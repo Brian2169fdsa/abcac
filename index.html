@@ -690,7 +690,70 @@ tr:hover td { background: var(--gray-50); }
   .welcome-banner h2 { font-size:17px; }
   .main-content { padding:12px 10px; }
 }
+
+/* ═══ TOAST NOTIFICATIONS ═══ */
+#toast-container {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  color: var(--gray-700);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(40px);
+  transition: all 0.3s ease;
+  max-width: 400px;
+}
+.toast-visible { opacity: 1; transform: translateX(0); }
+.toast-success { border-left: 4px solid var(--green); }
+.toast-error { border-left: 4px solid var(--red); }
+.toast-warning { border-left: 4px solid var(--amber); }
+.toast-info { border-left: 4px solid var(--blue); }
+.toast-icon { flex-shrink: 0; }
+.toast-success .toast-icon { color: var(--green); }
+.toast-error .toast-icon { color: var(--red); }
+.toast-warning .toast-icon { color: var(--amber); }
+.toast-info .toast-icon { color: var(--blue); }
+.toast-message { flex: 1; }
+.toast-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gray-400); padding: 0 0 0 8px; line-height: 1; }
+.toast-close:hover { color: var(--gray-700); }
+
+/* ═══ SPINNER ═══ */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // TODO: Replace with your actual Supabase credentials
+  const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 </head>
 <body>
 
@@ -800,7 +863,7 @@ tr:hover td { background: var(--gray-50); }
             <span style="font-size:12px;line-height:1.4;">I agree to the <a href="#" class="auth-link">ABCAC Code of Ethics</a> and <a href="#" class="auth-link">Portal Terms of Use</a>.</span>
           </label>
         </div>
-        <button class="auth-btn" onclick="doLogin()">Create Account</button>
+        <button class="auth-btn" onclick="doSignup()">Create Account</button>
         <p class="auth-switch" style="margin-top:14px;">Already have an account? <a href="#" class="auth-link" onclick="switchAuthTab('login')">Sign in</a></p>
       </div>
 
@@ -812,7 +875,7 @@ tr:hover td { background: var(--gray-50); }
           <label class="auth-label">Email Address</label>
           <input type="email" class="auth-input" placeholder="you@example.com">
         </div>
-        <button class="auth-btn" onclick="alert('Password reset link sent! Check your email.')">Send Reset Link</button>
+        <button class="auth-btn" onclick="doForgotPassword()">Send Reset Link</button>
         <div class="auth-divider"><span>or</span></div>
         <p class="auth-switch">Remember your password? <a href="#" class="auth-link" onclick="switchAuthTab('login')">Sign in</a></p>
       </div>
@@ -1897,7 +1960,7 @@ tr:hover td { background: var(--gray-50); }
 </div>
 
 <script>
-// ═══ AUTH GATEWAY ═══
+// ═══ AUTH GATEWAY (tab switching only — auth logic in portal.js) ═══
 function switchAuthTab(tab) {
   document.getElementById('formLogin').style.display = 'none';
   document.getElementById('formSignup').style.display = 'none';
@@ -1916,46 +1979,23 @@ function switchAuthTab(tab) {
   }
 }
 
-function doLogin() {
-  // Animate gateway out, reveal portal
-  const gw = document.getElementById('authGateway');
-  gw.classList.add('hidden');
-  setTimeout(() => { gw.style.display = 'none'; }, 400);
-}
-
-function doLogout() {
-  const gw = document.getElementById('authGateway');
-  gw.style.display = 'flex';
-  gw.classList.remove('hidden');
-  switchAuthTab('login');
-  // Clear any form inputs
-  document.querySelectorAll('.auth-input').forEach(i => { if(i.type !== 'checkbox') i.value = ''; });
-}
-
 // ═══ PORTAL NAVIGATION ═══
 function nav(page) {
-  // Hide all pages
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  // Remove active from all nav items
   document.querySelectorAll('.nav-home, .nav-link').forEach(n => n.classList.remove('active'));
-  // Show target page
   const target = document.getElementById('page-' + page);
   if (target) target.classList.add('active');
-  // Activate nav item
   const navItem = document.querySelector(`[data-page="${page}"]`);
   if (navItem) navItem.classList.add('active');
-  // Close mobile sidebar
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('visible');
   document.body.style.overflow = '';
-  // Scroll top
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('visible');
-  // Lock body scroll when sidebar open
   var isOpen = document.getElementById('sidebar').classList.contains('open');
   document.body.style.overflow = isOpen ? 'hidden' : '';
 }
@@ -1964,10 +2004,14 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('overlay').classList.remove('visible');
-    document.getElementById('ceuModal').style.display = 'none';
+    var ceuModal = document.getElementById('ceuModal');
+    if (ceuModal) ceuModal.style.display = 'none';
+    var msgModal = document.getElementById('messageModal');
+    if (msgModal) msgModal.remove();
     document.body.style.overflow = '';
   }
 });
 </script>
+<script src="js/portal.js"></script>
 </body>
 </html>
