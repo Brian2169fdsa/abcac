@@ -308,6 +308,14 @@ async function loadPortal(user) {
       }
 
       populatePersonalInfo(profile);
+
+      // Populate name change current name
+      var ncEl = document.getElementById('ncCurrentName');
+      if (ncEl) ncEl.value = ((profile.first_name || '') + ' ' + (profile.last_name || '')).trim();
+
+      // Populate account email
+      var acctEl = document.getElementById('accountEmail');
+      if (acctEl) acctEl.value = profile.email || '';
     }
 
     // Load all data sections in parallel
@@ -321,6 +329,9 @@ async function loadPortal(user) {
       loadOtherCertifications(user.id),
       loadApplications(user.id)
     ]);
+
+    // Show mock data for new members with no records
+    showMockDataIfEmpty();
   } catch (err) {
     console.error('Error loading portal:', err);
     showNotification('Error loading portal data. Please refresh.', 'error');
@@ -775,13 +786,17 @@ async function submitVerification() {
 async function submitReciprocity() {
   if (!currentUser) return;
 
-  const direction = (document.getElementById('recDirection') || {}).value;
+  const direction = 'out_of_az';
   const credential = (document.getElementById('recCredential') || {}).value;
   const destination = (document.getElementById('recDestination') || {}).value;
   const reason = (document.getElementById('recReason') || {}).value;
 
-  if (!direction) {
-    showNotification('Please select a transfer direction.', 'warning');
+  if (!credential || credential === '— Select —') {
+    showNotification('Please select a credential to transfer.', 'warning');
+    return;
+  }
+  if (!destination) {
+    showNotification('Please enter a destination state/board.', 'warning');
     return;
   }
 
@@ -944,4 +959,49 @@ async function addOtherCertification() {
   } catch (err) {
     showNotification('Failed to add certification.', 'error');
   }
+}
+
+// ═══ MOCK DATA FOR NEW MEMBERS ═══
+function showMockDataIfEmpty() {
+  // Home page stats — show zeros for new members
+  var statValues = document.querySelectorAll('.stat-value');
+  var statSubs = document.querySelectorAll('.stat-sub');
+
+  if (!currentProfile) return;
+
+  // If member is 'applying', update home page to reflect new member state
+  if (currentProfile.cert_status === 'applying') {
+    if (statValues[0]) statValues[0].textContent = '0';
+    if (statSubs[0]) statSubs[0].textContent = 'No active certifications';
+    if (statValues[1]) statValues[1].textContent = '0 / 40';
+    if (statSubs[1]) statSubs[1].textContent = '40 hours remaining';
+    if (statValues[2]) statValues[2].textContent = 'N/A';
+    if (statSubs[2]) statSubs[2].textContent = 'Apply for certification first';
+    if (statValues[3]) statValues[3].textContent = 'Applying';
+    if (statSubs[3]) statSubs[3].textContent = 'Application in progress';
+
+    // Update the reminder note
+    var noteBox = document.querySelector('.note-box.warning');
+    if (noteBox) {
+      var noteDiv = noteBox.querySelector('div');
+      if (noteDiv) noteDiv.innerHTML = 'Welcome to ABCAC! Complete your <strong>Personal Information</strong> and upload required documents to begin your certification application. <a href="#" onclick="nav(\'personal\')" style="color:inherit;font-weight:600;">Complete Profile \u2192</a>';
+    }
+
+    // Update the welcome message
+    var welcomeP = document.querySelector('.welcome-banner p');
+    if (welcomeP) welcomeP.textContent = 'Welcome to the ABCAC Member Portal. Complete your profile and upload your supporting documents to get started with your certification application.';
+  }
+
+  // Update messages quick action count
+  var msgQuick = document.querySelector('.quick-item:last-child');
+  // Leave as-is for now
+
+  // Ensure all empty tbodies show "no records" message
+  var tbodies = ['employmentTableBody', 'certsTableBody', 'docsTableBody', 'ceuTableBody', 'invoicesTableBody'];
+  tbodies.forEach(function(id) {
+    var tbody = document.getElementById(id);
+    if (tbody && tbody.querySelector('td[colspan]')) {
+      // Already shows "no records" — leave it
+    }
+  });
 }
