@@ -324,10 +324,12 @@ async function loadPortal(user) {
       loadCEURecords(user.id),
       loadDocuments(user.id),
       loadMessageCount(user.id),
+      loadMessages(user.id),
       loadInvoices(user.id),
       loadEmploymentRecords(user.id),
       loadOtherCertifications(user.id),
-      loadApplications(user.id)
+      loadApplications(user.id),
+      loadNotificationPrefs(user.id)
     ]);
 
     // Show mock data for new members with no records
@@ -554,14 +556,31 @@ async function loadMessageCount(memberId) {
 }
 
 async function loadMessages(memberId) {
-  return loadTableData('messages', memberId, 'messagesTableBody', function(msg) {
-    return '<tr style="' + (!msg.is_read ? 'font-weight:600;' : '') + '">' +
-      '<td>' + (msg.from_name || 'ABCAC Admin') + '</td>' +
-      '<td><a href="#" onclick="viewMessage(\'' + msg.id + '\')">' + (msg.subject || '\u2014') + '</a></td>' +
-      '<td>' + formatDate(msg.created_at) + '</td>' +
-      '<td>' + (msg.is_read ? 'Read' : getStatusBadge('pending')) + '</td>' +
-      '</tr>';
-  });
+  try {
+    var container = document.querySelector('#page-messages .card-body');
+    if (!container) return;
+    var { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">No messages yet.</div>';
+      return;
+    }
+    container.innerHTML = data.map(function(msg) {
+      return '<div class="msg-item" onclick="viewMessage(\'' + msg.id + '\')">' +
+        '<div class="msg-dot' + (msg.is_read ? ' read' : '') + '"></div>' +
+        '<div class="msg-info">' +
+        '<div class="msg-from">' + (msg.from_name || 'ABCAC Admin') + '</div>' +
+        '<div class="msg-subject"' + (!msg.is_read ? ' style="font-weight:600;"' : '') + '>' + (msg.subject || '\u2014') + '</div>' +
+        '<div class="msg-date">' + formatDate(msg.created_at) + '</div>' +
+        '</div></div>';
+    }).join('');
+  } catch (err) {
+    console.error('Error loading messages:', err);
+  }
 }
 
 // ═══ LOAD INVOICES ═══
@@ -875,6 +894,24 @@ async function viewCEUCert(filePath) {
   }
 }
 
+// ═══ LOAD NOTIFICATION PREFERENCES ═══
+async function loadNotificationPrefs(memberId) {
+  try {
+    var { data, error } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('member_id', memberId)
+      .single();
+    if (error || !data) return;
+    if (document.getElementById('prefRenewal')) document.getElementById('prefRenewal').checked = data.renewal_reminders;
+    if (document.getElementById('prefCEU')) document.getElementById('prefCEU').checked = data.ceu_deadline_alerts;
+    if (document.getElementById('prefAnnouncements')) document.getElementById('prefAnnouncements').checked = data.abcac_announcements;
+    if (document.getElementById('prefICRC')) document.getElementById('prefICRC').checked = data.icrc_updates;
+  } catch (err) {
+    console.error('Error loading notification prefs:', err);
+  }
+}
+
 // ═══ SAVE NOTIFICATION PREFERENCES ═══
 async function saveNotificationPrefs() {
   if (!currentUser) return;
@@ -895,23 +932,46 @@ async function saveNotificationPrefs() {
   }
 }
 
-// ═══ ADD EMPLOYMENT RECORD ═══
-async function addEmploymentRecord() {
+// ═══ ADD EMPLOYMENT RECORD (MODAL) ═══
+function addEmploymentRecord() {
   if (!currentUser) return;
+  var existing = document.getElementById('empModal');
+  if (existing) existing.remove();
 
-  const employer = (document.getElementById('empEmployer') || {}).value;
-  const position = (document.getElementById('empPosition') || {}).value;
-  const startDate = (document.getElementById('empStartDate') || {}).value;
-  const endDate = (document.getElementById('empEndDate') || {}).value;
-  const isCurrent = document.getElementById('empCurrent') ? document.getElementById('empCurrent').checked : false;
+  var modal = document.createElement('div');
+  modal.id = 'empModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:32px;max-width:500px;width:90%;">' +
+    '<h3 style="margin-bottom:16px;">Add Employment Record</h3>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Employer Name *</span><input id="empEmployer" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Position/Title *</span><input id="empPosition" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<div style="display:flex;gap:12px;margin-bottom:12px;">' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">Start Date</span><input type="date" id="empStartDate" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">End Date</span><input type="date" id="empEndDate" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '</div>' +
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;"><input type="checkbox" id="empCurrent" style="width:18px;height:18px;"><span style="font-size:13px;">Currently employed here</span></label>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'empModal\').remove()">Cancel</button>' +
+    '<button class="btn btn-sm btn-primary" onclick="submitEmploymentRecord()">Add Record</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+
+async function submitEmploymentRecord() {
+  if (!currentUser) return;
+  var employer = document.getElementById('empEmployer').value.trim();
+  var position = document.getElementById('empPosition').value.trim();
+  var startDate = document.getElementById('empStartDate').value;
+  var endDate = document.getElementById('empEndDate').value;
+  var isCurrent = document.getElementById('empCurrent').checked;
 
   if (!employer || !position) {
     showNotification('Please provide employer name and position.', 'warning');
     return;
   }
-
   try {
-    const { error } = await supabase.from('employment_records').insert({
+    var { error } = await supabase.from('employment_records').insert({
       member_id: currentUser.id,
       employer_name: employer,
       position_title: position,
@@ -919,8 +979,8 @@ async function addEmploymentRecord() {
       end_date: isCurrent ? null : (endDate || null),
       is_current: isCurrent
     });
-
     if (error) throw error;
+    document.getElementById('empModal').remove();
     await loadEmploymentRecords(currentUser.id);
     showNotification('Employment record added.', 'success');
   } catch (err) {
@@ -928,23 +988,46 @@ async function addEmploymentRecord() {
   }
 }
 
-// ═══ ADD OTHER CERTIFICATION ═══
-async function addOtherCertification() {
+// ═══ ADD OTHER CERTIFICATION (MODAL) ═══
+function addOtherCertification() {
   if (!currentUser) return;
+  var existing = document.getElementById('otherCertModal');
+  if (existing) existing.remove();
 
-  const title = (document.getElementById('otherCertTitle') || {}).value;
-  const number = (document.getElementById('otherCertNumber') || {}).value;
-  const board = (document.getElementById('otherCertBoard') || {}).value;
-  const issued = (document.getElementById('otherCertIssued') || {}).value;
-  const expires = (document.getElementById('otherCertExpires') || {}).value;
+  var modal = document.createElement('div');
+  modal.id = 'otherCertModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:32px;max-width:500px;width:90%;">' +
+    '<h3 style="margin-bottom:16px;">Add Other Certification</h3>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Title of Credential *</span><input id="otherCertTitle" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Credential Number</span><input id="otherCertNumber" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Issuing Board *</span><input id="otherCertBoard" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">Date Issued</span><input type="date" id="otherCertIssued" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">Expiration Date</span><input type="date" id="otherCertExpires" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'otherCertModal\').remove()">Cancel</button>' +
+    '<button class="btn btn-sm btn-primary" onclick="submitOtherCertification()">Add Certification</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+
+async function submitOtherCertification() {
+  if (!currentUser) return;
+  var title = document.getElementById('otherCertTitle').value.trim();
+  var number = document.getElementById('otherCertNumber').value.trim();
+  var board = document.getElementById('otherCertBoard').value.trim();
+  var issued = document.getElementById('otherCertIssued').value;
+  var expires = document.getElementById('otherCertExpires').value;
 
   if (!title || !board) {
     showNotification('Please provide credential title and issuing board.', 'warning');
     return;
   }
-
   try {
-    const { error } = await supabase.from('other_certifications').insert({
+    var { error } = await supabase.from('other_certifications').insert({
       member_id: currentUser.id,
       credential_title: title,
       credential_number: number || null,
@@ -952,8 +1035,8 @@ async function addOtherCertification() {
       issued_date: issued || null,
       expiration_date: expires || null
     });
-
     if (error) throw error;
+    document.getElementById('otherCertModal').remove();
     await loadOtherCertifications(currentUser.id);
     showNotification('Certification added.', 'success');
   } catch (err) {
