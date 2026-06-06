@@ -84,6 +84,7 @@ export default async function AccountPage() {
     [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user?.email || "Member";
   const syncOn = certifications.some((c) => c.sync_enabled);
   const profilePct = completeness(profile);
+  const isAdmin = (profile as { portal_role?: string | null } | null)?.portal_role === "admin";
 
   return (
     <>
@@ -99,6 +100,18 @@ export default async function AccountPage() {
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-6 text-muted">
             We couldn't load your records just now. Please refresh, or open the full portal.
           </div>
+        </Section>
+      )}
+
+      {isAdmin && (
+        <Section compact>
+          <Link href="/admin" className="flex items-center justify-between rounded-xl border border-brand bg-brand/5 p-5">
+            <div>
+              <h3 className="text-base">ABCAC Admin Console</h3>
+              <p className="mt-1 text-sm text-muted">Review approvals, documents, CEUs, and applications.</p>
+            </div>
+            <span className="font-semibold text-brand">Open →</span>
+          </Link>
         </Section>
       )}
 
