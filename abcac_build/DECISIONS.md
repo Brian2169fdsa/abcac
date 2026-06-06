@@ -15,7 +15,14 @@ Log every autonomous judgment call here. One row per decision.
 | 9 | Content pages port the substantive copy, deduplicated, into structured sections (raw source files repeat nav/services blocks) | Faithful to wording while producing clean, usable pages; no invented marketing copy | reorg only | `app/(site)/**` |
 | 10 | `/account` codes against the assumed `members/credentials/payments` contract and degrades gracefully (hides/explains) if tables are absent | No schema work allowed on the frontend track; backend owns those tables | yes | `app/(portal)/account/page.tsx` |
 | 11 | Created `/faq` from IC&RC exam facts + renewal basics (no FAQ source file) | Footer links to FAQ; instructions allow a minimal generated FAQ | yes | `app/(site)/faq/page.tsx` |
-| 12 | Per-credential eligibility hours shown only for CAC & CADAC (from source); others say "contact ABCAC for full requirements" | Source only specified CAC/CADAC hours; avoids inventing requirements | yes | `app/(site)/initial-certification/page.tsx` |
+| 12 | Per-credential eligibility hours ported for all 7 credentials from the source page | Source specified them; faithful detail | reorg only | `app/(site)/initial-certification/page.tsx` |
+| 13 | Front-end is now the PRIMARY site; the existing static member portal is co-hosted under `/portal` (and `/portal/admin`) via `public/portal/` + next.config rewrites | User directive: make the front-end primary and add a Member Portal button. One deployment serves both; portal keeps its own Supabase auth | yes | `frontend/public/portal/**`, `next.config.mjs` |
+| 14 | Header right side = "Member Portal" (primary) + "Book an Audit" (secondary); removed the separate Login/My Account link | Member Portal is the entry to the full portal app; reduces clutter | yes | `components/site-header.tsx`, `lib/nav.ts` |
+| 15 | Member Portal URL is `NEXT_PUBLIC_PORTAL_URL` (default `/portal`) | Allows pointing to a portal subdomain later without code changes | yes | `lib/nav.ts`, `.env.example` |
+| 16 | Added a darker `--accent-strong` token for small eyebrow text (gold-on-light failed WCAG AA) + skip-to-content link | Accessibility | yes | `globals.css`, `tailwind.config.ts`, components, layouts |
+
+## ⚠️ Vercel: make the front-end primary (one setting)
+Set the Vercel project **Root Directory = `frontend/`** (Project Settings → General → Root Directory) and add the env vars from `frontend/.env.example`. After that, the domain serves the Next.js site; the member portal is reachable at `/portal`. The old root static site is then bypassed.
 
 ## Open items needing human confirmation
 (Move here anything you could not resolve. Keep building around it with a stated assumption.)

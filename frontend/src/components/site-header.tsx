@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { NAV, HEADER_CTA } from "@/lib/nav";
+import { NAV, HEADER_CTA, MEMBER_PORTAL } from "@/lib/nav";
 import { siteConfig } from "@/lib/site-config";
 import { CtaButton } from "@/components/cta-button";
 import { cn } from "@/lib/utils";
 
-export function SiteHeader({ authed }: { authed: boolean }) {
+export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
@@ -23,9 +23,6 @@ export function SiteHeader({ authed }: { authed: boolean }) {
 
   // Close the drawer whenever the route changes.
   useEffect(() => setOpen(false), [pathname]);
-
-  const accountHref = authed ? "/account" : "/login";
-  const accountLabel = authed ? "My Account" : "Login";
 
   return (
     <header className={cn("sticky top-0 z-50 bg-surface/95 backdrop-blur transition-shadow", scrolled && "shadow-sm")}>
@@ -54,11 +51,11 @@ export function SiteHeader({ authed }: { authed: boolean }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link href={accountHref} className="hidden text-sm font-semibold text-muted hover:text-brand md:inline">
-            {accountLabel}
-          </Link>
-          <CtaButton href={HEADER_CTA.href} size="sm" className="hidden md:inline-flex">
+          <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden lg:inline-flex">
             {HEADER_CTA.label}
+          </CtaButton>
+          <CtaButton href={MEMBER_PORTAL.href} size="sm" className="hidden md:inline-flex">
+            {MEMBER_PORTAL.label}
           </CtaButton>
           <button
             type="button"
@@ -98,11 +95,11 @@ export function SiteHeader({ authed }: { authed: boolean }) {
                   {item.label}
                 </Link>
               ))}
-              <Link href={accountHref} className="rounded-lg px-3 py-2.5 text-base font-semibold text-ink hover:bg-line/60">
-                {accountLabel}
-              </Link>
             </nav>
-            <CtaButton href={HEADER_CTA.href} className="mt-6 w-full">
+            <CtaButton href={MEMBER_PORTAL.href} className="mt-6 w-full">
+              {MEMBER_PORTAL.label}
+            </CtaButton>
+            <CtaButton href={HEADER_CTA.href} variant="outline" className="mt-3 w-full">
               {HEADER_CTA.label}
             </CtaButton>
           </div>

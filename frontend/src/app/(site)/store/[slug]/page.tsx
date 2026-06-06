@@ -28,7 +28,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent">{product.category}</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">{product.category}</p>
           <h1 className="mt-2">{product.name}</h1>
           <div className="mt-4">
             <PriceTag product={product} className="text-3xl" />

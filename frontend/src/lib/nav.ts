@@ -18,6 +18,13 @@ export const NAV: NavItem[] = [
   { label: "Contact Us", href: "/contact" },
 ];
 
-// CTA shown at the right of the header. Points to /contact until a booking
+// Secondary CTA at the right of the header. Points to /contact until a booking
 // URL is provided (logged in DECISIONS.md).
 export const HEADER_CTA = { label: "Book an Audit", href: "/contact" };
+
+// Primary entry to the member portal (the standalone portal app, co-hosted at
+// /portal). Overridable via NEXT_PUBLIC_PORTAL_URL (e.g. a portal subdomain).
+export const MEMBER_PORTAL = {
+  label: "Member Portal",
+  href: process.env.NEXT_PUBLIC_PORTAL_URL || "/portal",
+};

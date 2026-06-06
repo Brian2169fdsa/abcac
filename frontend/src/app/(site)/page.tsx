@@ -38,7 +38,7 @@ export default function HomePage() {
       <section className="border-b border-line bg-surface">
         <div className="mx-auto grid w-full max-w-content items-center gap-10 px-5 py-16 md:grid-cols-2 md:px-8 md:py-24">
           <div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">{siteConfig.shortName}</p>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">{siteConfig.shortName}</p>
             <h1>{siteConfig.tagline}</h1>
             <p className="mt-4 text-lg text-muted">{siteConfig.trustLine}</p>
             <div className="mt-8 flex flex-wrap gap-3">

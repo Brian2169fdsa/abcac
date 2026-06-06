@@ -9,7 +9,7 @@ export function ProductCard({ product }: { product: Product }) {
       href={`/store/${product.slug}`}
       className="group flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors hover:border-brand"
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-accent">{product.category}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-accent-strong">{product.category}</p>
       <h3 className="mt-2 text-lg">{product.name}</h3>
       <p className="mt-2 flex-1 text-sm text-muted">{product.short}</p>
       <div className="mt-4 flex items-center justify-between">

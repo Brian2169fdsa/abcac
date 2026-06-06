@@ -12,7 +12,10 @@ const config: Config = {
           DEFAULT: "var(--brand)",
           600: "var(--brand-600)",
         },
-        accent: "var(--accent)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          strong: "var(--accent-strong)",
+        },
         muted: "var(--muted)",
         line: "var(--line)",
         success: "var(--success)",
