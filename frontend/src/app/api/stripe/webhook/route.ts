@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const admin = createSupabaseAdminClient();
 
-  // Idempotency: ignore an event id we've already processed.
+  // Idempotency: ignore an event id we've already recorded.
   try {
     const { data: seen } = await admin
       .from("payments")
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (seen) return NextResponse.json({ received: true, duplicate: true });
   } catch {
-    // payments table may not exist — log dependency, continue best-effort.
+    // payments table not present — should not happen after migration 004.
   }
 
   try {
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     console.error("webhook side-effect error", err);
-    // Still 200 so Stripe doesn't retry forever on a backend-schema gap.
+    // Still 200 so Stripe doesn't retry forever; the payment row is the record.
   }
 
   return NextResponse.json({ received: true });
@@ -71,13 +71,23 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     status: "paid",
   });
 
-  await applyCredentialSideEffect(admin, memberId, meta.slug ?? "", meta.credential_level || null);
+  // The ONLY automatic credential effect on payment is enabling Certification
+  // Sync. Initial certification and renewals are issued by ABCAC staff AFTER
+  // reviewing the member's application/CEU documentation in the admin console —
+  // paying a fee does not by itself grant or renew a credential.
+  if (meta.slug === "certification-sync" && memberId) {
+    try {
+      await admin.from("certifications").update({ sync_enabled: true }).eq("member_id", memberId);
+    } catch (err) {
+      console.error("sync flag update skipped:", err);
+    }
+  }
 }
 
 async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
-  // Recurring subscription renewal. Record the payment; extend on the slug if known.
+  // Recurring subscription renewal (Certification Sync, annual provider fee).
   const invoice = event.data.object as Stripe.Invoice;
-  if (invoice.billing_reason === "subscription_create") return; // already handled by checkout.session.completed
+  if (invoice.billing_reason === "subscription_create") return; // first invoice handled by checkout.session.completed
   await writePayment(admin, {
     member_id: null,
     stripe_session_id: (invoice.id as string) ?? "",
@@ -109,35 +119,5 @@ interface PaymentRow {
 
 async function writePayment(admin: Admin, row: PaymentRow) {
   const { error } = await admin.from("payments").insert(row);
-  if (error) console.error("payments insert failed (backend dependency?):", error.message);
-}
-
-async function applyCredentialSideEffect(
-  admin: Admin,
-  memberId: string | null,
-  slug: string,
-  level: string | null,
-) {
-  if (!memberId) return; // guest checkout — reconcile by email later (logged dependency)
-
-  const renewSlugs = [
-    "certification-renewal-2-year-credential-renewal-fee",
-    "initial-certification-full-application-exam-fee",
-    "initial-certification-full-application-exam-fee-remote-proctored-exam",
-    "certification-certification-only-fee-already-passed-icrc-exam",
-  ];
-
-  try {
-    if (renewSlugs.includes(slug)) {
-      const expires = new Date();
-      expires.setFullYear(expires.getFullYear() + 2);
-      const patch = { status: "active", expires_at: expires.toISOString() };
-      const q = admin.from("credentials").update(patch).eq("member_id", memberId);
-      await (level ? q.eq("level", level) : q);
-    } else if (slug === "certification-sync") {
-      await admin.from("credentials").update({ sync_enabled: true }).eq("member_id", memberId);
-    }
-  } catch (err) {
-    console.error("credential side-effect skipped (backend dependency?):", err);
-  }
+  if (error) console.error("payments insert failed:", error.message);
 }

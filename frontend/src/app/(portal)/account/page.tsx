@@ -7,11 +7,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
 
-interface Credential {
+interface Certification {
   id: string;
-  level: string | null;
+  cert_type: string | null;
+  cert_number: string | null;
   status: string | null;
-  expires_at: string | null;
+  expiration_date: string | null;
   sync_enabled: boolean | null;
 }
 interface Payment {
@@ -21,9 +22,10 @@ interface Payment {
   status: string | null;
   created_at: string | null;
 }
-interface Member {
+interface Profile {
   id: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   phone: string | null;
 }
@@ -46,71 +48,76 @@ export default async function AccountPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  let member: Member | null = null;
-  let credentials: Credential[] = [];
+  let profile: Profile | null = null;
+  let certifications: Certification[] = [];
   let payments: Payment[] = [];
   let backendReady = true;
 
   if (user) {
     try {
-      const { data: m, error } = await supabase.from("members").select("*").eq("auth_user_id", user.id).maybeSingle();
+      const { data: p, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (error) throw error;
-      member = m as Member | null;
-      if (member) {
-        const [{ data: creds }, { data: pays }] = await Promise.all([
-          supabase.from("credentials").select("*").eq("member_id", member.id),
-          supabase.from("payments").select("*").eq("member_id", member.id).order("created_at", { ascending: false }),
-        ]);
-        credentials = (creds as Credential[]) ?? [];
-        payments = (pays as Payment[]) ?? [];
-      }
+      profile = p as Profile | null;
+      const [{ data: certs }, { data: pays }] = await Promise.all([
+        supabase.from("certifications").select("*").eq("member_id", user.id),
+        supabase.from("payments").select("*").eq("member_id", user.id).order("created_at", { ascending: false }),
+      ]);
+      certifications = (certs as Certification[]) ?? [];
+      payments = (pays as Payment[]) ?? [];
     } catch {
       backendReady = false;
     }
   }
 
-  const displayName = member?.full_name || user?.email || "Member";
-  const syncOn = credentials.some((c) => c.sync_enabled);
+  const displayName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user?.email || "Member";
+  const syncOn = certifications.some((c) => c.sync_enabled);
 
   return (
     <>
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
-        <Link href="/logout" className="text-sm font-semibold text-brand hover:text-brand-600">Log out</Link>
+        <div className="flex gap-4">
+          <CtaButton href="/portal" size="sm">Open Full Portal</CtaButton>
+          <Link href="/logout" className="self-center text-sm font-semibold text-brand hover:text-brand-600">Log out</Link>
+        </div>
       </PageHero>
 
       {!backendReady && (
         <Section compact>
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-6 text-muted">
-            Your member records aren't connected yet. Once the member database is linked, your credential status and
-            payment history will appear here automatically.
+            We couldn't load your records just now. Please refresh, or open the full portal.
           </div>
         </Section>
       )}
 
       {/* Credentials */}
       <Section title="Your Credentials" compact>
-        {credentials.length === 0 ? (
+        {certifications.length === 0 ? (
           <p className="text-muted">No credentials on file yet. Start with the certification path that fits you.</p>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {credentials.map((c) => {
-              const d = daysLeft(c.expires_at);
+            {certifications.map((c) => {
+              const d = daysLeft(c.expiration_date);
               return (
                 <div key={c.id} className="rounded-xl border border-line bg-surface p-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg">{c.level ?? "Credential"}</h3>
+                    <h3 className="text-lg">{c.cert_type ?? "Credential"}</h3>
                     <span className="rounded-full border border-line px-2.5 py-0.5 text-xs font-semibold capitalize text-muted">
                       {c.status ?? "unknown"}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-muted">Expires {fmtDate(c.expires_at)}{d !== null && d > 0 ? ` · ${d} days left` : d !== null ? " · expired" : ""}</p>
+                  {c.cert_number && <p className="mt-1 text-sm text-muted">No. {c.cert_number}</p>}
+                  <p className="mt-2 text-sm text-muted">
+                    Expires {fmtDate(c.expiration_date)}
+                    {d !== null && d > 0 ? ` · ${d} days left` : d !== null ? " · expired" : ""}
+                  </p>
                   <CtaButton href={`/store/${RENEWAL_SLUG}`} variant="outline" size="sm" className="mt-4">Renew</CtaButton>
                 </div>
               );
             })}
           </div>
         )}
-        {credentials.length === 0 && (
+        {certifications.length === 0 && (
           <CtaButton href="/choose-your-cert-path" className="mt-6">Choose Your Cert Path</CtaButton>
         )}
       </Section>
@@ -118,9 +125,7 @@ export default async function AccountPage() {
       {/* Certification Sync */}
       <Section surface title="Certification Sync" compact>
         <p className="text-muted">
-          {syncOn
-            ? "Certification Sync is active on your account."
-            : "Align all your renewal dates into one cycle for $15/month."}
+          {syncOn ? "Certification Sync is active on your account." : "Align all your renewal dates into one cycle for $15/month."}
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {syncOn ? (
@@ -159,6 +164,10 @@ export default async function AccountPage() {
             </table>
           </div>
         )}
+        <p className="mt-4 text-sm text-muted">
+          Manage applications, CEUs, and documents in the{" "}
+          <Link href="/portal" className="font-semibold text-brand">full member portal</Link>.
+        </p>
       </Section>
     </>
   );

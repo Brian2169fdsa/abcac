@@ -23,6 +23,8 @@ export async function POST(req: Request) {
   }
 
   // Attribute to the signed-in member if there is one (guest checkout allowed).
+  // member_id is the Supabase auth user id, which equals profiles.id in the
+  // shared portal schema — no separate members table.
   let memberId: string | null = null;
   let email: string | undefined;
   try {
@@ -30,15 +32,10 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       email = user.email ?? undefined;
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-      memberId = member?.id ?? null;
+      memberId = user.id;
     }
   } catch {
-    // members table may not exist yet — proceed as guest (logged as backend dependency).
+    // not signed in — proceed as guest (reconcile by email later).
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
