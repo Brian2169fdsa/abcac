@@ -1,4 +1,4 @@
-import { Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle, Bell } from "lucide-react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { DocumentUpload } from "@/components/document-upload";
@@ -11,6 +11,13 @@ export const dynamic = "force-dynamic";
 interface Doc {
   id: string; document_type: string | null; file_name: string | null; file_path: string | null;
   uploaded_at: string | null; status: string | null; admin_notes: string | null;
+}
+
+interface DocumentRequest {
+  id: string;
+  document_type: string;
+  note: string | null;
+  created_at: string | null;
 }
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -44,11 +51,13 @@ const CREDENTIAL_CHECKLIST: Record<string, { label: string; match: string }[]> =
 export default async function DocumentsPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [{ data }, { data: latestApp }] = await Promise.all([
+  const [{ data }, { data: latestApp }, { data: openReqData }] = await Promise.all([
     supabase.from("documents").select("*").eq("member_id", user!.id).order("uploaded_at", { ascending: false }),
     supabase.from("applications").select("cert_type").eq("member_id", user!.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("document_requests").select("id,document_type,note,created_at").eq("member_id", user!.id).eq("status", "open").order("created_at", { ascending: false }),
   ]);
   const docs = (data as Doc[]) ?? [];
+  const openRequests = (openReqData as DocumentRequest[]) ?? [];
   const credential: string | null = (latestApp?.cert_type as string | null) ?? null;
   const requiredDocs = (credential && CREDENTIAL_CHECKLIST[credential]) || DEFAULT_CHECKLIST;
 
@@ -60,6 +69,27 @@ export default async function DocumentsPage() {
   return (
     <>
       <PageHero eyebrow="Member Portal" title="Documents" intro="Upload supporting documents and track ABCAC's review. Files are stored privately and only visible to you and ABCAC staff." />
+
+      {/* Open document requests from ABCAC */}
+      {openRequests.length > 0 && (
+        <Section compact>
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <Bell className="h-5 w-5 flex-shrink-0 text-amber-600" aria-hidden />
+              <span className="font-semibold text-amber-800">ABCAC has requested the following document{openRequests.length > 1 ? "s" : ""}:</span>
+            </div>
+            <ul className="mb-4 space-y-2">
+              {openRequests.map((r) => (
+                <li key={r.id} className="rounded-lg border border-amber-200 bg-white px-4 py-3">
+                  <div className="font-semibold text-ink">{r.document_type}</div>
+                  {r.note && <div className="mt-0.5 text-sm text-muted">{r.note}</div>}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-amber-700">Please upload the requested document{openRequests.length > 1 ? "s" : ""} using the upload form below.</p>
+          </div>
+        </Section>
+      )}
 
       {/* Tracking checklist */}
       <Section compact title="Document checklist">

@@ -39,6 +39,7 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "text-sm font-semibold text-muted transition-colors hover:text-brand",
                   active && "text-brand",
@@ -86,15 +87,19 @@ export function SiteHeader() {
               </button>
             </div>
             <nav className="flex flex-col gap-1" aria-label="Mobile">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg px-3 py-2.5 text-base font-semibold text-ink hover:bg-line/60"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {NAV.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className="rounded-lg px-3 py-2.5 text-base font-semibold text-ink hover:bg-line/60"
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
             <CtaButton href={MEMBER_PORTAL.href} className="mt-6 w-full">
               {MEMBER_PORTAL.label}

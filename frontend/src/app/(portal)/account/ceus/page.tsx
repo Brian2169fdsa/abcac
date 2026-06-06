@@ -2,6 +2,7 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CeuSubmitForm } from "@/components/ceu-submit-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { computeCompliance } from "@/lib/ceu-compliance";
 
 export const metadata = { title: "CEU Tracker" };
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function CeusPage() {
   const total = approved.reduce((s, r) => s + Number(r.hours || 0), 0);
   const pct = Math.min(100, Math.round((total / REQUIRED) * 100));
   const byCat = (cat: string) => approved.filter((r) => r.category === cat).reduce((s, r) => s + Number(r.hours || 0), 0);
+  const compliance = computeCompliance(records);
 
   return (
     <>
@@ -43,6 +45,37 @@ export default async function CeusPage() {
           <div className="rounded-xl border border-line bg-surface p-6">
             <div className="font-display text-3xl font-bold text-brand">{byCat("Cultural Diversity")} / 3</div>
             <div className="mt-1 text-sm text-muted">Cultural Diversity hours</div>
+          </div>
+        </div>
+        {/* Renewal Compliance Card */}
+        <div className="mt-5 rounded-xl border border-line bg-surface p-6">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-display text-lg font-bold">Renewal compliance</h2>
+            {compliance.compliant ? (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">Compliant</span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Not yet</span>
+            )}
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <div className="text-sm text-muted">Hours remaining</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.remaining}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted">Ethics</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.ethics} / 3</div>
+              {compliance.ethicsRemaining > 0 && (
+                <div className="mt-0.5 text-xs text-amber-600">{compliance.ethicsRemaining} hr{compliance.ethicsRemaining !== 1 ? "s" : ""} needed</div>
+              )}
+            </div>
+            <div>
+              <div className="text-sm text-muted">Cultural Diversity</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.cultural} / 3</div>
+              {compliance.culturalRemaining > 0 && (
+                <div className="mt-0.5 text-xs text-amber-600">{compliance.culturalRemaining} hr{compliance.culturalRemaining !== 1 ? "s" : ""} needed</div>
+              )}
+            </div>
           </div>
         </div>
         <div className="mt-6"><CeuSubmitForm /></div>

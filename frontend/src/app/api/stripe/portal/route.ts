@@ -20,14 +20,31 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Find the Stripe customer by the email used at checkout.
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    const customer = customers.data[0];
-    if (!customer) {
+    // Prefer the stored Stripe customer id to avoid a potentially ambiguous
+    // email-based lookup (a member could share an email across test/live modes).
+    let customerId: string | null = null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    customerId = profile?.stripe_customer_id ?? null;
+
+    if (!customerId) {
+      // Fall back to the email-based lookup for members who checked out before
+      // the stripe_customer_id column was added.
+      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId = customers.data[0]?.id ?? null;
+    }
+
+    if (!customerId) {
       return NextResponse.redirect(new URL("/account", siteUrl));
     }
+
     const session = await stripe.billingPortal.sessions.create({
-      customer: customer.id,
+      customer: customerId,
       return_url: `${siteUrl}/account`,
     });
     return NextResponse.redirect(session.url);

@@ -39,6 +39,27 @@ Deno.serve(async (req) => {
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         );
+
+        // Idempotency guard: if a payments row for this stripe event already
+        // exists we've already processed it — return early to avoid double
+        // side-effects if both webhooks (Edge Function + Next.js route) are
+        // ever registered at the same time.
+        try {
+          const { data: seen } = await admin
+            .from("payments")
+            .select("id")
+            .eq("stripe_event_id", event.id)
+            .maybeSingle();
+          if (seen) {
+            return new Response(JSON.stringify({ received: true, duplicate: true }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        } catch {
+          // payments table not present — proceed without the guard.
+        }
+
         await admin.from("invoices").update({
           status: "paid",
           paid_at: new Date().toISOString(),

@@ -27,12 +27,22 @@ export async function POST(req: Request) {
   // shared portal schema — no separate members table.
   let memberId: string | null = null;
   let email: string | undefined;
+  let existingStripeCustomerId: string | null = null;
   try {
     const supabase = createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       email = user.email ?? undefined;
       memberId = user.id;
+      // Re-use an existing Stripe customer when available so the member's
+      // payment history stays consolidated in Stripe and the portal works
+      // without an email-based lookup.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      existingStripeCustomerId = profile?.stripe_customer_id ?? null;
     }
   } catch {
     // not signed in — proceed as guest (reconcile by email later).
@@ -46,7 +56,13 @@ export async function POST(req: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/checkout/cancel`,
-      ...(email ? { customer_email: email } : {}),
+      // Prefer an existing customer id; fall back to customer_email for guests
+      // or first-time purchasers whose id hasn't been stored yet.
+      ...(existingStripeCustomerId
+        ? { customer: existingStripeCustomerId }
+        : email
+          ? { customer_email: email }
+          : {}),
       ...(memberId ? { client_reference_id: memberId } : {}),
       metadata: {
         slug: product.slug,

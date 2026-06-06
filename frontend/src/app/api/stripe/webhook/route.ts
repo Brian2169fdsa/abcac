@@ -84,6 +84,19 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     status: "paid",
   });
 
+  // Persist the Stripe customer id on the profile so future checkouts and portal
+  // lookups can use it directly (avoids the email-based customer list search).
+  if (session.customer && memberId) {
+    try {
+      await admin
+        .from("profiles")
+        .update({ stripe_customer_id: String(session.customer) })
+        .eq("id", memberId);
+    } catch (err) {
+      console.error("stripe_customer_id persist skipped:", err);
+    }
+  }
+
   // The ONLY automatic credential effect on payment is enabling Certification
   // Sync. Initial certification and renewals are issued by ABCAC staff AFTER
   // reviewing the member's application/CEU documentation in the admin console —
