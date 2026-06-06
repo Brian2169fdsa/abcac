@@ -7,8 +7,10 @@
   the migration-005 status triggers. *(Requested.)*
 
 ## Known follow-ups
-- [ ] Retire the static `/portal` + `/portal/admin` once the native Next.js
-  member portal and admin console reach full parity.
+- [ ] **Retire the static `/portal` + `/portal/admin`** — the native Next.js
+  member portal (/account/*) and admin console (/admin/*) now have full parity,
+  and no in-app links point to the static app anymore. Safe to remove
+  `frontend/public/portal/` + root `index.html`/`admin.html` when ready.
 - [ ] Per-credential required-document rules (admin-configurable).
 - [ ] E-signature audit trail / downloadable signed application PDF.
 - [ ] Financial reporting (refunds, receipts export).

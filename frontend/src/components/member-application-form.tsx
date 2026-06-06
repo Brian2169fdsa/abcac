@@ -119,7 +119,7 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
           Thank you, {prefillName}. ABCAC will review your {isRenewal ? "recertification" : "application"} and
           supporting documents. You can track the status in your member portal.
         </p>
-        <Button className="mt-4" onClick={() => (window.location.href = "/portal")}>Go to the portal</Button>
+        <Button className="mt-4" onClick={() => (window.location.href = "/account/applications")}>Track application status</Button>
       </div>
     );
   }

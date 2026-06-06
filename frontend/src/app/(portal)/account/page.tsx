@@ -90,7 +90,7 @@ export default async function AccountPage() {
     <>
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
         <div className="flex gap-4">
-          <CtaButton href="/portal" size="sm">Open Full Portal</CtaButton>
+          <CtaButton href="/account/certifications" size="sm">My Certifications</CtaButton>
           <Link href="/logout" className="self-center text-sm font-semibold text-brand hover:text-brand-600">Log out</Link>
         </div>
       </PageHero>
@@ -233,8 +233,9 @@ export default async function AccountPage() {
           </div>
         )}
         <p className="mt-4 text-sm text-muted">
-          Manage applications, CEUs, and documents in the{" "}
-          <Link href="/portal" className="font-semibold text-brand">full member portal</Link>.
+          Manage your <Link href="/account/applications" className="font-semibold text-brand">applications</Link>,{" "}
+          <Link href="/account/ceus" className="font-semibold text-brand">CEUs</Link>, and{" "}
+          <Link href="/account/documents" className="font-semibold text-brand">documents</Link> from the tabs above.
         </p>
       </Section>
     </>

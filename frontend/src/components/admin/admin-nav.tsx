@@ -10,7 +10,10 @@ const TABS = [
   { label: "Documents", href: "/admin/documents" },
   { label: "CEUs", href: "/admin/ceus" },
   { label: "Applications", href: "/admin/applications" },
+  { label: "Requests", href: "/admin/requests" },
   { label: "Members", href: "/admin/members" },
+  { label: "Send Message", href: "/admin/messaging" },
+  { label: "Create Invoice", href: "/admin/invoices" },
 ];
 
 export function AdminNav() {
