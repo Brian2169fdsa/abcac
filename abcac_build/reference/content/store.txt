@@ -1,0 +1,46 @@
+PAGE: store
+TITLE: Store
+META: 
+============================================================
+Store
+My Account
+Logout
+ABCAC Certification Services & Exam Payments
+Testing, Certification, and Renewal for Addiction Counseling in Arizona
+Payment
+Welcome to the official store for the Arizona Board for the Certification of Addiction Counselors (ABCAC). Here you can submit payments for services including IC&RC testing, initial certification applications, reciprocity transfers, recertification, and remote proctoring fees. Each service listed is designed to support your path toward licensure and professional credentialing in Arizona and through the IC&RC global network.
+Initial Certification – Full Application & Exam Fee (Remote Proctored Exam)
+$425.00
+Button
+CEU Workshop Endorsement (Up to 8 Contact Hours)
+$250.00
+Button
+CEU Workshop Endorsement (9–15 Contact Hours)
+$375.00
+Button
+CEU Workshop Endorsement (More Than 15 Contact Hours)
+$500.00
+Button
+Annual Credential Fee – Approved CEU Providers
+$500.00
+Button
+Certification Renewal – 2-Year Credential Renewal Fee
+$150.00
+Button
+Certification Certification-Only Fee – Already Passed IC&RC Exam
+$150.00
+Button
+Initial Certification – Full Application & Exam Fee
+$375.00
+Button
+Testing for Certification with ABCAC and/or Licensure with AZBBHE Remote Proctored Exam
+$275.00
+Button
+Testing for Certification with ABCAC and/or Licensure with AZBBHE  In person
+$225.00
+Button
+Certification Sync
+$15.00
+Button
+Arizona Board for Certification of Addiction Counselors (ABCAC). All rights reserved.
+ABCAC is an independent member board of the International Certification & Reciprocity Consortium (IC&RC). Unauthorized use of content, logos, or materials is strictly prohibited.
