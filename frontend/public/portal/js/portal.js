@@ -733,8 +733,8 @@ async function loadMessages(memberId) {
       return '<div class="msg-item" onclick="viewMessage(\'' + msg.id + '\')">' +
         '<div class="msg-dot' + (msg.is_read ? ' read' : '') + '"></div>' +
         '<div class="msg-info">' +
-        '<div class="msg-from">' + (msg.from_name || 'ABCAC Admin') + '</div>' +
-        '<div class="msg-subject"' + (!msg.is_read ? ' style="font-weight:600;"' : '') + '>' + (msg.subject || '\u2014') + '</div>' +
+        '<div class="msg-from">' + escHtml(msg.from_name || 'ABCAC Admin') + '</div>' +
+        '<div class="msg-subject"' + (!msg.is_read ? ' style="font-weight:600;"' : '') + '>' + escHtml(msg.subject || '\u2014') + '</div>' +
         '<div class="msg-date">' + formatDate(msg.created_at) + '</div>' +
         '</div></div>';
     }).join('');
@@ -1039,6 +1039,12 @@ async function submitReciprocity() {
 }
 
 // ═══ VIEW MESSAGE ═══
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
 async function viewMessage(messageId) {
   if (!currentUser) return;
 
@@ -1054,10 +1060,10 @@ async function viewMessage(messageId) {
 
     if (msg) {
       const content =
-        '<strong>From:</strong> ' + (msg.from_name || 'ABCAC Admin') + '<br>' +
+        '<strong>From:</strong> ' + escHtml(msg.from_name || 'ABCAC Admin') + '<br>' +
         '<strong>Date:</strong> ' + formatDate(msg.created_at) + '<br>' +
-        '<strong>Subject:</strong> ' + msg.subject + '<br><br>' +
-        (msg.body || '');
+        '<strong>Subject:</strong> ' + escHtml(msg.subject) + '<br><br>' +
+        escHtml(msg.body || '');
 
       // Remove existing modal if present
       const existing = document.getElementById('messageModal');
@@ -1368,7 +1374,7 @@ async function updateHomeStats(certs, ceuRecords, memberId) {
     events.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
     if (events.length > 0) {
       timeline.innerHTML = events.slice(0, 5).map(function(e) {
-        return '<div class="timeline-item"><div class="timeline-dot ' + (e.status || '') + '"></div><div class="tl-title">' + e.title + '</div><div class="tl-desc">' + formatDate(e.date) + '</div></div>';
+        return '<div class="timeline-item"><div class="timeline-dot ' + (e.status || '') + '"></div><div class="tl-title">' + escHtml(e.title) + '</div><div class="tl-desc">' + formatDate(e.date) + '</div></div>';
       }).join('');
     } else {
       timeline.innerHTML = '<div class="timeline-item"><div class="timeline-dot"></div><div class="tl-title">No recent activity</div><div class="tl-desc">Your activity will appear here as you use the portal.</div></div>';

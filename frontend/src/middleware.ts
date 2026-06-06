@@ -30,6 +30,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
+  // Gate the admin area to admins (defense-in-depth; the layout also checks).
+  if (user && path.startsWith("/admin")) {
+    const { data: profile } = await supabase.from("profiles").select("portal_role").eq("id", user.id).maybeSingle();
+    if (!profile || profile.portal_role !== "admin") {
+      const redirect = request.nextUrl.clone();
+      redirect.pathname = "/account";
+      redirect.search = "";
+      return NextResponse.redirect(redirect);
+    }
+  }
+
   // Gate unapproved members to the onboarding/approval flow.
   if (user && path.startsWith("/account") && path !== "/account/onboarding") {
     const { data: profile } = await supabase.from("profiles").select("account_status").eq("id", user.id).maybeSingle();

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 const CATEGORIES = ["General", "Ethics", "Cultural Diversity", "HIV/AIDS"];
 const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
 
 export function CeuSubmitForm() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export function CeuSubmitForm() {
     const file = fileInput?.files?.[0];
     if (!course || !provider || !hours || !category || !date) return setError("Please complete all fields.");
     if (file && file.size > MAX_BYTES) return setError("Certificate must be under 10MB.");
+    if (file && !ALLOWED_EXT.includes((file.name.split(".").pop() || "").toLowerCase())) return setError("Use a PDF, JPG, or PNG.");
 
     setLoading(true);
     try {
