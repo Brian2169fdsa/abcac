@@ -16,6 +16,7 @@ const TABS = [
   { label: "Members", href: "/admin/members" },
   { label: "Send Message", href: "/admin/messaging" },
   { label: "Create Invoice", href: "/admin/invoices" },
+  { label: "Audit Log", href: "/admin/audit" },
 ];
 
 export function AdminNav() {

@@ -22,6 +22,16 @@ export function AppStatusControl({ id, status }: { id: string; status: string | 
         .update({ status: value, reviewed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) { alert("Update failed: " + error.message); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "application_status",
+          target_table: "applications",
+          target_id: id,
+          details: { status: value },
+        });
+      } catch { /* best-effort */ }
       router.refresh();
     } finally {
       setBusy(false);

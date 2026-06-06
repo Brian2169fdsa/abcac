@@ -25,6 +25,16 @@ export function SendMessageForm({ members }: { members: MemberOption[] }) {
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.from("messages").insert({ member_id: memberId, from_name: "ABCAC Admin", subject, body, is_read: false });
       if (error) { setMsg("Failed: " + error.message); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "message_sent",
+          target_table: "messages",
+          target_id: null,
+          details: { member_id: memberId },
+        });
+      } catch { /* best-effort */ }
       f.reset();
       setMsg("Message sent.");
     } finally {

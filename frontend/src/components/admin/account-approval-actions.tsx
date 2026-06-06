@@ -33,6 +33,16 @@ export function AccountApprovalActions({ memberId }: { memberId: string }) {
       if (error) { alert("Approve failed: " + error.message); return; }
       await supabase.from("certifications").update({ status: "active" }).eq("member_id", memberId).eq("status", "pending");
       notify("Your ABCAC account is approved", "Welcome! Your member portal account has been approved. You can now sign in and access the full portal.");
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "account_approved",
+          target_table: "profiles",
+          target_id: memberId,
+          details: null,
+        });
+      } catch { /* best-effort */ }
       router.refresh();
     } finally {
       setBusy(false);
@@ -49,6 +59,16 @@ export function AccountApprovalActions({ memberId }: { memberId: string }) {
         .eq("id", memberId);
       if (error) { alert("Reject failed: " + error.message); return; }
       notify("Your ABCAC account needs changes", "Your registration needs updates before approval." + (note ? " Note: " + note : "") + " Please sign in to update and resubmit.");
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "account_rejected",
+          target_table: "profiles",
+          target_id: memberId,
+          details: { note },
+        });
+      } catch { /* best-effort */ }
       router.refresh();
     } finally {
       setBusy(false);

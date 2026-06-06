@@ -22,6 +22,16 @@ export function ReviewActions({ table, id, status }: { table: "documents" | "ceu
       }
       const { error } = await supabase.from(table).update(patch).eq("id", id);
       if (error) { alert("Update failed: " + error.message); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: `${table}_${next}`,
+          target_table: table,
+          target_id: id,
+          details: { status: next },
+        });
+      } catch { /* best-effort */ }
       router.refresh();
     } finally {
       setBusy(false);

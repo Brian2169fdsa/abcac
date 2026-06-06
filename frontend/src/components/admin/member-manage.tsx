@@ -25,6 +25,16 @@ export function MemberManage({ id, accountStatus, role }: { id: string; accountS
         .update({ account_status: acct, portal_role: r, account_reviewed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) { alert("Save failed: " + error.message); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "member_update",
+          target_table: "profiles",
+          target_id: id,
+          details: { account_status: acct, portal_role: r },
+        });
+      } catch { /* best-effort */ }
       router.refresh();
     } finally {
       setBusy(false);

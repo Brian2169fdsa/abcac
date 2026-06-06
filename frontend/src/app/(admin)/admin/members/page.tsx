@@ -1,4 +1,5 @@
 import { MemberManage } from "@/components/admin/member-manage";
+import { IssueCertForm } from "@/components/admin/issue-cert-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +10,25 @@ export default async function AdminMembers() {
   const { data } = await sb.from("profiles").select("*").order("created_at", { ascending: false });
   const rows = data ?? [];
 
+  const memberOptions = rows.map((p: any) => ({
+    id: p.id as string,
+    label: [
+      [p.first_name, p.last_name].filter(Boolean).join(" ") || null,
+      p.email ? `(${p.email})` : null,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  }));
+
   return (
     <>
       <h1 className="text-2xl font-bold">Members</h1>
       <p className="mb-6 text-muted">Directory of all member accounts. Adjust account status or role and save.</p>
+
+      <h2 className="mb-3 text-lg font-semibold">Issue a certification</h2>
+      <div className="mb-8">
+        <IssueCertForm members={memberOptions} />
+      </div>
       <div className="overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full text-sm">
           <thead>

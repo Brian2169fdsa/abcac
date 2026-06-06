@@ -23,11 +23,22 @@ export function CreateInvoiceForm({ members }: { members: MemberOption[] }) {
     try {
       const supabase = createSupabaseBrowserClient();
       const invoiceNumber = "INV-" + Date.now().toString(36).toUpperCase();
+      const amount_cents = Math.round(amount * 100);
       const { error } = await supabase.from("invoices").insert({
         member_id: memberId, invoice_number: invoiceNumber, description: desc,
-        amount_cents: Math.round(amount * 100), status: "unpaid",
+        amount_cents, status: "unpaid",
       });
       if (error) { setMsg("Failed: " + error.message); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "invoice_created",
+          target_table: "invoices",
+          target_id: null,
+          details: { member_id: memberId, amount_cents },
+        });
+      } catch { /* best-effort */ }
       f.reset();
       setMsg(`Invoice ${invoiceNumber} created.`);
     } finally {

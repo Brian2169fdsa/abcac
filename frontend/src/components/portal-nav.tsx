@@ -13,6 +13,7 @@ const TABS = [
   { label: "Experience", href: "/account/experience" },
   { label: "Apply", href: "/account/apply" },
   { label: "Recertify", href: "/account/renew" },
+  { label: "Renewals", href: "/account/renewals" },
   { label: "Requests", href: "/account/requests" },
   { label: "Invoices", href: "/account/invoices" },
   { label: "Messages", href: "/account/messages" },
