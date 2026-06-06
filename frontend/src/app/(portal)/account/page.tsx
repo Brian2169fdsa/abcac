@@ -92,7 +92,11 @@ export default async function AccountPage() {
 
       {/* Quick actions */}
       <Section compact>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/account/applications" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
+            <h3 className="text-base">Application Status</h3>
+            <p className="mt-1 text-sm text-muted">Track where your applications stand.</p>
+          </Link>
           <Link href="/account/apply" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
             <h3 className="text-base">Apply for Certification</h3>
             <p className="mt-1 text-sm text-muted">Submit a new application + documents.</p>
@@ -101,9 +105,9 @@ export default async function AccountPage() {
             <h3 className="text-base">Submit Recertification</h3>
             <p className="mt-1 text-sm text-muted">Report CEUs and renew your credential.</p>
           </Link>
-          <Link href="/portal" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
-            <h3 className="text-base">Full Member Portal</h3>
-            <p className="mt-1 text-sm text-muted">CEU tracker, documents, messages, and more.</p>
+          <Link href="/account/documents" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
+            <h3 className="text-base">Documents</h3>
+            <p className="mt-1 text-sm text-muted">Upload and track your paperwork.</p>
           </Link>
         </div>
       </Section>
