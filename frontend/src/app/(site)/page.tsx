@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { Award, ClipboardCheck, RefreshCw, Globe } from "lucide-react";
 import { Section } from "@/components/section";
@@ -8,6 +9,18 @@ import { TrustBadge } from "@/components/trust-badge";
 import { getProductBySlug } from "@/lib/catalog";
 import { PriceTag } from "@/components/price-tag";
 import { siteConfig } from "@/lib/site-config";
+
+export const metadata: Metadata = {
+  title: "ABCAC — Arizona Board for Certification of Addiction Counselors",
+  description:
+    "Setting the Standard for Addiction Counselor Certification in Arizona. Apply for initial certification, renew credentials, register for IC&RC exams, and explore reciprocity.",
+  openGraph: {
+    title: "ABCAC — Arizona Board for Certification of Addiction Counselors",
+    description:
+      "Setting the Standard for Addiction Counselor Certification in Arizona. Apply for initial certification, renew credentials, register for IC&RC exams, and explore reciprocity.",
+    url: "/",
+  },
+};
 
 const stats = [
   { value: "1200+", label: "Certified Professionals in Arizona", sublabel: "And growing every year across clinical, prevention, and peer support domains." },

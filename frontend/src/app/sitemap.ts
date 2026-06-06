@@ -1,0 +1,68 @@
+import type { MetadataRoute } from "next";
+import { getProducts } from "@/lib/catalog";
+import { getPosts } from "@/lib/blog";
+
+const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+const staticPrimaryRoutes = [
+  "choose-your-cert-path",
+  "initial-certification",
+  "certification-renewal",
+  "ceu",
+  "ic-rc",
+  "reciprocity",
+  "testing",
+  "contact",
+  "faq",
+];
+
+const staticSecondaryRoutes = [
+  "remote-or-inperson",
+  "initial-or-renewal",
+  "blog",
+  "store",
+];
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const products = getProducts();
+  const posts = getPosts();
+
+  const homepageEntry: MetadataRoute.Sitemap[number] = {
+    url: `${base}/`,
+    priority: 1,
+    changeFrequency: "weekly",
+  };
+
+  const primaryEntries: MetadataRoute.Sitemap = staticPrimaryRoutes.map((route) => ({
+    url: `${base}/${route}`,
+    priority: 0.8,
+    changeFrequency: "monthly" as const,
+  }));
+
+  const secondaryEntries: MetadataRoute.Sitemap = staticSecondaryRoutes.map((route) => ({
+    url: `${base}/${route}`,
+    priority: 0.6,
+    changeFrequency: "monthly" as const,
+  }));
+
+  const productEntries: MetadataRoute.Sitemap = products.map((product) => ({
+    url: `${base}/store/${product.slug}`,
+    priority: 0.6,
+    changeFrequency: "monthly" as const,
+  }));
+
+  const postEntries: MetadataRoute.Sitemap = posts.map((post) => ({
+    url: `${base}/blog/${post.slug}`,
+    lastModified: new Date(post.date),
+    priority: 0.6,
+    changeFrequency: "yearly" as const,
+  }));
+
+  return [
+    homepageEntry,
+    ...primaryEntries,
+    ...secondaryEntries,
+    ...productEntries,
+    ...postEntries,
+  ];
+}
