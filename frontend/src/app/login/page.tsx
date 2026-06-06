@@ -50,7 +50,10 @@ function LoginInner() {
           <input id="email" name="email" type="email" className={field} required autoComplete="email" />
         </div>
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-semibold">Password</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label htmlFor="password" className="block text-sm font-semibold">Password</label>
+            <Link href="/forgot" className="text-xs font-semibold text-brand hover:text-brand-600">Forgot password?</Link>
+          </div>
           <input id="password" name="password" type="password" className={field} required autoComplete="current-password" />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -59,8 +62,10 @@ function LoginInner() {
         </Button>
       </form>
       <p className="mt-4 text-center text-sm text-muted">
-        Need help accessing your account?{" "}
-        <Link href="/contact" className="font-semibold text-brand">Contact ABCAC</Link>
+        New to ABCAC? <Link href="/signup" className="font-semibold text-brand">Create an account</Link>
+      </p>
+      <p className="mt-2 text-center text-sm text-muted">
+        Need help? <Link href="/contact" className="font-semibold text-brand">Contact ABCAC</Link>
       </p>
     </div>
   );
