@@ -83,6 +83,22 @@ function setButtonLoading(btn, loading) {
   }
 }
 
+// ═══ FILE UPLOAD VALIDATION ═══
+var MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+var ALLOWED_UPLOAD_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
+
+function validateUpload(file) {
+  if (!file) return { ok: true };
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { ok: false, msg: 'File is too large. Maximum size is 10MB.' };
+  }
+  var ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (ALLOWED_UPLOAD_EXT.indexOf(ext) === -1) {
+    return { ok: false, msg: 'Unsupported file type. Please upload a PDF, JPG, or PNG.' };
+  }
+  return { ok: true };
+}
+
 // ═══ AUTH: SIGN IN ═══
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
@@ -829,6 +845,9 @@ async function submitCEU() {
     return;
   }
 
+  var ceuCheck = validateUpload(file);
+  if (!ceuCheck.ok) { showNotification(ceuCheck.msg, 'warning'); return; }
+
   try {
     let certificateUrl = null;
     if (file) {
@@ -876,6 +895,9 @@ async function uploadDocument() {
     return;
   }
 
+  var docCheck = validateUpload(file);
+  if (!docCheck.ok) { showNotification(docCheck.msg, 'warning'); return; }
+
   try {
     const filePath = currentUser.id + '/' + Date.now() + '_' + file.name;
     const { data: upload, error: uploadErr } = await supabase.storage
@@ -918,6 +940,9 @@ async function submitNameChange() {
     showNotification('Please fill in all required fields.', 'warning');
     return;
   }
+
+  var ncCheck = validateUpload(file);
+  if (!ncCheck.ok) { showNotification(ncCheck.msg, 'warning'); return; }
 
   try {
     let docPath = null;
