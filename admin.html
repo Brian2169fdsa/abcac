@@ -128,6 +128,7 @@ tr:last-child td{border-bottom:none;}
     <div class="brand"><b>ABCAC</b><span>Admin Console</span></div>
     <nav class="nav">
       <a data-page="dashboard" class="active" onclick="nav('dashboard')">Dashboard</a>
+      <a data-page="approvals" onclick="nav('approvals')">Account Approvals <span class="count zero" id="cntApprovals">0</span></a>
       <a data-page="documents" onclick="nav('documents')">Documents <span class="count zero" id="cntDocs">0</span></a>
       <a data-page="ceus" onclick="nav('ceus')">CEU Review <span class="count zero" id="cntCeus">0</span></a>
       <a data-page="applications" onclick="nav('applications')">Applications <span class="count zero" id="cntApps">0</span></a>
@@ -158,8 +159,19 @@ tr:last-child td{border-bottom:none;}
           <div class="stat" onclick="nav('ceus')"><div class="n" id="sCeus">—</div><div class="l">CEUs pending</div></div>
           <div class="stat" onclick="nav('applications')"><div class="n" id="sApps">—</div><div class="l">Applications open</div></div>
           <div class="stat" onclick="nav('requests')"><div class="n" id="sReqs">—</div><div class="l">Requests pending</div></div>
+          <div class="stat" onclick="nav('approvals')"><div class="n" id="sApprovals">—</div><div class="l">Accounts to approve</div></div>
           <div class="stat" onclick="nav('members')"><div class="n" id="sMembers">—</div><div class="l">Total members</div></div>
         </div>
+      </div>
+
+      <!-- Account Approvals -->
+      <div class="page" id="page-approvals">
+        <h1 class="page-h">Account Approvals</h1>
+        <div class="page-sub">Review and approve new certificate-holder registrations</div>
+        <div class="card"><div class="card-b"><div style="overflow-x:auto;"><table>
+          <thead><tr><th>Member</th><th>Email</th><th>Phone</th><th>Certifications</th><th>Submitted</th><th>Actions</th></tr></thead>
+          <tbody id="approvalsBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        </table></div></div></div>
       </div>
 
       <!-- Documents -->

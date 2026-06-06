@@ -21,12 +21,24 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data: { user } } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
 
-  if (!user && request.nextUrl.pathname.startsWith("/account")) {
+  if (!user && path.startsWith("/account")) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
-    redirect.searchParams.set("next", request.nextUrl.pathname);
+    redirect.searchParams.set("next", path);
     return NextResponse.redirect(redirect);
+  }
+
+  // Gate unapproved members to the onboarding/approval flow.
+  if (user && path.startsWith("/account") && path !== "/account/onboarding") {
+    const { data: profile } = await supabase.from("profiles").select("account_status").eq("id", user.id).maybeSingle();
+    if (profile && profile.account_status !== "approved") {
+      const redirect = request.nextUrl.clone();
+      redirect.pathname = "/account/onboarding";
+      redirect.search = "";
+      return NextResponse.redirect(redirect);
+    }
   }
 
   return response;

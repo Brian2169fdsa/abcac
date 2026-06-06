@@ -133,8 +133,65 @@ function nav(page) {
 // ═══ LOAD EVERYTHING ═══
 async function loadEverything() {
   await Promise.all([
-    loadDocuments(), loadCEUs(), loadApplications(), loadRequests(), loadMembers()
+    loadAccountApprovals(), loadDocuments(), loadCEUs(), loadApplications(), loadRequests(), loadMembers()
   ]);
+}
+
+// ═══ ACCOUNT APPROVALS ═══
+async function loadAccountApprovals() {
+  const body = document.getElementById('approvalsBody');
+  if (!body) return;
+  // Pending accounts that have been submitted for review.
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*, certifications(cert_type,cert_number,status)')
+    .eq('account_status', 'pending')
+    .not('account_submitted_at', 'is', null)
+    .order('account_submitted_at', { ascending: true });
+  if (error) { body.innerHTML = '<tr><td colspan="6" class="empty">Error loading.</td></tr>'; return; }
+  setCount('sApprovals', 'cntApprovals', (data || []).length);
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="6" class="empty">No accounts awaiting approval.</td></tr>'; return; }
+  body.innerHTML = data.map(function (p) {
+    var certs = (p.certifications || []).filter(function (c) { return c.status === 'pending'; })
+      .map(function (c) { return esc(c.cert_type) + (c.cert_number ? ' (' + esc(c.cert_number) + ')' : ''); }).join(', ') || '—';
+    return '<tr>' +
+      '<td>' + memberName(p) + '</td>' +
+      '<td>' + esc(p.email) + '</td>' +
+      '<td>' + esc(p.phone || '—') + '</td>' +
+      '<td>' + certs + '</td>' +
+      '<td>' + fmtDate(p.account_submitted_at) + '</td>' +
+      '<td><div class="row-actions">' +
+      '<button class="btn btn-sm btn-green" onclick="approveAccount(\'' + p.id + '\')">Approve</button>' +
+      '<button class="btn btn-sm btn-red" onclick="rejectAccount(\'' + p.id + '\')">Reject</button>' +
+      '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function approveAccount(id) {
+  const { error } = await supabase.from('profiles')
+    .update({ account_status: 'approved', account_reviewed_at: new Date().toISOString(), account_review_notes: null })
+    .eq('id', id);
+  if (error) { toast('Approve failed: ' + error.message, 'error'); return; }
+  // Activate the member's self-reported certifications.
+  await supabase.from('certifications').update({ status: 'active' }).eq('member_id', id).eq('status', 'pending');
+  await audit('account_approved', 'profiles', id, null);
+  notifyMember(id, 'Your ABCAC account is approved', 'Welcome! Your member portal account has been approved. You can now sign in and access the full portal.');
+  toast('Account approved.', 'success');
+  loadAccountApprovals();
+}
+
+function rejectAccount(id) {
+  promptNotes('Account', 'rejected', async function (notes) {
+    const { error } = await supabase.from('profiles')
+      .update({ account_status: 'rejected', account_reviewed_at: new Date().toISOString(), account_review_notes: notes || null })
+      .eq('id', id);
+    if (error) { toast('Reject failed: ' + error.message, 'error'); return; }
+    await audit('account_rejected', 'profiles', id, { notes: notes });
+    notifyMember(id, 'Your ABCAC account needs changes', 'Your account registration needs updates before approval.' + (notes ? ' Note: ' + notes : '') + ' Please sign in to update and resubmit.');
+    toast('Account marked for changes.', 'success');
+    loadAccountApprovals();
+  });
 }
 
 function setCount(elId, navId, n) {
