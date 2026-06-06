@@ -61,6 +61,10 @@ export default function InitialCertificationPage() {
             <CtaButton href={`/store/${certOnly.slug}`} variant="ghost" size="sm">Certification-only fee</CtaButton>
           )}
         </p>
+        <div className="mt-8 rounded-xl border border-line bg-bg p-5">
+          <p className="text-muted">Already paid? Submit your application and documents online.</p>
+          <CtaButton href="/account/apply" variant="outline" className="mt-3">Begin Your Application</CtaButton>
+        </div>
       </Section>
 
       <Section surface eyebrow="Credentials" title="Explore your certification path">

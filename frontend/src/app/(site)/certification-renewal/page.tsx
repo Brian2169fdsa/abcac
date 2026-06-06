@@ -47,6 +47,10 @@ export default function CertificationRenewalPage() {
           )}
           <CtaButton href="/ceu" variant="outline">Continuing Education Info</CtaButton>
         </div>
+        <div className="mt-8 rounded-xl border border-line bg-bg p-5">
+          <p className="text-muted">Paid your renewal fee? Submit your recertification and CE certificates online.</p>
+          <CtaButton href="/account/renew" variant="outline" className="mt-3">Submit Recertification</CtaButton>
+        </div>
       </Section>
 
       <Section surface compact title="Recertification packages">
