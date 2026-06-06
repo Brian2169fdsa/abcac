@@ -252,8 +252,23 @@ async function doLogout() {
   showNotification('You have been signed out.', 'info');
 }
 
+// ═══ PAYMENT RETURN HANDLER (from Stripe Checkout) ═══
+function handlePaymentReturn() {
+  var params = new URLSearchParams(window.location.search);
+  var payment = params.get('payment');
+  if (!payment) return;
+  if (payment === 'success') {
+    showNotification('Payment received — thank you! Your invoice will update shortly.', 'success');
+  } else if (payment === 'cancelled') {
+    showNotification('Payment cancelled. You can pay your invoice anytime.', 'info');
+  }
+  // Clean the query string so the message doesn't repeat on refresh.
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 // ═══ SESSION CHECK ON PAGE LOAD ═══
 window.addEventListener('DOMContentLoaded', async function() {
+  handlePaymentReturn();
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -715,14 +730,47 @@ async function loadMessages(memberId) {
 // ═══ LOAD INVOICES ═══
 async function loadInvoices(memberId) {
   return loadTableData('invoices', memberId, 'invoicesTableBody', function(inv) {
+    var action;
+    if (inv.status === 'paid') {
+      action = 'Paid ' + formatDate(inv.paid_at);
+    } else {
+      action = '<button class="btn btn-sm btn-gold" onclick="payInvoice(\'' + inv.id + '\')">Pay Now</button>';
+    }
     return '<tr>' +
       '<td>' + (inv.invoice_number || '\u2014') + '</td>' +
       '<td>' + (inv.description || '\u2014') + '</td>' +
+      '<td>' + formatDate(inv.created_at) + '</td>' +
       '<td>' + formatCurrency(inv.amount_cents) + '</td>' +
       '<td>' + getStatusBadge(inv.status) + '</td>' +
-      '<td>' + (inv.paid_at ? formatDate(inv.paid_at) : '\u2014') + '</td>' +
+      '<td>' + action + '</td>' +
       '</tr>';
   });
+}
+
+// \u2550\u2550\u2550 PAY AN INVOICE (Stripe Checkout via Edge Function) \u2550\u2550\u2550
+async function payInvoice(invoiceId) {
+  if (!currentUser) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/create-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (session ? session.access_token : '')
+      },
+      body: JSON.stringify({ invoice_id: invoiceId, origin: window.location.origin })
+    });
+    const result = await resp.json();
+    if (!resp.ok || !result.url) {
+      showNotification(result.error === 'payments_not_configured'
+        ? 'Online payment is not yet enabled. Please contact ABCAC to pay this invoice.'
+        : 'Could not start checkout. Please try again.', 'warning');
+      return;
+    }
+    window.location.href = result.url; // Redirect to Stripe Checkout
+  } catch (err) {
+    showNotification('Could not start checkout. Please try again.', 'error');
+  }
 }
 
 // ═══ LOAD EMPLOYMENT RECORDS ═══
