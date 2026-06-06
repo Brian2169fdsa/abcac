@@ -333,13 +333,15 @@ async function loadPortal(user) {
       loadEmploymentRecords(user.id),
       loadOtherCertifications(user.id),
       loadApplications(user.id),
-      loadNotificationPrefs(user.id)
+      loadNotificationPrefs(user.id),
+      loadSupervision(user.id)
     ]);
 
     // Update home page with dynamic stats
     var certs = results[0] || [];
     var ceuRecords = results[1] || [];
     updateHomeStats(certs, ceuRecords, user.id);
+    loadRenewal(certs, ceuRecords);
   } catch (err) {
     console.error('Error loading portal:', err);
     showNotification('Error loading portal data. Please refresh.', 'error');
@@ -443,16 +445,109 @@ async function loadTableData(tableName, memberId, tbodyId, rowRenderer, orderCol
 
 // ═══ LOAD CERTIFICATIONS ═══
 async function loadCertifications(memberId) {
-  return loadTableData('certifications', memberId, 'certsTableBody', function(cert) {
-    return '<tr>' +
-      '<td>' + (cert.cert_type || '\u2014') + '</td>' +
-      '<td>' + (cert.cert_number || '\u2014') + '</td>' +
-      '<td>' + (cert.ic_rc_level || '\u2014') + '</td>' +
-      '<td>' + formatDate(cert.issued_date) + '</td>' +
-      '<td>' + formatDate(cert.expiration_date) + '</td>' +
-      '<td>' + getStatusBadge(cert.status) + '</td>' +
-      '</tr>';
-  });
+  const tbody = document.getElementById('certsTableBody');
+  try {
+    const { data, error } = await supabase
+      .from('certifications')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('issued_date', { ascending: false });
+
+    window._certs = data || [];
+
+    if (tbody) {
+      if (error || !data || !data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:24px;">No certifications issued yet.</td></tr>';
+      } else {
+        tbody.innerHTML = data.map(function(cert) {
+          var actions = getStatusBadge(cert.status);
+          if (cert.status === 'active') {
+            actions += ' <button class="btn btn-sm btn-outline" onclick="downloadCertificate(\'' + cert.id + '\')">Certificate</button>' +
+                       ' <button class="btn btn-sm btn-outline" onclick="downloadWalletCard(\'' + cert.id + '\')">Wallet Card</button>';
+          }
+          return '<tr>' +
+            '<td>' + (cert.cert_type || '\u2014') + '</td>' +
+            '<td>' + (cert.cert_number || '\u2014') + '</td>' +
+            '<td>' + formatDate(cert.issued_date) + '</td>' +
+            '<td>' + formatDate(cert.expiration_date) + '</td>' +
+            '<td>' + (cert.ic_rc_level || '\u2014') + '</td>' +
+            '<td><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + actions + '</div></td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+    return data || [];
+  } catch (err) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:24px;">Error loading certifications.</td></tr>';
+    return [];
+  }
+}
+
+// \u2550\u2550\u2550 CERTIFICATE & WALLET CARD (printable PDF via browser) \u2550\u2550\u2550
+function findCert(certId) {
+  return (window._certs || []).find(function(c) { return c.id === certId; });
+}
+
+function openPrintWindow(html) {
+  var w = window.open('', '_blank');
+  if (!w) { showNotification('Please allow pop-ups to download your certificate.', 'warning'); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function() { w.print(); }, 400);
+}
+
+function downloadCertificate(certId) {
+  var cert = findCert(certId);
+  if (!cert || !currentProfile) return;
+  var name = ((currentProfile.first_name || '') + ' ' + (currentProfile.last_name || '')).trim();
+  openPrintWindow(
+    '<!DOCTYPE html><html><head><title>ABCAC Certificate</title><style>' +
+    '@page{size:landscape;margin:0;}body{margin:0;font-family:Georgia,serif;}' +
+    '.cert{width:100%;height:100vh;box-sizing:border-box;padding:60px;text-align:center;' +
+    'border:18px solid #7B1A1A;outline:3px solid #C5A55A;outline-offset:-30px;display:flex;' +
+    'flex-direction:column;justify-content:center;align-items:center;color:#3a2d2d;}' +
+    'h1{color:#7B1A1A;font-size:34px;letter-spacing:2px;margin:0 0 6px;}' +
+    '.sub{color:#C5A55A;text-transform:uppercase;letter-spacing:4px;font-size:14px;margin-bottom:40px;}' +
+    '.name{font-size:42px;margin:18px 0;border-bottom:2px solid #C5A55A;padding-bottom:10px;}' +
+    '.body{font-size:18px;max-width:680px;line-height:1.6;}' +
+    '.meta{margin-top:34px;font-size:14px;color:#6B5;}.meta b{color:#3a2d2d;}' +
+    '.row{display:flex;gap:60px;margin-top:30px;font-size:14px;}</style></head><body>' +
+    '<div class="cert">' +
+    '<h1>Arizona Board for Certification of Addiction Counselors</h1>' +
+    '<div class="sub">Certifies that</div>' +
+    '<div class="name">' + name + '</div>' +
+    '<div class="body">has met all requirements and is hereby recognized as a<br><strong>' +
+    (cert.cert_type || '') + '</strong>' + (cert.ic_rc_level ? ' (' + cert.ic_rc_level + ')' : '') + '</div>' +
+    '<div class="row">' +
+    '<div>Certificate No.<br><b>' + (cert.cert_number || '\u2014') + '</b></div>' +
+    '<div>Issued<br><b>' + formatDate(cert.issued_date) + '</b></div>' +
+    '<div>Valid Through<br><b>' + formatDate(cert.expiration_date) + '</b></div>' +
+    '</div></div></body></html>'
+  );
+}
+
+function downloadWalletCard(certId) {
+  var cert = findCert(certId);
+  if (!cert || !currentProfile) return;
+  var name = ((currentProfile.first_name || '') + ' ' + (currentProfile.last_name || '')).trim();
+  openPrintWindow(
+    '<!DOCTYPE html><html><head><title>ABCAC Wallet Card</title><style>' +
+    'body{margin:0;font-family:Arial,sans-serif;display:flex;justify-content:center;padding:40px;}' +
+    '.card{width:340px;height:214px;border-radius:14px;background:linear-gradient(135deg,#7B1A1A,#9B2C2C);' +
+    'color:#fff;padding:20px;box-sizing:border-box;box-shadow:0 4px 16px rgba(0,0,0,.3);}' +
+    '.t{font-size:12px;letter-spacing:1px;color:#E9D29A;text-transform:uppercase;}' +
+    '.org{font-size:13px;font-weight:bold;margin-bottom:18px;}' +
+    '.nm{font-size:20px;font-weight:bold;}.cr{font-size:15px;color:#E9D29A;margin:4px 0 14px;}' +
+    '.f{display:flex;justify-content:space-between;font-size:11px;color:#f0dede;}' +
+    '@media print{body{padding:0;}}</style></head><body>' +
+    '<div class="card"><div class="t">Arizona Board for Certification</div>' +
+    '<div class="org">of Addiction Counselors</div>' +
+    '<div class="nm">' + name + '</div>' +
+    '<div class="cr">' + (cert.cert_type || '') + (cert.cert_number ? ' \u00b7 ' + cert.cert_number : '') + '</div>' +
+    '<div class="f"><span>Issued: ' + formatDate(cert.issued_date) + '</span>' +
+    '<span>Expires: ' + formatDate(cert.expiration_date) + '</span></div></div></body></html>'
+  );
 }
 
 // ═══ LOAD CEU RECORDS ═══
@@ -539,15 +634,29 @@ async function loadCEURecords(memberId) {
 // ═══ LOAD DOCUMENTS ═══
 async function loadDocuments(memberId) {
   return loadTableData('documents', memberId, 'docsTableBody', function(doc) {
+    var path = (doc.file_path || '').replace(/'/g, "\\'");
     return '<tr>' +
+      '<td><strong>' + (doc.file_name || '\u2014') + '</strong></td>' +
       '<td>' + (doc.document_type || '\u2014') + '</td>' +
-      '<td>' + (doc.related_cert || '\u2014') + '</td>' +
-      '<td>' + (doc.file_name || '\u2014') + '</td>' +
-      '<td>' + (doc.file_size_kb ? doc.file_size_kb + ' KB' : '\u2014') + '</td>' +
       '<td>' + formatDate(doc.uploaded_at) + '</td>' +
       '<td>' + getStatusBadge(doc.status) + '</td>' +
+      '<td>' + (doc.file_path ? '<button class="btn btn-sm btn-outline" onclick="downloadDocument(\'' + path + '\')">View</button>' : '\u2014') + '</td>' +
       '</tr>';
   }, 'uploaded_at');
+}
+
+// \u2550\u2550\u2550 DOWNLOAD / VIEW A MEMBER DOCUMENT \u2550\u2550\u2550
+async function downloadDocument(filePath) {
+  if (!filePath) return;
+  try {
+    const { data, error } = await supabase.storage
+      .from('member-documents')
+      .createSignedUrl(filePath, 3600);
+    if (error || !data) throw error || new Error('No URL');
+    window.open(data.signedUrl, '_blank');
+  } catch (err) {
+    showNotification('Could not open document.', 'error');
+  }
 }
 
 // ═══ LOAD MESSAGES ═══
@@ -652,7 +761,7 @@ async function loadApplications(memberId) {
       '<td>' + (app.est_completion ? formatDate(app.est_completion) : '\u2014') + '</td>' +
       '<td>' + getStatusBadge(app.status) + '</td>' +
       '</tr>';
-  });
+  }, 'submitted_at');
 }
 
 // ═══ CEU SUBMISSION ═══
@@ -1237,5 +1346,184 @@ async function changePassword() {
     showNotification('Password updated successfully.', 'success');
   } catch (err) {
     showNotification('Failed to update password: ' + (err.message || 'Unknown error'), 'error');
+  }
+}
+
+// ═══ APPLICATION SUBMISSION ═══
+async function submitApplication() {
+  if (!currentUser) return;
+  var appType = (document.getElementById('appType') || {}).value;
+  var certType = (document.getElementById('appCertType') || {}).value;
+
+  if (!appType || !certType) {
+    showNotification('Please select an application type and certification.', 'warning');
+    return;
+  }
+
+  try {
+    var { error } = await supabase.from('applications').insert({
+      member_id: currentUser.id,
+      app_type: appType,
+      cert_type: certType,
+      status: 'submitted'
+    });
+    if (error) throw error;
+    if (document.getElementById('appType')) document.getElementById('appType').value = '';
+    if (document.getElementById('appCertType')) document.getElementById('appCertType').value = '';
+    await loadApplications(currentUser.id);
+    showNotification('Application submitted! Upload your supporting documents next.', 'success');
+  } catch (err) {
+    showNotification('Submission failed: ' + (err.message || 'Unknown error'), 'error');
+  }
+}
+
+// ═══ CERTIFICATION RENEWAL ═══
+var RENEWAL_FEE_CENTS = 15000; // $150
+var REQUIRED_CEU_HOURS = 40;
+
+function loadRenewal(certs, ceuRecords) {
+  var tbody = document.getElementById('renewalTableBody');
+  if (!tbody) return;
+
+  var active = (certs || []).filter(function(c) { return c.status === 'active'; });
+  if (!active.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:24px;">No certifications are currently eligible for renewal.</td></tr>';
+    return;
+  }
+
+  var approvedHours = (ceuRecords || [])
+    .filter(function(r) { return r.status === 'approved'; })
+    .reduce(function(sum, r) { return sum + parseFloat(r.hours || 0); }, 0);
+  var ceuMet = approvedHours >= REQUIRED_CEU_HOURS;
+  var ceuStatus = ceuMet
+    ? getStatusBadge('completed')
+    : '<span style="color:var(--amber);font-size:13px;">' + approvedHours + ' / ' + REQUIRED_CEU_HOURS + ' hrs</span>';
+
+  tbody.innerHTML = active.map(function(cert) {
+    var btn = '<button class="btn btn-sm btn-gold" onclick="requestRenewal(\'' + cert.id + '\',\'' + (cert.cert_type || '') + '\')">Pay Renewal Fee</button>';
+    return '<tr>' +
+      '<td>' + (cert.cert_type || '—') + '</td>' +
+      '<td>' + (cert.cert_number || '—') + '</td>' +
+      '<td>' + formatDate(cert.expiration_date) + '</td>' +
+      '<td>' + ceuStatus + '</td>' +
+      '<td>' + formatCurrency(RENEWAL_FEE_CENTS) + '</td>' +
+      '<td>' + btn + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function requestRenewal(certId, certType) {
+  if (!currentUser) return;
+  try {
+    var { error } = await supabase.from('applications').insert({
+      member_id: currentUser.id,
+      app_type: 'renewal',
+      cert_type: certType || null,
+      status: 'submitted'
+    });
+    if (error) throw error;
+    showNotification('Renewal request submitted. ABCAC will issue an invoice for the $150 fee, payable in your Invoices page.', 'success');
+    await loadApplications(currentUser.id);
+  } catch (err) {
+    showNotification('Renewal request failed: ' + (err.message || 'Unknown error'), 'error');
+  }
+}
+
+async function requestSync() {
+  if (!currentUser) return;
+  try {
+    var { error } = await supabase.from('applications').insert({
+      member_id: currentUser.id,
+      app_type: 'certification_sync',
+      status: 'submitted'
+    });
+    if (error) throw error;
+    showNotification('Certification sync request submitted. ABCAC will calculate the prorated fee and invoice you.', 'success');
+  } catch (err) {
+    showNotification('Sync request failed: ' + (err.message || 'Unknown error'), 'error');
+  }
+}
+
+// ═══ CLINICAL SUPERVISION RECORDS ═══
+async function loadSupervision(userId) {
+  var tbody = document.getElementById('supervisionTableBody');
+  if (!tbody) return [];
+  try {
+    var { data, error } = await supabase
+      .from('supervision_records')
+      .select('*')
+      .eq('supervisor_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error || !data || !data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px;">No Records have been added. Click <strong>+ Add New Records</strong> to add Records.</td></tr>';
+      return data || [];
+    }
+    tbody.innerHTML = data.map(function(s) {
+      return '<tr>' +
+        '<td>' + (s.supervisee_name || '—') + '</td>' +
+        '<td>' + (s.supervisee_credential || '—') + '</td>' +
+        '<td>' + formatDate(s.start_date) + '</td>' +
+        '<td>' + (s.end_date ? formatDate(s.end_date) : 'Present') + '</td>' +
+        '<td>' + getStatusBadge(s.status) + '</td>' +
+        '</tr>';
+    }).join('');
+    return data;
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red);padding:24px;">Error loading records.</td></tr>';
+    return [];
+  }
+}
+
+function addSupervisionRecord() {
+  if (!currentUser) return;
+  var existing = document.getElementById('supModal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'supModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:32px;max-width:500px;width:90%;">' +
+    '<h3 style="margin-bottom:16px;">Add Supervision Record</h3>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Supervisee Name *</span><input id="supName" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="display:block;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;">Supervisee Credential</span><input id="supCred" class="form-input" style="width:100%;margin-top:4px;" placeholder="e.g. CAC applicant"></label>' +
+    '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">Start Date</span><input type="date" id="supStart" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '<label style="flex:1;"><span style="font-size:13px;font-weight:600;">End Date</span><input type="date" id="supEnd" class="form-input" style="width:100%;margin-top:4px;"></label>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'supModal\').remove()">Cancel</button>' +
+    '<button class="btn btn-sm btn-primary" onclick="submitSupervisionRecord()">Add Record</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+
+async function submitSupervisionRecord() {
+  if (!currentUser) return;
+  var name = document.getElementById('supName').value.trim();
+  var cred = document.getElementById('supCred').value.trim();
+  var start = document.getElementById('supStart').value;
+  var end = document.getElementById('supEnd').value;
+
+  if (!name) {
+    showNotification('Please provide the supervisee name.', 'warning');
+    return;
+  }
+  try {
+    var { error } = await supabase.from('supervision_records').insert({
+      supervisor_id: currentUser.id,
+      supervisee_name: name,
+      supervisee_credential: cred || null,
+      start_date: start || null,
+      end_date: end || null,
+      status: end ? 'completed' : 'active'
+    });
+    if (error) throw error;
+    document.getElementById('supModal').remove();
+    await loadSupervision(currentUser.id);
+    showNotification('Supervision record added.', 'success');
+  } catch (err) {
+    showNotification('Failed to add record: ' + (err.message || 'Unknown error'), 'error');
   }
 }
