@@ -76,6 +76,17 @@ Deno.serve(async (req) => {
 });
 
 async function handleStatusChange(admin: ReturnType<typeof createClient>, table: string, record: Record<string, unknown>) {
+  // New member account submitted for approval → alert ABCAC staff.
+  if (table === "profiles") {
+    const admins = await adminEmails(admin);
+    if (!admins.length) return ok({ skipped: true, reason: "no admin recipients" });
+    const who = ((String(record.first_name ?? "") + " " + String(record.last_name ?? "")).trim()) || String(record.email ?? "A new applicant");
+    await send(admins, "ABCAC: new account awaiting approval",
+      `<p>${who} submitted their member portal registration and is awaiting approval.</p>
+       <p><a href="${PORTAL}/admin/approvals">Review it in the admin console</a>.</p>`);
+    return ok({ emailed: true, kind: "account_submitted" });
+  }
+
   const status = String(record.status ?? "");
   const memberId = record.member_id as string | undefined;
   if (!memberId) return ok({ skipped: true, reason: "no member_id" });
