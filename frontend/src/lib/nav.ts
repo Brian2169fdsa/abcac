@@ -22,9 +22,10 @@ export const NAV: NavItem[] = [
 // URL is provided (logged in DECISIONS.md).
 export const HEADER_CTA = { label: "Book an Audit", href: "/contact" };
 
-// Primary entry to the member portal (the standalone portal app, co-hosted at
-// /portal). Overridable via NEXT_PUBLIC_PORTAL_URL (e.g. a portal subdomain).
+// Primary entry to the member portal — the native Next.js portal at /account.
+// (The classic static portal remains reachable at /portal for screens not yet
+// ported.) Overridable via NEXT_PUBLIC_PORTAL_URL.
 export const MEMBER_PORTAL = {
   label: "Member Portal",
-  href: process.env.NEXT_PUBLIC_PORTAL_URL || "/portal",
+  href: process.env.NEXT_PUBLIC_PORTAL_URL || "/account",
 };

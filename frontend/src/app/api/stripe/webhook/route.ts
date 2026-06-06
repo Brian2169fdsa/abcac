@@ -57,6 +57,19 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const meta = session.metadata ?? {};
   const memberId = session.client_reference_id || meta.member_id || null;
 
+  // If this checkout was paying an admin-issued invoice, mark it paid.
+  if (meta.invoice_id) {
+    try {
+      await admin.from("invoices").update({
+        status: "paid",
+        paid_at: new Date().toISOString(),
+        stripe_payment_intent: String(session.payment_intent ?? ""),
+      }).eq("id", meta.invoice_id);
+    } catch (err) {
+      console.error("invoice mark-paid skipped:", err);
+    }
+  }
+
   await writePayment(admin, {
     member_id: memberId,
     stripe_session_id: session.id,
