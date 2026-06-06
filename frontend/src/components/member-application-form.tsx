@@ -24,6 +24,8 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
   const [notes, setNotes] = useState("");
   const [ceuHours, setCeuHours] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [attested, setAttested] = useState(false);
+  const [signature, setSignature] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +46,8 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
     setError(null);
     if (!credential) return setError("Please select your credential.");
     if (mode === "initial" && files.length === 0) return setError("Please upload your supporting documents.");
+    if (!attested) return setError("Please confirm the attestation to continue.");
+    if (!signature.trim()) return setError("Please type your full name as your signature.");
     setStatus("saving");
     try {
       const supabase = createSupabaseBrowserClient();
@@ -61,7 +65,10 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
           app_type: mode,
           cert_type: credential,
           status: "submitted",
-          admin_notes: notes || null,
+          member_notes: notes || null,
+          attested: true,
+          attested_at: new Date().toISOString(),
+          signature_name: signature.trim(),
         })
         .select("id")
         .single();
@@ -154,6 +161,20 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
             <span>{files.length ? `${files.length} file(s) selected` : "Choose PDF, JPG, or PNG files (max 10MB each)"}</span>
             <input id="docs" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={onFiles} className="sr-only" />
           </label>
+        </div>
+
+        <div className="rounded-lg border border-line bg-bg p-4">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
+            <span className="text-muted">
+              I certify that the information and documents I am submitting are true and accurate, and I agree to abide
+              by the ABCAC Code of Ethics.
+            </span>
+          </label>
+          <div className="mt-3">
+            <label htmlFor="signature" className="mb-1.5 block text-sm font-semibold">Signature (type your full name)</label>
+            <input id="signature" value={signature} onChange={(e) => setSignature(e.target.value)} className={field} placeholder="Full legal name" />
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

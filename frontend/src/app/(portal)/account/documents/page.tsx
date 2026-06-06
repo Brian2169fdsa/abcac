@@ -21,21 +21,38 @@ function badgeClass(s: string | null) {
   return "text-amber-600";
 }
 
-// Common documents requested during certification — tracked against uploads.
-const CHECKLIST = [
-  { label: "Government Photo ID", match: "id" },
-  { label: "Education Verification (transcript)", match: "education" },
-  { label: "Experience Documentation (hours log)", match: "experience" },
-  { label: "Training Verification (certificate)", match: "training" },
-];
+// Document requirements, adapted to the member's most recent application
+// credential. Falls back to a sensible default set.
+const ID_ITEM = { label: "Government Photo ID", match: "id" };
+const EDU_ITEM = { label: "Education Verification (transcript)", match: "education" };
+const EXP_ITEM = { label: "Experience Documentation (hours log)", match: "experience" };
+const TRAIN_ITEM = { label: "Training Verification (certificate)", match: "training" };
+const SUP_ITEM = { label: "Clinical Supervision Documentation", match: "supervision" };
+
+const DEFAULT_CHECKLIST = [ID_ITEM, EDU_ITEM, EXP_ITEM, TRAIN_ITEM];
+
+const CREDENTIAL_CHECKLIST: Record<string, { label: string; match: string }[]> = {
+  CAC: [ID_ITEM, EDU_ITEM, EXP_ITEM],
+  CADAC: [ID_ITEM, EDU_ITEM, EXP_ITEM],
+  AADC: [ID_ITEM, EDU_ITEM, EXP_ITEM],
+  CCS: [ID_ITEM, EDU_ITEM, EXP_ITEM, SUP_ITEM],
+  CCJP: [ID_ITEM, EDU_ITEM, EXP_ITEM],
+  CPRS: [ID_ITEM, EDU_ITEM, EXP_ITEM, TRAIN_ITEM],
+  CPS: [ID_ITEM, EDU_ITEM, EXP_ITEM, TRAIN_ITEM],
+};
 
 export default async function DocumentsPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data } = await supabase.from("documents").select("*").eq("member_id", user!.id).order("uploaded_at", { ascending: false });
+  const [{ data }, { data: latestApp }] = await Promise.all([
+    supabase.from("documents").select("*").eq("member_id", user!.id).order("uploaded_at", { ascending: false }),
+    supabase.from("applications").select("cert_type").eq("member_id", user!.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
   const docs = (data as Doc[]) ?? [];
+  const credential: string | null = (latestApp?.cert_type as string | null) ?? null;
+  const requiredDocs = (credential && CREDENTIAL_CHECKLIST[credential]) || DEFAULT_CHECKLIST;
 
-  const checklist = CHECKLIST.map((item) => {
+  const checklist = requiredDocs.map((item: { label: string; match: string }) => {
     const match = docs.find((d) => (d.document_type ?? "").toLowerCase().includes(item.match));
     return { ...item, status: match?.status ?? null, present: Boolean(match) };
   });
@@ -46,7 +63,9 @@ export default async function DocumentsPage() {
 
       {/* Tracking checklist */}
       <Section compact title="Document checklist">
-        <p className="mb-4 max-w-3xl text-sm text-muted">Common documents requested during certification. Upload anything still marked “Needed.”</p>
+        <p className="mb-4 max-w-3xl text-sm text-muted">
+          {credential ? `Documents typically required for your ${credential} application.` : "Common documents requested during certification."} Upload anything still marked “Needed.”
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {checklist.map((c) => (
             <div key={c.label} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-4">

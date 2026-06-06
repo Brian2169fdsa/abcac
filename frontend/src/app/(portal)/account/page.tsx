@@ -28,6 +28,17 @@ interface Profile {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+}
+
+function completeness(p: Profile | null): number {
+  if (!p) return 0;
+  const fields = [p.first_name, p.last_name, p.phone, p.address_line1, p.city, p.state, p.zip_code];
+  const filled = fields.filter((f) => f && String(f).trim()).length;
+  return Math.round((filled / fields.length) * 100);
 }
 
 const RENEWAL_SLUG = "certification-renewal-2-year-credential-renewal-fee";
@@ -72,6 +83,7 @@ export default async function AccountPage() {
   const displayName =
     [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user?.email || "Member";
   const syncOn = certifications.some((c) => c.sync_enabled);
+  const profilePct = completeness(profile);
 
   return (
     <>
@@ -86,6 +98,27 @@ export default async function AccountPage() {
         <Section compact>
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-6 text-muted">
             We couldn't load your records just now. Please refresh, or open the full portal.
+          </div>
+        </Section>
+      )}
+
+      {/* Profile completeness */}
+      {profilePct < 100 && (
+        <Section compact>
+          <div className="rounded-xl border border-accent/40 bg-accent/5 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base">Complete your profile</h3>
+                <p className="mt-1 text-sm text-muted">A complete profile helps ABCAC process your applications faster.</p>
+              </div>
+              <div className="text-right">
+                <div className="font-display text-2xl font-bold text-brand">{profilePct}%</div>
+                <Link href="/account/profile" className="text-sm font-semibold text-brand hover:text-brand-600">Finish →</Link>
+              </div>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+              <div className="h-full bg-brand" style={{ width: `${profilePct}%` }} />
+            </div>
           </div>
         </Section>
       )}

@@ -29,12 +29,17 @@ Deno.serve(async (req) => {
     const table: string = payload.table;
     const record = payload.record ?? {};
     const type: string = payload.type; // INSERT / UPDATE / DELETE
-    if (type !== "INSERT") return ok({ skipped: true });
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // Status-change notifications to the member (fired by UPDATE triggers).
+    if (type === "UPDATE") {
+      return await handleStatusChange(admin, table, record);
+    }
+    if (type !== "INSERT") return ok({ skipped: true });
 
     if (table === "profiles") {
       await send(record.email, "Welcome to the ABCAC Member Portal",
@@ -69,6 +74,37 @@ Deno.serve(async (req) => {
     return ok({ error: String(err) });
   }
 });
+
+async function handleStatusChange(admin: ReturnType<typeof createClient>, table: string, record: Record<string, unknown>) {
+  const status = String(record.status ?? "");
+  const memberId = record.member_id as string | undefined;
+  if (!memberId) return ok({ skipped: true, reason: "no member_id" });
+
+  const { data: member } = await admin.from("profiles").select("email,first_name").eq("id", memberId).single();
+  if (!member?.email) return ok({ skipped: true, reason: "no member email" });
+  const hi = `<p>Hi ${member.first_name ?? "there"},</p>`;
+  const footer = `<p><a href="${PORTAL}/account">View the details in your portal</a>.</p>`;
+
+  let subject = "";
+  let body = "";
+  if (table === "applications") {
+    subject = `Application update: ${status}`;
+    body = `${hi}<p>Your ${String(record.app_type ?? "certification")} application${record.cert_type ? ` for ${record.cert_type}` : ""} is now: <strong>${status}</strong>.</p>${footer}`;
+  } else if (table === "documents") {
+    if (status !== "approved" && status !== "rejected") return ok({ skipped: true });
+    subject = `Document ${status}`;
+    body = `${hi}<p>Your document “${String(record.file_name ?? "")}” has been <strong>${status}</strong>.${record.admin_notes ? ` Note: ${record.admin_notes}` : ""}</p>${footer}`;
+  } else if (table === "ceu_records") {
+    if (status !== "approved" && status !== "rejected") return ok({ skipped: true });
+    subject = `CEU ${status}`;
+    body = `${hi}<p>Your CEU “${String(record.course_name ?? "")}” has been <strong>${status}</strong>.</p>${footer}`;
+  } else {
+    return ok({ skipped: true, table });
+  }
+
+  await send(member.email, subject, body);
+  return ok({ emailed: true, kind: "status_change", table });
+}
 
 async function lookupMember(admin: ReturnType<typeof createClient>, id?: string) {
   if (!id) return "A member";
