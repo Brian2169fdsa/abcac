@@ -32,7 +32,7 @@ export default async function CeusPage() {
     <>
       <PageHero eyebrow="Member Portal" title="Continuing Education Tracker" intro="Log your CEU hours and track progress toward your 40-hour renewal requirement." />
       <Section compact>
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-line bg-surface p-6">
             <div className="font-display text-3xl font-bold text-brand">{total} / {REQUIRED}</div>
             <div className="mt-1 text-sm text-muted">Approved hours</div>
@@ -45,6 +45,10 @@ export default async function CeusPage() {
           <div className="rounded-xl border border-line bg-surface p-6">
             <div className="font-display text-3xl font-bold text-brand">{byCat("Cultural Diversity")} / 3</div>
             <div className="mt-1 text-sm text-muted">Cultural Diversity hours</div>
+          </div>
+          <div className="rounded-xl border border-line bg-surface p-6">
+            <div className="font-display text-3xl font-bold text-brand">{compliance.remaining}</div>
+            <div className="mt-1 text-sm text-muted">Hours remaining</div>
           </div>
         </div>
         {/* Renewal Compliance Card */}

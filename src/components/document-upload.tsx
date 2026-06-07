@@ -17,6 +17,7 @@ const TYPES = [
   "IC&RC Reciprocity Documents",
   "Other",
 ];
+const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"];
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED = ["pdf", "jpg", "jpeg", "png"];
 
@@ -30,6 +31,7 @@ export function DocumentUpload() {
     setError(null);
     const form = e.currentTarget;
     const type = (form.elements.namedItem("type") as HTMLSelectElement).value;
+    const relatedCert = (form.elements.namedItem("related_cert") as HTMLSelectElement).value || null;
     const file = (form.elements.namedItem("file") as HTMLInputElement).files?.[0];
     if (!type || !file) return setError("Choose a document type and file.");
     if (file.size > MAX_BYTES) return setError("File must be under 10MB.");
@@ -44,7 +46,7 @@ export function DocumentUpload() {
       const { error: upErr } = await supabase.storage.from("member-documents").upload(path, file);
       if (upErr) throw upErr;
       const { error: insErr } = await supabase.from("documents").insert({
-        member_id: user.id, document_type: type, file_name: file.name, file_path: path,
+        member_id: user.id, document_type: type, related_cert: relatedCert, file_name: file.name, file_path: path,
         file_size_kb: Math.round(file.size / 1024), status: "pending",
       });
       if (insErr) throw insErr;
@@ -65,6 +67,12 @@ export function DocumentUpload() {
           <select name="type" className={field} defaultValue="" required>
             <option value="" disabled>— Select —</option>
             {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="block sm:col-span-2"><span className="mb-1.5 block text-sm font-semibold">Related certification (optional)</span>
+          <select name="related_cert" className={field} defaultValue="">
+            <option value="">— None / Not applicable —</option>
+            {CREDENTIALS.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
         <label className="block sm:col-span-2"><span className="mb-1.5 block text-sm font-semibold">File (PDF/JPG/PNG, max 10MB)</span>

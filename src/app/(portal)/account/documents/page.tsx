@@ -9,7 +9,7 @@ export const metadata = { title: "Documents" };
 export const dynamic = "force-dynamic";
 
 interface Doc {
-  id: string; document_type: string | null; file_name: string | null; file_path: string | null;
+  id: string; document_type: string | null; related_cert: string | null; file_name: string | null; file_path: string | null;
   uploaded_at: string | null; status: string | null; admin_notes: string | null;
 }
 
@@ -128,7 +128,7 @@ export default async function DocumentsPage() {
                 {docs.map((d) => (
                   <tr key={d.id} className="border-b border-line last:border-0">
                     <td className="px-4 py-3 font-semibold text-ink">{d.file_name ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted">{d.document_type ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted">{d.document_type ?? "—"}{d.related_cert ? ` (${d.related_cert})` : ""}</td>
                     <td className="px-4 py-3 text-muted">{fmt(d.uploaded_at)}</td>
                     <td className={`px-4 py-3 font-semibold capitalize ${badgeClass(d.status)}`}>{d.status ?? "pending"}</td>
                     <td className="px-4 py-3 text-muted">{d.admin_notes ?? "—"}</td>

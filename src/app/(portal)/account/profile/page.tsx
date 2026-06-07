@@ -20,13 +20,13 @@ export default async function ProfilePage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profile }, { data: prefs }] = await Promise.all([
-    supabase.from("profiles").select("first_name,last_name,email,phone,address_line1,city,state,zip_code,cert_status").eq("id", user!.id).maybeSingle(),
+    supabase.from("profiles").select("first_name,middle_name,last_name,email,phone,date_of_birth,ssn_last4,address_line1,city,state,zip_code,cert_status").eq("id", user!.id).maybeSingle(),
     supabase.from("notification_preferences").select("*").eq("member_id", user!.id).maybeSingle(),
   ]);
 
   const profileData: ProfileData = (profile as ProfileData) ?? {
-    first_name: null, last_name: null, email: user?.email ?? null, phone: null,
-    address_line1: null, city: null, state: null, zip_code: null,
+    first_name: null, middle_name: null, last_name: null, email: user?.email ?? null, phone: null,
+    date_of_birth: null, ssn_last4: null, address_line1: null, city: null, state: null, zip_code: null,
   };
   const prefsData: Prefs = prefs
     ? {
