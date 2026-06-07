@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default function MessagesPage() {
   return (
     <>
-      <PageHero eyebrow="Member Portal" title="Messages" intro="Messages and announcements from ABCAC." />
+      <PageHero eyebrow="Member Portal" title="Messages" intro="Messages and announcements from ABCAC — and send a message back." />
       <Section compact>
         <MessagesPanel />
       </Section>

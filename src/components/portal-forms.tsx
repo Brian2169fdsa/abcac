@@ -9,6 +9,26 @@ import { Button } from "@/components/ui/button";
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 const labelCls = "mb-1.5 block text-sm font-semibold";
 
+const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
+
+/** Validate + upload a member file to a private bucket under <uid>/. Returns the stored path. */
+async function uploadMemberFile(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  bucket: string,
+  uid: string,
+  file: File,
+): Promise<string> {
+  if (file.size > MAX_BYTES) throw new Error("File must be under 10MB.");
+  if (!ALLOWED_EXT.includes((file.name.split(".").pop() || "").toLowerCase())) {
+    throw new Error("Use a PDF, JPG, or PNG.");
+  }
+  const path = `${uid}/${Date.now()}_${file.name}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file);
+  if (error) throw error;
+  return path;
+}
+
 function useInsert(table: string) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -78,23 +98,46 @@ export function AddEmploymentForm() {
   );
 }
 
-// ─── Other certification ───
+// ─── Other certification (with optional supporting-document upload) ───
 export function AddOtherCertForm() {
-  const { run, loading, error } = useInsert("other_certifications");
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
-    const ok = await run((uid) => ({
-      member_id: uid,
-      credential_title: g("title").value.trim(),
-      credential_number: g("number").value.trim() || null,
-      issuing_board: g("board").value.trim(),
-      issued_date: g("issued").value || null,
-      expiration_date: g("expires").value || null,
-    }));
-    if (ok) f.reset();
+    const file = (f.elements.namedItem("doc") as HTMLInputElement).files?.[0];
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+
+      let docPath: string | null = null;
+      if (file) docPath = await uploadMemberFile(supabase, "member-documents", user.id, file);
+
+      const { error: insErr } = await supabase.from("other_certifications").insert({
+        member_id: user.id,
+        credential_title: g("title").value.trim(),
+        credential_number: g("number").value.trim() || null,
+        issuing_board: g("board").value.trim(),
+        issued_date: g("issued").value || null,
+        expiration_date: g("expires").value || null,
+        doc_path: docPath,
+      });
+      if (insErr) throw insErr;
+      f.reset();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
     <Collapsible label="+ Add Certification">
       <form onSubmit={onSubmit} className="space-y-4">
@@ -106,6 +149,9 @@ export function AddOtherCertForm() {
           <label className="block"><span className={labelCls}>Issued</span><input name="issued" type="date" className={field} /></label>
           <label className="block"><span className={labelCls}>Expires</span><input name="expires" type="date" className={field} /></label>
         </div>
+        <label className="block"><span className={labelCls}>Supporting document (PDF/JPG/PNG, max 10MB)</span>
+          <input name="doc" type="file" accept=".pdf,.jpg,.jpeg,.png" className="text-sm" />
+        </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Add Certification"}</Button>
       </form>
@@ -154,16 +200,39 @@ function SuccessNote({ children }: { children: React.ReactNode }) {
 }
 
 export function NameChangeForm({ currentName }: { currentName: string }) {
-  const { run, loading, error, done } = useInsert("name_change_requests");
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   if (done) return <SuccessNote>Name change request submitted. Review takes 5–7 business days.</SuccessNote>;
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
-    await run((uid) => ({
-      member_id: uid, current_name: currentName, new_name: g("newname").value.trim(),
-      reason: g("reason").value, status: "pending",
-    }));
+    const file = (f.elements.namedItem("doc") as HTMLInputElement).files?.[0];
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+
+      let docPath: string | null = null;
+      if (file) docPath = await uploadMemberFile(supabase, "name-change-docs", user.id, file);
+
+      const { error: insErr } = await supabase.from("name_change_requests").insert({
+        member_id: user.id, current_name: currentName, new_name: g("newname").value.trim(),
+        reason: g("reason").value, doc_path: docPath, status: "pending",
+      });
+      if (insErr) throw insErr;
+      setDone(true);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -175,27 +244,48 @@ export function NameChangeForm({ currentName }: { currentName: string }) {
           <option>Marriage</option><option>Divorce</option><option>Court Order</option><option>Other</option>
         </select>
       </label>
-      <p className="text-xs text-muted">Upload your supporting document (marriage certificate, court order) on the Documents page.</p>
+      <label className="block"><span className={labelCls}>Supporting ID / document (PDF/JPG/PNG, max 10MB)</span>
+        <input name="doc" type="file" accept=".pdf,.jpg,.jpeg,.png" className="text-sm" />
+        <span className="mt-1 block text-xs text-muted">e.g. marriage certificate, court order, or government photo ID.</span>
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Submit Request"}</Button>
     </form>
   );
 }
 
-export function VerificationForm() {
+// A selectable certification. `certId` is set only for ISSUED credentials
+// (rows in public.certifications); member-recorded "other" credentials have a
+// null certId and are captured by label/notes instead (cert_id FKs certifications).
+export interface VerifyCertOption { value: string; label: string; certId: string | null }
+
+export function VerificationForm({ certOptions = [] }: { certOptions?: VerifyCertOption[] }) {
   const { run, loading, error, done } = useInsert("verification_requests");
   if (done) return <SuccessNote>Verification request submitted successfully.</SuccessNote>;
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
+    const sel = (f.elements.namedItem("cert") as HTMLSelectElement)?.value || "";
+    const picked = certOptions.find((o) => o.value === sel);
+    const notes = g("notes").value.trim();
+    // If the member chose an "other" credential (no cert_id), record which one in notes.
+    const composedNotes = [picked && !picked.certId ? `Certification: ${picked.label}` : null, notes || null]
+      .filter(Boolean).join(" — ") || null;
     await run((uid) => ({
       member_id: uid, purpose: g("purpose").value.trim(), recipient_name: g("recipient").value.trim(),
-      recipient_email: g("email").value.trim() || null, notes: g("notes").value.trim() || null, status: "pending",
+      recipient_email: g("email").value.trim() || null, notes: composedNotes,
+      cert_id: picked?.certId ?? null, status: "pending",
     }));
   }
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <label className="block"><span className={labelCls}>Certification to verify{certOptions.length > 0 ? " *" : ""}</span>
+        <select name="cert" className={field} defaultValue="" required={certOptions.length > 0} disabled={certOptions.length === 0}>
+          <option value="" disabled>{certOptions.length === 0 ? "No certifications on file" : "— Select —"}</option>
+          {certOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </label>
       <label className="block"><span className={labelCls}>Purpose *</span><input name="purpose" className={field} required placeholder="e.g. Employer verification" /></label>
       <label className="block"><span className={labelCls}>Recipient name *</span><input name="recipient" className={field} required /></label>
       <label className="block"><span className={labelCls}>Recipient email</span><input name="email" type="email" className={field} /></label>
