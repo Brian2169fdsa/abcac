@@ -27,21 +27,23 @@ export function MessagesPanel() {
     const supabase = createSupabaseBrowserClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const { data } = await supabase.from("messages").select("*").eq("member_id", user.id).order("created_at", { ascending: false });
-    setMessages((data as Message[]) ?? []);
+    const { data } = await supabase.from("messages").select("*").eq("member_id", user.id).order("created_at", { ascending: true });
+    const rows = (data as Message[]) ?? [];
+    setMessages(rows);
     setLoading(false);
+    // Mark-as-read on view: flip every unread admin-authored message to read.
+    // (Members' own messages don't carry a member-facing read receipt.)
+    const unreadIds = rows.filter((m) => !m.is_read && m.sender_role !== "member").map((m) => m.id);
+    if (unreadIds.length > 0) {
+      await supabase.from("messages").update({ is_read: true }).in("id", unreadIds);
+      setMessages((prev) => prev.map((x) => (unreadIds.includes(x.id) ? { ...x, is_read: true } : x)));
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  async function open(m: Message) {
+  function open(m: Message) {
     setOpenId(openId === m.id ? null : m.id);
-    // Only admin-authored messages need a read receipt; members' own messages are already read.
-    if (!m.is_read && m.sender_role !== "member") {
-      const supabase = createSupabaseBrowserClient();
-      await supabase.from("messages").update({ is_read: true }).eq("id", m.id);
-      setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, is_read: true } : x)));
-    }
   }
 
   async function onSend(e: React.FormEvent<HTMLFormElement>) {
