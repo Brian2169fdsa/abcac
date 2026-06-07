@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Image placeholder">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b1a1a"/><stop offset="1" stop-color="#5e1414"/></linearGradient></defs>
-  <rect width="1200" height="900" fill="url(#g)"/>
-  <rect x="28" y="28" width="1144" height="844" rx="20" fill="none" stroke="#c8a04a" stroke-width="4" stroke-dasharray="16 12"/>
-  <text x="600" y="430" fill="#ffffff" font-family="Arial,Helvetica,sans-serif" font-size="52" font-weight="700" text-anchor="middle">Image placeholder</text>
-  <text x="600" y="494" fill="#e9d29a" font-family="Arial,Helvetica,sans-serif" font-size="26" text-anchor="middle">Drop your photo at public/brand/why-counselors.png</text>
-</svg>

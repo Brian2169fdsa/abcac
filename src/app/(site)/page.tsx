@@ -142,15 +142,31 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* Right: image placeholder */}
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-white/5 shadow-lg ring-1 ring-white/10">
-            <Image
-              src="/brand/why-counselors.svg"
-              alt="Addiction counselor working with a client"
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
+          {/* Right: image with on-brand stylized overlay */}
+          <div className="relative mx-auto w-full max-w-md">
+            {/* Gold offset frame, top-right */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-3 -top-3 h-full w-full rounded-2xl border border-accent/50"
             />
+            {/* Maroon arc accent, bottom-left */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full border-[6px] border-brand/70"
+            />
+            {/* Image card */}
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-white/5 shadow-xl ring-1 ring-white/10">
+              <Image
+                src="/brand/why-counselors.png"
+                alt="ABCAC certified addiction counselor"
+                fill
+                sizes="(max-width: 768px) 100vw, 28rem"
+                className="object-cover"
+              />
+              {/* Navy blend + maroon tint overlay */}
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-info/70 via-info/10 to-transparent" />
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand/25 to-transparent mix-blend-multiply" />
+            </div>
           </div>
         </div>
       </section>
