@@ -5,7 +5,13 @@ import { siteConfig } from "@/lib/site-config";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const { name, email, phone, message } = await req.json();
+  let body: { name?: string; email?: string; phone?: string; message?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const { name, email, phone, message } = body ?? {};
   if (!name || !email || !message) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }

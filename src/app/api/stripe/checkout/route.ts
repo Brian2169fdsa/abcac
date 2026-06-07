@@ -7,10 +7,19 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   if (!isStripeConfigured) {
-    return NextResponse.json({ error: "payments_not_configured" });
+    return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
   }
 
-  const { slug, credentialLevel, examMode } = await req.json();
+  let parsed: { slug?: string; credentialLevel?: string; examMode?: string };
+  try {
+    parsed = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const { slug, credentialLevel, examMode } = parsed;
+  if (typeof slug !== "string" || !slug) {
+    return NextResponse.json({ error: "missing_slug" }, { status: 400 });
+  }
   const product = getProductBySlug(slug);
   if (!product) {
     return NextResponse.json({ error: "product_not_found" }, { status: 404 });
@@ -19,7 +28,7 @@ export async function POST(req: Request) {
   const priceId = getPriceId(slug);
   if (!priceId) {
     // Seed script hasn't run yet for this slug.
-    return NextResponse.json({ error: "price_not_found" });
+    return NextResponse.json({ error: "price_not_found" }, { status: 503 });
   }
 
   // Attribute to the signed-in member if there is one (guest checkout allowed).

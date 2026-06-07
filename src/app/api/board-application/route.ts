@@ -10,7 +10,12 @@ interface Attachment {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  let body: Awaited<ReturnType<Request["json"]>>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
   const {
     fullName,
     preferredName,
