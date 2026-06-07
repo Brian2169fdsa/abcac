@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed:stripe": "tsx scripts/seed-stripe.ts",
+    "import:cert-schedules": "tsx scripts/import-cert-schedules.ts",
     "test": "vitest run"
   },
   "dependencies": {

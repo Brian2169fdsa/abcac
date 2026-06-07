@@ -1,0 +1,8 @@
+credential_type,renewal_cycle_months,ceu_total_required,ceu_ethics_required,ceu_cultural_required,grace_period_days,notes
+CAC,24,40,3,3,0,Certified Addiction Counselor — entry-level AODA credential.
+CADAC,24,40,3,3,0,Certified Alcohol & Drug Abuse Counselor — bachelor's level.
+AADC,24,40,3,3,0,Advanced Alcohol & Drug Counselor — master's level.
+CCS,24,40,3,3,0,Certified Clinical Supervisor — supervisory credential.
+CCJP,24,40,3,3,0,Certified Criminal Justice Professional.
+CPRS,24,20,2,2,0,Certified Peer Recovery Specialist — lower CE requirement; confirm against real schedule.
+CPS,24,40,3,3,0,Certified Prevention Specialist.
