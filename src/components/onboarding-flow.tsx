@@ -83,6 +83,9 @@ export function OnboardingFlow({ profile }: { profile: OnboardingProfile }) {
       }
 
       router.refresh();
+      // Re-enable the form in case the refreshed view still renders it
+      // (e.g. the status did not advance), so it never gets stuck spinning.
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit. Please try again.");
       setLoading(false);
@@ -119,11 +122,11 @@ export function OnboardingFlow({ profile }: { profile: OnboardingProfile }) {
         <div className="space-y-3">
           {certs.map((c, i) => (
             <div key={i} className="flex gap-3">
-              <select value={c.cert_type} onChange={(e) => update(i, "cert_type", e.target.value)} className={field}>
+              <select value={c.cert_type} onChange={(e) => update(i, "cert_type", e.target.value)} className={field} aria-label={`Credential ${i + 1}`}>
                 <option value="">— Credential —</option>
                 {CREDENTIALS.map((x) => <option key={x} value={x}>{x}</option>)}
               </select>
-              <input value={c.cert_number} onChange={(e) => update(i, "cert_number", e.target.value)} className={field} placeholder="Certificate number" />
+              <input value={c.cert_number} onChange={(e) => update(i, "cert_number", e.target.value)} className={field} placeholder="Certificate number" aria-label={`Certificate number ${i + 1}`} />
               {certs.length > 1 && (
                 <button type="button" onClick={() => removeRow(i)} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:text-red-600" aria-label="Remove">
                   <Trash2 className="h-4 w-4" aria-hidden />

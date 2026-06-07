@@ -111,8 +111,12 @@ export default async function AccountPage() {
   const expiringCerts = certifications.filter(
     (c) => c.status === "active" && c.expiration_date !== null && new Date(c.expiration_date).getTime() <= ninety && new Date(c.expiration_date).getTime() > Date.now(),
   );
+  // Only nag about CEUs once the member actually holds an active credential to
+  // renew — otherwise a brand-new member with no certs sees "40 hours needed."
+  const hasActiveCert = certifications.some((c) => c.status === "active");
+  const showCeuActionItem = hasActiveCert && !ceuCompliance.compliant;
   const hasActionItems =
-    unreadMessages > 0 || openDocRequests > 0 || !ceuCompliance.compliant || expiringCerts.length > 0;
+    unreadMessages > 0 || openDocRequests > 0 || showCeuActionItem || expiringCerts.length > 0;
 
   return (
     <>
@@ -179,7 +183,7 @@ export default async function AccountPage() {
                 <span className="font-semibold text-amber-700 dark:text-amber-400">Upload →</span>
               </Link>
             )}
-            {!ceuCompliance.compliant && (
+            {showCeuActionItem && (
               <Link
                 href="/account/ceus"
                 className="flex items-center justify-between rounded-xl border border-amber-400/60 bg-amber-50/60 p-5 transition-colors hover:border-amber-500 dark:bg-amber-900/10"
@@ -229,7 +233,14 @@ export default async function AccountPage() {
                 <Link href="/account/profile" className="text-sm font-semibold text-brand hover:text-brand-600">Finish →</Link>
               </div>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+            <div
+              className="mt-3 h-2 overflow-hidden rounded-full bg-line"
+              role="progressbar"
+              aria-valuenow={profilePct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Profile completeness"
+            >
               <div className="h-full bg-brand" style={{ width: `${profilePct}%` }} />
             </div>
           </div>

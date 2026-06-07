@@ -36,7 +36,7 @@ export default async function CeusPage() {
           <div className="rounded-xl border border-line bg-surface p-6">
             <div className="font-display text-3xl font-bold text-brand">{total} / {REQUIRED}</div>
             <div className="mt-1 text-sm text-muted">Approved hours</div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-line"><div className="h-full bg-brand" style={{ width: `${pct}%` }} /></div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={total} aria-valuemin={0} aria-valuemax={REQUIRED} aria-label="Approved CEU hours toward renewal"><div className="h-full bg-brand" style={{ width: `${pct}%` }} /></div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
             <div className="font-display text-3xl font-bold text-brand">{byCat("Ethics")} / 3</div>
