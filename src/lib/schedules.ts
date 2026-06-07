@@ -24,6 +24,22 @@ export interface CertSchedule {
   notes?: string | null;
 }
 
+/**
+ * Pick the cert_schedules row matching a member's credential type from a list
+ * of schedules. Case-insensitive, trims whitespace. Returns undefined when no
+ * row matches (caller should then fall back to default behavior).
+ *
+ * Pure: callers fetch the rows from Supabase and pass them in.
+ */
+export function findScheduleFor(
+  schedules: CertSchedule[],
+  credentialType: string | null | undefined,
+): CertSchedule | undefined {
+  if (!credentialType) return undefined;
+  const key = credentialType.trim().toLowerCase();
+  return schedules.find((s) => s.credential_type?.trim().toLowerCase() === key);
+}
+
 /** Reminder tiers, ordered most-distant → past. */
 export type DueTier = "90-day" | "60-day" | "30-day" | "7-day" | "due" | "overdue" | "ok";
 
