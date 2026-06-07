@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PageHero } from "@/components/page-hero";
+import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 import { Section } from "@/components/section";
 import { CtaButton } from "@/components/cta-button";
 import { PriceTag } from "@/components/price-tag";
@@ -16,11 +17,56 @@ export default function CertificationRenewalPage() {
 
   return (
     <>
-      <PageHero
-        eyebrow="Recertification"
-        title="Certification Renewal"
-        intro="All ABCAC credentials renew every two years. This path walks you through your CEU documentation, recertification packet, uploads, and payment — simple, fast, and fully digital."
-      />
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-line bg-surface">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-[1fr_1.35fr] md:px-10 md:py-24 lg:px-16">
+          {/* Left: copy */}
+          <div>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
+              Recertification
+            </p>
+            <h1>Certification Renewal</h1>
+            <p className="mt-5 max-w-xl text-lg text-muted">
+              All ABCAC credentials renew every two years. This path walks you through your CEU documentation,
+              recertification packet, uploads, and payment — simple, fast, and fully digital.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              {renewal && (
+                <CtaButton href={`/store/${renewal.slug}`} size="lg">
+                  Pay Renewal Fee — <PriceTag product={renewal} className="ml-1 text-white" />
+                </CtaButton>
+              )}
+              <CtaButton href="/ceu" variant="outline" size="lg">CEU Requirements</CtaButton>
+            </div>
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
+              {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
+                <li key={item} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right: hero image with maroon arc accent */}
+          <div className="relative">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-4 -top-6 h-28 w-28 rounded-full border-[6px] border-brand/70 md:-right-6 md:h-36 md:w-36"
+            />
+            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5">
+              <Image
+                src="/brand/renewal-hero.png"
+                alt="ABCAC certification renewal"
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       <Section title="Renew and maintain your credential">
         <p className="max-w-3xl text-muted">
