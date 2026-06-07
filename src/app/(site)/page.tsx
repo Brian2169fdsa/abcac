@@ -284,15 +284,29 @@ export default function HomePage() {
               </p>
               <CtaButton href="/contact" size="lg" className="mt-6">Express Interest</CtaButton>
             </div>
-            {/* Right: image placeholder */}
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-              <Image
-                src="/brand/board-member.svg"
-                alt="ABCAC board members"
-                fill
-                sizes="(max-width: 768px) 100vw, 45vw"
-                className="object-cover"
+            {/* Right: image with on-brand stylized overlay */}
+            <div className="relative mx-auto w-full max-w-md">
+              {/* Gold offset frame, top-right */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-3 -top-3 h-full w-full rounded-2xl border border-accent/50"
               />
+              {/* Maroon arc accent, bottom-left */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full border-[6px] border-brand/70"
+              />
+              {/* Image card */}
+              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+                <Image
+                  src="/brand/board-member.png"
+                  alt="Expand your impact as an ABCAC board member"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 28rem"
+                  className="object-cover"
+                />
+                <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand/15 to-transparent mix-blend-multiply" />
+              </div>
             </div>
           </div>
         </div>
