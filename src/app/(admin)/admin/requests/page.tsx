@@ -54,21 +54,32 @@ export default async function AdminRequests() {
       <Card title="Verification Requests">
         <table className="w-full text-sm">
           <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-5 py-3">Member</th><th className="px-5 py-3">Purpose</th><th className="px-5 py-3">Recipient</th>
-            <th className="px-5 py-3">Email</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Actions</th>
+            <th className="px-5 py-3">Source</th><th className="px-5 py-3">Requester</th><th className="px-5 py-3">Verifying</th>
+            <th className="px-5 py-3">Reason</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Result</th><th className="px-5 py-3">Actions</th>
           </tr></thead>
           <tbody>
-            {(ver.data ?? []).length === 0 ? <tr><td colSpan={6} className="px-5 py-6 text-center text-muted">None.</td></tr> :
-              (ver.data ?? []).map((r: any) => (
-                <tr key={r.id} className="border-b border-line last:border-0">
-                  <td className="px-5 py-3">{name(r.profiles)}</td>
-                  <td className="px-5 py-3 text-muted">{r.purpose}</td>
-                  <td className="px-5 py-3 text-muted">{r.recipient_name}</td>
-                  <td className="px-5 py-3 text-muted">{r.recipient_email ?? "—"}</td>
-                  <td className="px-5 py-3 capitalize text-muted">{r.status}</td>
-                  <td className="px-5 py-3"><RequestReviewActions table="verification_requests" id={r.id} status={r.status} /></td>
-                </tr>
-              ))}
+            {(ver.data ?? []).length === 0 ? <tr><td colSpan={7} className="px-5 py-6 text-center text-muted">None.</td></tr> :
+              (ver.data ?? []).map((r: any) => {
+                const isPublic = r.source === "public";
+                const requester = isPublic
+                  ? [r.requester_name, r.organization].filter(Boolean).join(" · ")
+                  : name(r.profiles);
+                const subject = [r.subject_name, r.subject_cert_number].filter(Boolean).join(" · ") || (isPublic ? "—" : name(r.profiles));
+                return (
+                  <tr key={r.id} className="border-b border-line last:border-0">
+                    <td className="px-5 py-3"><span className="rounded px-2 py-0.5 text-xs font-medium capitalize text-muted">{r.source ?? "portal"}</span></td>
+                    <td className="px-5 py-3">
+                      <div>{requester || "—"}</div>
+                      <div className="text-xs text-muted">{r.requester_email ?? r.recipient_email ?? "—"}</div>
+                    </td>
+                    <td className="px-5 py-3 text-muted">{subject}</td>
+                    <td className="px-5 py-3 text-muted">{r.purpose}</td>
+                    <td className="px-5 py-3 capitalize text-muted">{r.status}</td>
+                    <td className="px-5 py-3 capitalize text-muted">{r.verification_result ? r.verification_result.replace(/_/g, " ") : "—"}</td>
+                    <td className="px-5 py-3"><RequestReviewActions table="verification_requests" id={r.id} status={r.status} /></td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </Card>
