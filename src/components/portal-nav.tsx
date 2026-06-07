@@ -18,6 +18,7 @@ const TABS = [
   { label: "Invoices", href: "/account/invoices" },
   { label: "Messages", href: "/account/messages" },
   { label: "Profile", href: "/account/profile" },
+  { label: "Settings", href: "/account/settings" },
 ];
 
 export function PortalNav() {
