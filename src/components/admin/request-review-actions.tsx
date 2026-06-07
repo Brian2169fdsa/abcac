@@ -15,9 +15,14 @@ export function RequestReviewActions({ table, id, status }: { table: string; id:
     try {
       const supabase = createSupabaseBrowserClient();
       const patch: Record<string, unknown> = { status: next };
-      // verification_requests tracks completion via completed_at; others use reviewed_at.
-      if (table === "verification_requests" && next === "completed") patch.completed_at = new Date().toISOString();
-      else patch.reviewed_at = new Date().toISOString();
+      // verification_requests only has a completed_at column (no reviewed_at):
+      // stamp it when completing, clear it otherwise. All other request tables
+      // track the review time via reviewed_at.
+      if (table === "verification_requests") {
+        patch.completed_at = next === "completed" ? new Date().toISOString() : null;
+      } else {
+        patch.reviewed_at = next === "pending" ? null : new Date().toISOString();
+      }
       const { error } = await supabase.from(table).update(patch).eq("id", id);
       if (error) { alert("Update failed: " + error.message); return; }
       try {

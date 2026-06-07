@@ -54,6 +54,17 @@ export function IssueCertForm({ members }: { members: { id: string; label: strin
         return;
       }
 
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("admin_audit_log").insert({
+          admin_id: user?.id,
+          action: "certification_issued",
+          target_table: "certifications",
+          target_id: null,
+          details: { member_id: memberId, cert_type: credential },
+        });
+      } catch { /* best-effort */ }
+
       f.reset();
       setMsg(`${credential} certification issued successfully.`);
       setIsError(false);
