@@ -1273,6 +1273,7 @@ tr:hover td { background: var(--gray-50); }
     <a class="nav-link" data-page="other-cert" onclick="nav('other-cert')">Other Certifications</a>
 
     <div class="nav-section">Certification</div>
+    <a class="nav-link" data-page="applications" onclick="nav('applications')">Apply for Certification</a>
     <a class="nav-link" data-page="documents" onclick="nav('documents')">Document Upload</a>
     <a class="nav-link" data-page="ceu" onclick="nav('ceu')">Continuing Education Unit Tracker</a>
     <a class="nav-link" data-page="renewal" onclick="nav('renewal')">Certification Renewal</a>
@@ -1444,6 +1445,61 @@ tr:hover td { background: var(--gray-50); }
       </div>
     </div>
 
+    <!-- ══ APPLY FOR CERTIFICATION ══ -->
+    <div class="page" id="page-applications">
+      <h1 class="page-heading">Apply for Certification</h1>
+      <div class="note-box">
+        <span class="note-label">Note:</span>
+        <div>Submit a new application for ABCAC certification or renewal. Once submitted, upload your supporting documents on the <a href="#" onclick="nav('documents')" style="color:inherit;font-weight:600;">Document Upload</a> page. ABCAC reviews applications within 10–15 business days.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">New Application</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Application Type <span class="req">*</span></label>
+              <select class="form-select" id="appType">
+                <option value="">— Select —</option>
+                <option value="initial">Initial Certification</option>
+                <option value="renewal">Renewal</option>
+                <option value="upgrade">Upgrade / Add Credential</option>
+                <option value="reciprocity">IC&RC Reciprocity</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Certification <span class="req">*</span></label>
+              <select class="form-select" id="appCertType">
+                <option value="">— Select —</option>
+                <option value="CAC">CAC — Certified Addiction Counselor</option>
+                <option value="CADAC">CADAC — Certified Alcohol &amp; Drug Abuse Counselor</option>
+                <option value="AADC">AADC — Advanced Alcohol &amp; Drug Counselor</option>
+                <option value="CCS">CCS — Certified Clinical Supervisor</option>
+                <option value="CPS">CPS — Certified Prevention Specialist</option>
+                <option value="CCJP">CCJP — Certified Criminal Justice Professional</option>
+                <option value="CPRS">CPRS — Certified Peer Recovery Support</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="submitApplication()">Submit Application</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Application History</div></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Type</th><th>Certification</th><th>Submitted</th><th>Est. Completion</th><th>Status</th></tr></thead>
+              <tbody id="applicationsTableBody">
+                <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ DOCUMENT UPLOAD ══ -->
     <div class="page" id="page-documents">
       <h1 class="page-heading">Document Upload</h1>
@@ -1458,27 +1514,7 @@ tr:hover td { background: var(--gray-50); }
             <table>
               <thead><tr><th>Document Name</th><th>Type</th><th>Date Uploaded</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody id="docsTableBody">
-                <tr>
-                  <td><strong>Bachelor's Degree Transcript</strong></td>
-                  <td>Education Verification</td>
-                  <td>Jun 1, 2024</td>
-                  <td><span class="badge badge-active"><span class="badge-dot"></span>Accepted</span></td>
-                  <td><button class="btn btn-sm btn-outline">View</button></td>
-                </tr>
-                <tr>
-                  <td><strong>Supervised Hours Log</strong></td>
-                  <td>Experience Documentation</td>
-                  <td>Jun 1, 2024</td>
-                  <td><span class="badge badge-active"><span class="badge-dot"></span>Accepted</span></td>
-                  <td><button class="btn btn-sm btn-outline">View</button></td>
-                </tr>
-                <tr>
-                  <td><strong>CCS Supervision Training Certificate</strong></td>
-                  <td>Training Verification</td>
-                  <td>Jan 20, 2026</td>
-                  <td><span class="badge badge-pending"><span class="badge-dot"></span>Under Review</span></td>
-                  <td><button class="btn btn-sm btn-outline">View</button></td>
-                </tr>
+                <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px;">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1596,8 +1632,7 @@ tr:hover td { background: var(--gray-50); }
         <div class="card-body">
           <p style="font-size:14px;color:var(--gray-600);margin-bottom:16px;">Align renewal dates of all your ABCAC certifications into one cycle. Cost: <strong>$15 per month synced forward</strong>.</p>
           <div style="display:flex;gap:12px;">
-            <button class="btn btn-outline">📄 Download Sync Form</button>
-            <button class="btn btn-gold">Pay for Sync</button>
+            <button class="btn btn-gold" onclick="requestSync()">Request Certification Sync</button>
           </div>
         </div>
       </div>
@@ -1620,7 +1655,7 @@ tr:hover td { background: var(--gray-50); }
               </tbody>
             </table>
           </div>
-          <div class="add-row">+ Add New Records</div>
+          <div class="add-row" onclick="addSupervisionRecord()">+ Add New Records</div>
         </div>
       </div>
     </div>

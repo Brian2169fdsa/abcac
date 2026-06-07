@@ -1,0 +1,152 @@
+{
+  "currency": "usd",
+  "products": [
+    {
+      "slug": "initial-certification-full-application-exam-fee",
+      "name": "Initial Certification \u2013 Full Application & Exam Fee",
+      "price": 375.0,
+      "category": "Certification",
+      "exam_mode": "In-Person",
+      "short": "Full certification process for first-time applicants, including IC&RC exam at a certified Arizona testing center (Phoenix or Flagstaff).",
+      "includes": [
+        "Application Manuals (General & Supplemental, as applicable)",
+        "Application Processing",
+        "IC&RC Exam Fee (for applicable credentials)",
+        "Two Years of Certification (once approved)",
+        "In-Person Testing at a certified AZ center"
+      ]
+    },
+    {
+      "slug": "initial-certification-full-application-exam-fee-remote-proctored-exam",
+      "name": "Initial Certification \u2013 Full Application & Exam Fee (Remote Proctored Exam)",
+      "price": 425.0,
+      "category": "Certification",
+      "exam_mode": "Remote Proctored",
+      "short": "Full certification process for first-time applicants with a remote-proctored IC&RC exam option for added flexibility.",
+      "includes": [
+        "Application Manuals (General & Supplemental, as applicable)",
+        "Application Processing",
+        "IC&RC Exam Fee (for applicable credentials)",
+        "Two Years of Certification (once approved)",
+        "Remote-Proctored Exam from a secure approved location"
+      ]
+    },
+    {
+      "slug": "certification-certification-only-fee-already-passed-icrc-exam",
+      "name": "Certification Certification-Only Fee \u2013 Already Passed IC&RC Exam",
+      "price": 150.0,
+      "category": "Certification",
+      "exam_mode": null,
+      "short": "For applicants who already passed the IC&RC exam and are ready to complete certification through ABCAC.",
+      "includes": [
+        "Final certification processing",
+        "Review of submitted documentation",
+        "Issuance of a 2-year ABCAC credential for any approved level (CAC, CADAC, AADC, CCS, CCJP, CPRS, CPS, etc.)"
+      ]
+    },
+    {
+      "slug": "certification-renewal-2-year-credential-renewal-fee",
+      "name": "Certification Renewal \u2013 2-Year Credential Renewal Fee",
+      "price": 150.0,
+      "category": "Renewal",
+      "exam_mode": null,
+      "short": "For certified professionals renewing their credential. All ABCAC credentials renew every two years.",
+      "includes": [
+        "Application processing for certification renewal",
+        "Review of continuing education documentation",
+        "Issuance of a new 2-year ABCAC credential for any approved level"
+      ]
+    },
+    {
+      "slug": "certification-sync",
+      "name": "Certification Sync",
+      "price": 15.0,
+      "billing": "per month",
+      "category": "Service",
+      "exam_mode": null,
+      "short": "Sync all your ABCAC certifications into one unified renewal date for $15/month. Eliminate multiple deadlines and stay compliant.",
+      "includes": [
+        "Unified single renewal date",
+        "Reduced admin work",
+        "Ideal for professionals holding multiple credentials"
+      ]
+    },
+    {
+      "slug": "testing-for-licensure-with-azbbhe",
+      "name": "Testing for Certification with ABCAC and/or Licensure with AZBBHE \u2013 In Person",
+      "price": 225.0,
+      "category": "Testing",
+      "exam_mode": "In-Person",
+      "short": "IC&RC exam registration for individuals pursuing AZBBHE licensure and/or ABCAC certification, in-person.",
+      "includes": [
+        "IC&RC exam registration",
+        "In-person proctored testing",
+        "Administered through ABCAC"
+      ]
+    },
+    {
+      "slug": "testing-for-licensure-with-azbbhe-remote-proctored-exam",
+      "name": "Testing for Certification with ABCAC and/or Licensure with AZBBHE \u2013 Remote Proctored Exam",
+      "price": 275.0,
+      "category": "Testing",
+      "exam_mode": "Remote Proctored",
+      "short": "IC&RC exam registration for AZBBHE licensure and/or ABCAC certification, remote-proctored.",
+      "includes": [
+        "IC&RC exam registration",
+        "Remote proctored testing",
+        "Administered through ABCAC"
+      ]
+    },
+    {
+      "slug": "ceu-workshop-endorsement-up-to-8-contact-hours",
+      "name": "CEU Workshop Endorsement (Up to 8 Contact Hours)",
+      "price": 250.0,
+      "category": "CEU Endorsement",
+      "exam_mode": null,
+      "short": "ABCAC endorsement of a CEU workshop with 8 contact hours or less (shorter / half-day workshops).",
+      "includes": [
+        "Application processing and endorsement review",
+        "Processing time: up to 4 weeks",
+        "Submit materials to abcac@abcac.org"
+      ]
+    },
+    {
+      "slug": "ceu-workshop-endorsement-9-15-contact-hours",
+      "name": "CEU Workshop Endorsement (9\u201315 Contact Hours)",
+      "price": 375.0,
+      "category": "CEU Endorsement",
+      "exam_mode": null,
+      "short": "ABCAC endorsement of a CEU workshop with more than 8 and up to 15 contact hours (full-day / multi-part).",
+      "includes": [
+        "Processing and endorsement decision",
+        "Standard review turnaround: 4 weeks",
+        "Submit materials to abcac@abcac.org"
+      ]
+    },
+    {
+      "slug": "ceu-workshop-endorsement-more-than-15-contact-hours",
+      "name": "CEU Workshop Endorsement (More Than 15 Contact Hours)",
+      "price": 500.0,
+      "category": "CEU Endorsement",
+      "exam_mode": null,
+      "short": "ABCAC endorsement of a CEU workshop exceeding 15 contact hours. Includes full application review.",
+      "includes": [
+        "Full application review",
+        "Endorsement decision"
+      ]
+    },
+    {
+      "slug": "annual-credential-fee-approved-ceu-providers",
+      "name": "Annual Credential Fee \u2013 Approved CEU Providers",
+      "price": 500.0,
+      "billing": "per year",
+      "category": "Provider Fee",
+      "exam_mode": null,
+      "short": "Annual credential maintenance fee to remain an approved CEU provider with ABCAC. Due yearly on your anniversary date.",
+      "includes": [
+        "Annual provider credential maintenance",
+        "Required yearly on anniversary date"
+      ]
+    }
+  ]
+}
