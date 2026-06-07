@@ -84,7 +84,7 @@ export default function HomePage() {
             />
             <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5">
               <Image
-                src="/brand/hero.png"
+                src="/brand/hero-v2.png"
                 alt="Arizona addiction counseling professionals reviewing certification materials"
                 fill
                 priority
