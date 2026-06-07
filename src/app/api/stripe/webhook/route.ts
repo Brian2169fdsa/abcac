@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { siteConfig } from "@/lib/site-config";
 
 // Stripe requires the raw request body to verify the signature.
 export const runtime = "nodejs";
@@ -118,7 +119,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     </tr>
   </table>
   <p style="color:#6b7280;font-size:14px">If you have any questions about your payment, please contact us at <a href="mailto:info@abcac.org">info@abcac.org</a>.</p>
-  <p style="color:#6b7280;font-size:12px;margin-top:24px">ABCAC &mdash; American Board of Certification for Animal Chiropractic</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">${siteConfig.shortName} &mdash; ${siteConfig.name}</p>
 </div>`.trim();
 
         await sendEmail({

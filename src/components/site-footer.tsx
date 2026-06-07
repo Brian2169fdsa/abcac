@@ -4,6 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 const quickLinks = [
   { label: "Sync Your Certs", href: "/store/certification-sync" },
+  { label: "Verify a Certification", href: "/verify" },
   { label: "FAQ", href: "/faq" },
   { label: "Blog", href: "/blog" },
 ];
