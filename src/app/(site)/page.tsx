@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Award, ClipboardCheck, RefreshCw, Globe } from "lucide-react";
 import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
@@ -49,29 +50,38 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="border-b border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-content items-center gap-10 px-5 py-16 md:grid-cols-2 md:px-8 md:py-24">
-          <div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">{siteConfig.shortName}</p>
-            <h1>{siteConfig.tagline}</h1>
-            <p className="mt-4 text-lg text-muted">{siteConfig.trustLine}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <CtaButton href="/choose-your-cert-path" size="lg">Choose Your Cert Path</CtaButton>
-              <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
-            </div>
-            <div className="mt-8 max-w-md">
-              <TrustBadge />
-            </div>
-          </div>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-bg">
+      <section className="relative overflow-hidden border-b border-line bg-surface">
+        {/* Maroon half-circle decorative element, top-right */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand md:-right-32 md:-top-32 md:h-96 md:w-96"
+        />
+        <div className="relative mx-auto flex w-full max-w-content flex-col items-center px-5 py-16 text-center md:px-8 md:py-24">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">{siteConfig.shortName}</p>
+          <h1 className="max-w-3xl">{siteConfig.tagline}</h1>
+          <p className="mt-4 max-w-2xl text-lg text-muted">{siteConfig.trustLine}</p>
+
+          {/* Hero image — rounded corners, centered. Swap /brand/hero.svg → /brand/hero.jpg once the real banner is added. */}
+          <Link
+            href="/choose-your-cert-path"
+            className="group relative mx-auto mt-10 block aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5"
+          >
             <Image
-              src="/brand/abcac-logo.jpg"
-              alt="Arizona Board for Certification of Addiction Counselors"
+              src="/brand/hero.svg"
+              alt="Certification pathways for Arizona addiction counseling professionals"
               fill
               priority
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-contain p-6"
+              sizes="(max-width: 896px) 100vw, 896px"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             />
+          </Link>
+
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <CtaButton href="/choose-your-cert-path" size="lg">Choose Your Cert Path</CtaButton>
+            <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
+          </div>
+          <div className="mt-8 w-full max-w-md">
+            <TrustBadge />
           </div>
         </div>
       </section>
