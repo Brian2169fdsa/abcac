@@ -6,10 +6,18 @@ export const runtime = "nodejs";
 
 // Creates a Stripe Checkout Session to pay an admin-issued invoice.
 export async function POST(req: Request) {
-  if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" });
+  if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
-  const { invoice_id } = await req.json();
-  if (!invoice_id) return NextResponse.json({ error: "missing invoice_id" }, { status: 400 });
+  let parsed: { invoice_id?: string };
+  try {
+    parsed = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const { invoice_id } = parsed;
+  if (!invoice_id || typeof invoice_id !== "string") {
+    return NextResponse.json({ error: "missing invoice_id" }, { status: 400 });
+  }
 
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

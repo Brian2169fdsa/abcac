@@ -3,8 +3,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 
 function escCsv(val: string | null | undefined): string {
-  const s = val ?? "";
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+  let s = val ?? "";
+  // Neutralize spreadsheet formula injection: a leading =, +, -, @, tab, or CR
+  // can be interpreted as a formula by Excel/Sheets when the admin opens the CSV.
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
     return '"' + s.replace(/"/g, '""') + '"';
   }
   return s;
