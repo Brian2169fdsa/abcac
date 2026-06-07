@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email";
 
 // Stripe requires the raw request body to verify the signature.
 export const runtime = "nodejs";
@@ -83,6 +84,53 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     exam_mode: meta.exam_mode || null,
     status: "paid",
   });
+
+  // Best-effort receipt email — never throws, never affects the 200 response.
+  if (memberId) {
+    try {
+      const { data: member } = await admin
+        .from("profiles")
+        .select("email,first_name")
+        .eq("id", memberId)
+        .maybeSingle();
+
+      if (member?.email) {
+        const amountDollars =
+          session.amount_total != null
+            ? `$${(session.amount_total / 100).toFixed(2)}`
+            : "an amount";
+        const productName = meta.product_name || "your purchase";
+        const greeting = member.first_name ? `Hi ${member.first_name},` : "Hi,";
+
+        const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+  <h2 style="color:#1a3c5e">ABCAC Payment Receipt</h2>
+  <p>${greeting}</p>
+  <p>This email confirms that we have received your payment for <strong>${productName}</strong>.</p>
+  <table style="border-collapse:collapse;width:100%;margin:16px 0">
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Product</td>
+      <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right">${productName}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;color:#6b7280">Amount paid</td>
+      <td style="padding:8px 0;text-align:right"><strong>${amountDollars}</strong></td>
+    </tr>
+  </table>
+  <p style="color:#6b7280;font-size:14px">If you have any questions about your payment, please contact us at <a href="mailto:info@abcac.org">info@abcac.org</a>.</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">ABCAC &mdash; American Board of Certification for Animal Chiropractic</p>
+</div>`.trim();
+
+        await sendEmail({
+          to: member.email,
+          subject: "Your ABCAC payment receipt",
+          html,
+        });
+      }
+    } catch (err) {
+      console.error("receipt email skipped:", err);
+    }
+  }
 
   // Persist the Stripe customer id on the profile so future checkouts and portal
   // lookups can use it directly (avoids the email-based customer list search).
