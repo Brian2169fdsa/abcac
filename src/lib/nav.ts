@@ -36,7 +36,6 @@ export const MENU: MegaGroup[] = [
       { label: "Choose Your Cert Path", href: "/choose-your-cert-path", desc: "Not sure where to start? Find your path.", image: "/brand/menu/choose-path.png" },
       { label: "Initial Certification", href: "/initial-certification", desc: "Apply for your first ABCAC credential.", image: "/brand/menu/int-cert.png" },
       { label: "Certification Renewal", href: "/certification-renewal", desc: "Renew every two years with your CEUs.", image: "/brand/menu/renewal.png" },
-      { label: "Initial or Renewal", href: "/initial-or-renewal", desc: "Pay the right certification fee." },
     ],
   },
   {
@@ -51,7 +50,7 @@ export const MENU: MegaGroup[] = [
     links: [
       { label: "Testing", href: "/testing", desc: "Register for your IC&RC / AZBBHE exam." },
       { label: "Remote or In-Person", href: "/remote-or-inperson", desc: "Compare exam delivery options." },
-      { label: "About IC&RC", href: "/ic-rc", desc: "The consortium and exam format." },
+      { label: "About IC&RC", href: "https://internationalcredentialing.org", desc: "Visit the IC&RC website." },
       { label: "Reciprocity", href: "/reciprocity", desc: "Transfer your credential to or from Arizona." },
     ],
   },

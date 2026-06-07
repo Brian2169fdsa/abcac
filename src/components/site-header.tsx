@@ -74,16 +74,28 @@ export function SiteHeader() {
               {MENU.map((group) => (
                 <div key={group.label}>
                   <div className="mb-1 px-3 text-xs font-bold uppercase tracking-wide text-accent-strong">{group.label}</div>
-                  {group.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      aria-current={pathname === link.href ? "page" : undefined}
-                      className="block rounded-lg px-3 py-2 text-base font-semibold text-ink hover:bg-line/60"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {group.links.map((link) =>
+                    link.href.startsWith("http") ? (
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-lg px-3 py-2 text-base font-semibold text-ink hover:bg-line/60"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        aria-current={pathname === link.href ? "page" : undefined}
+                        className="block rounded-lg px-3 py-2 text-base font-semibold text-ink hover:bg-line/60"
+                      >
+                        {link.label}
+                      </Link>
+                    ),
+                  )}
                 </div>
               ))}
               <div className="border-t border-line pt-3">
