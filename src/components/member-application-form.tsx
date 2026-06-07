@@ -20,6 +20,7 @@ interface Props {
 /** Online certification / recertification application — writes to the shared
  *  portal database (applications + documents +, for renewal, ceu_records). */
 export function MemberApplicationForm({ mode, prefillName }: Props) {
+  const [appType, setAppType] = useState<Mode>(mode);
   const [credential, setCredential] = useState("");
   const [notes, setNotes] = useState("");
   const [ceuHours, setCeuHours] = useState("");
@@ -29,7 +30,7 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
   const [status, setStatus] = useState<"idle" | "saving" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const isRenewal = mode === "renewal";
+  const isRenewal = appType === "renewal";
 
   function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const list = Array.from(e.target.files ?? []);
@@ -45,7 +46,7 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
   async function submit() {
     setError(null);
     if (!credential) return setError("Please select your credential.");
-    if (mode === "initial" && files.length === 0) return setError("Please upload your supporting documents.");
+    if (!isRenewal && files.length === 0) return setError("Please upload your supporting documents.");
     if (!attested) return setError("Please confirm the attestation to continue.");
     if (!signature.trim()) return setError("Please type your full name as your signature.");
     setStatus("saving");
@@ -62,7 +63,7 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
         .from("applications")
         .insert({
           member_id: user.id,
-          app_type: mode,
+          app_type: appType,
           cert_type: credential,
           status: "submitted",
           member_notes: notes || null,
@@ -128,7 +129,15 @@ export function MemberApplicationForm({ mode, prefillName }: Props) {
     <div className="rounded-xl border border-line bg-surface p-7">
       <div className="space-y-4">
         <div>
-          <label htmlFor="credential" className="mb-1.5 block text-sm font-semibold">Credential</label>
+          <label htmlFor="appType" className="mb-1.5 block text-sm font-semibold">Application type</label>
+          <select id="appType" value={appType} onChange={(e) => setAppType(e.target.value as Mode)} className={field}>
+            <option value="initial">Initial Certification</option>
+            <option value="renewal">Recertification / Renewal</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="credential" className="mb-1.5 block text-sm font-semibold">Certification</label>
           <select id="credential" value={credential} onChange={(e) => setCredential(e.target.value)} className={field}>
             <option value="">— Select —</option>
             {CREDENTIALS.map((c) => <option key={c} value={c}>{c}</option>)}
