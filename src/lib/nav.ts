@@ -41,7 +41,7 @@ export const MENU: MegaGroup[] = [
   {
     label: "Exams & IC&RC",
     featured: {
-      image: "/brand/menu/exams.svg",
+      image: "/brand/menu/exams.png",
       title: "IC&RC testing",
       text: "Computer-based IC&RC exams, in person at an Arizona center or remote-proctored.",
       href: "/testing",
