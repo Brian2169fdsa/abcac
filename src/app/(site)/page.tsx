@@ -282,7 +282,7 @@ export default function HomePage() {
                 our board of directors. Your insights are invaluable, and your leadership helps shape the future of
                 addiction counselor certification in Arizona.
               </p>
-              <CtaButton href="/contact" size="lg" className="mt-6">Express Interest</CtaButton>
+              <CtaButton href="/board-application" size="lg" className="mt-6">Express Interest</CtaButton>
             </div>
             {/* Right: image with on-brand stylized overlay */}
             <div className="relative mx-auto w-full max-w-md">
