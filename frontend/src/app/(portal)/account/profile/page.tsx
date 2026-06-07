@@ -3,6 +3,7 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { ProfileForm, type ProfileData, type Prefs } from "@/components/profile-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ExportButton } from "@/components/account/export-button";
 
 function title(s: string | null) {
   return (s ?? "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -53,6 +54,14 @@ export default async function ProfilePage() {
 
       <Section compact>
         <ProfileForm profile={profileData} prefs={prefsData} />
+      </Section>
+
+      <Section compact>
+        <div className="rounded-xl border border-line bg-surface p-6">
+          <h3 className="mb-4">Your data</h3>
+          <p className="mb-4 text-muted">Download a copy of your ABCAC portal data.</p>
+          <ExportButton />
+        </div>
       </Section>
     </>
   );

@@ -3,6 +3,7 @@ import { CtaButton } from "@/components/cta-button";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { computeCompliance, CeuLike } from "@/lib/ceu-compliance";
 
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ interface Profile {
   state: string | null;
   zip_code: string | null;
 }
+interface CeuRecord extends CeuLike {
+  id: string;
+}
 
 function completeness(p: Profile | null): number {
   if (!p) return 0;
@@ -62,6 +66,9 @@ export default async function AccountPage() {
   let profile: Profile | null = null;
   let certifications: Certification[] = [];
   let payments: Payment[] = [];
+  let ceuRecords: CeuRecord[] = [];
+  let unreadMessages = 0;
+  let openDocRequests = 0;
   let backendReady = true;
 
   if (user) {
@@ -69,12 +76,24 @@ export default async function AccountPage() {
       const { data: p, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (error) throw error;
       profile = p as Profile | null;
-      const [{ data: certs }, { data: pays }] = await Promise.all([
+      const [
+        { data: certs },
+        { data: pays },
+        { data: ceus },
+        { count: msgCount },
+        { count: docCount },
+      ] = await Promise.all([
         supabase.from("certifications").select("*").eq("member_id", user.id),
         supabase.from("payments").select("*").eq("member_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("ceu_records").select("id, hours, category, status").eq("member_id", user.id),
+        supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("is_read", false),
+        supabase.from("document_requests").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("status", "open"),
       ]);
       certifications = (certs as Certification[]) ?? [];
       payments = (pays as Payment[]) ?? [];
+      ceuRecords = (ceus as CeuRecord[]) ?? [];
+      unreadMessages = msgCount ?? 0;
+      openDocRequests = docCount ?? 0;
     } catch {
       backendReady = false;
     }
@@ -85,6 +104,15 @@ export default async function AccountPage() {
   const syncOn = certifications.some((c) => c.sync_enabled);
   const profilePct = completeness(profile);
   const isAdmin = (profile as { portal_role?: string | null } | null)?.portal_role === "admin";
+
+  // Action items
+  const ceuCompliance = computeCompliance(ceuRecords);
+  const ninety = Date.now() + 90 * 86400000;
+  const expiringCerts = certifications.filter(
+    (c) => c.status === "active" && c.expiration_date !== null && new Date(c.expiration_date).getTime() <= ninety && new Date(c.expiration_date).getTime() > Date.now(),
+  );
+  const hasActionItems =
+    unreadMessages > 0 || openDocRequests > 0 || !ceuCompliance.compliant || expiringCerts.length > 0;
 
   return (
     <>
@@ -112,6 +140,78 @@ export default async function AccountPage() {
             </div>
             <span className="font-semibold text-brand">Open →</span>
           </Link>
+        </Section>
+      )}
+
+      {/* Action items */}
+      {hasActionItems && (
+        <Section title="Action Items" compact>
+          <div className="flex flex-col gap-3">
+            {unreadMessages > 0 && (
+              <Link
+                href="/account/messages"
+                className="flex items-center justify-between rounded-xl border border-amber-400/60 bg-amber-50/60 p-5 transition-colors hover:border-amber-500 dark:bg-amber-900/10"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-amber-800 dark:text-amber-300">
+                    {unreadMessages} unread message{unreadMessages !== 1 ? "s" : ""}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
+                    You have unread messages from ABCAC.
+                  </p>
+                </div>
+                <span className="font-semibold text-amber-700 dark:text-amber-400">View →</span>
+              </Link>
+            )}
+            {openDocRequests > 0 && (
+              <Link
+                href="/account/documents"
+                className="flex items-center justify-between rounded-xl border border-amber-400/60 bg-amber-50/60 p-5 transition-colors hover:border-amber-500 dark:bg-amber-900/10"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-amber-800 dark:text-amber-300">
+                    ABCAC requested {openDocRequests} document{openDocRequests !== 1 ? "s" : ""}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
+                    Please upload the requested document{openDocRequests !== 1 ? "s" : ""} to proceed.
+                  </p>
+                </div>
+                <span className="font-semibold text-amber-700 dark:text-amber-400">Upload →</span>
+              </Link>
+            )}
+            {!ceuCompliance.compliant && (
+              <Link
+                href="/account/ceus"
+                className="flex items-center justify-between rounded-xl border border-amber-400/60 bg-amber-50/60 p-5 transition-colors hover:border-amber-500 dark:bg-amber-900/10"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-amber-800 dark:text-amber-300">
+                    {ceuCompliance.remaining} CEU hour{ceuCompliance.remaining !== 1 ? "s" : ""} still needed for renewal
+                  </h3>
+                  <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
+                    You need {ceuCompliance.remaining} more approved CEU hour{ceuCompliance.remaining !== 1 ? "s" : ""} to meet the {40}-hour requirement.
+                  </p>
+                </div>
+                <span className="font-semibold text-amber-700 dark:text-amber-400">Add CEUs →</span>
+              </Link>
+            )}
+            {expiringCerts.length > 0 && (
+              <Link
+                href="/account/renewals"
+                className="flex items-center justify-between rounded-xl border border-amber-400/60 bg-amber-50/60 p-5 transition-colors hover:border-amber-500 dark:bg-amber-900/10"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-amber-800 dark:text-amber-300">
+                    {expiringCerts.length} credential{expiringCerts.length !== 1 ? "s" : ""} expiring within 90 days
+                  </h3>
+                  <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
+                    Renew soon to avoid a lapse in certification status.
+                  </p>
+                </div>
+                <span className="font-semibold text-amber-700 dark:text-amber-400">Renew →</span>
+              </Link>
+            )}
+          </div>
         </Section>
       )}
 
