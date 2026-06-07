@@ -10,7 +10,7 @@ const field =
 
 const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"] as const;
 
-export function IssueCertForm({ members }: { members: { id: string; label: string }[] }) {
+export function IssueCertForm({ members, defaultMemberId }: { members: { id: string; label: string }[]; defaultMemberId?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -78,7 +78,7 @@ export function IssueCertForm({ members }: { members: { id: string; label: strin
     <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-line bg-surface p-6">
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold">Member</span>
-        <select name="member" className={field} defaultValue="">
+        <select name="member" className={field} defaultValue={defaultMemberId ?? ""}>
           <option value="" disabled>— Select member —</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>

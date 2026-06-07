@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MemberManage } from "@/components/admin/member-manage";
 import { IssueCertForm } from "@/components/admin/issue-cert-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -42,7 +43,11 @@ export default async function AdminMembers() {
               <tr><td colSpan={5} className="px-5 py-8 text-center text-muted">No members.</td></tr>
             ) : rows.map((p: any) => (
               <tr key={p.id} className="border-b border-line last:border-0">
-                <td className="px-5 py-3 font-semibold">{[p.first_name, p.last_name].filter(Boolean).join(" ") || "—"}</td>
+                <td className="px-5 py-3 font-semibold">
+                  <Link href={`/admin/members/${p.id}`} className="text-brand hover:text-brand-600 hover:underline">
+                    {[p.first_name, p.last_name].filter(Boolean).join(" ") || "View member"}
+                  </Link>
+                </td>
                 <td className="px-5 py-3 text-muted">{p.email}</td>
                 <td className="px-5 py-3 capitalize text-muted">{(p.cert_status ?? "—").replace(/_/g, " ")}</td>
                 <td className="px-5 py-3 text-muted">{fmt(p.created_at)}</td>

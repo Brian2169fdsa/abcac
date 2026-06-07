@@ -13,7 +13,7 @@ export interface MemberOption {
   label: string;
 }
 
-export function RequestDocumentForm({ members }: { members: MemberOption[] }) {
+export function RequestDocumentForm({ members, defaultMemberId }: { members: MemberOption[]; defaultMemberId?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function RequestDocumentForm({ members }: { members: MemberOption[] }) {
     <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-line bg-surface p-6">
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold">Member</span>
-        <select name="member" className={field} defaultValue="">
+        <select name="member" className={field} defaultValue={defaultMemberId ?? ""}>
           <option value="" disabled>— Select member —</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
