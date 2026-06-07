@@ -187,31 +187,45 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Sync CTA */}
-      <Section>
-        <div className="rounded-xl border border-line bg-brand p-8 text-white md:p-12">
-          <h2 className="text-white">Sync Your Certifications — One Date, One Renewal, Less Stress.</h2>
-          <p className="mt-4 max-w-3xl text-white/85">
-            Align the renewal dates of your CADAC, CCJP, AADC, or other ABCAC certifications into one easy, unified
-            cycle. For just $15 per month forward, you can eliminate staggered renewals and manage all your
-            certifications together — saving time, reducing hassle, and staying compliant.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-4">
-            <CtaButton href="/store/certification-sync" variant="accent" size="lg">Start Your Sync Now</CtaButton>
-            {sync && <PriceTag product={sync} className="text-xl text-white" />}
+      {/* Sync Your Certifications */}
+      <Section surface>
+        <div className="grid items-start gap-10 lg:grid-cols-2">
+          {/* Left: heading + certificate */}
+          <div>
+            <h2 className="text-brand">Sync Your Certifications – One Date, One Renewal, Less Stress.</h2>
+            <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+              <Image
+                src="/brand/cadac-certificate.png"
+                alt="Sample ABCAC Certified Alcohol and Drug Abuse Counselor certificate"
+                fill
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-contain"
+              />
+            </div>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              "Count the months you need to move forward to align your certifications.",
-              "Enter that quantity when prompted (e.g., 5 months = $75).",
-              "Complete your payment securely online.",
-              "After payment, upload your completed sync form to finalize your request.",
-            ].map((step, i) => (
-              <div key={i} className="rounded-xl bg-white/10 p-4">
-                <div className="font-display text-lg font-bold text-accent">Step {i + 1}</div>
-                <p className="mt-1 text-sm text-white/85">{step}</p>
-              </div>
-            ))}
+
+          {/* Right: copy + video */}
+          <div>
+            <p className="text-lg text-muted">
+              Align the renewal dates of your CADAC, CCJP, AADC, or other ABCAC certifications into one easy, unified
+              cycle. For just $15 per month forward, you can eliminate staggered renewals and manage all your
+              certifications together — saving time, reducing hassle, and staying compliant. Submit your
+              synchronization request and pay securely online today!
+            </p>
+            <p className="mt-5 font-semibold text-brand">Watch our how to video below.</p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-line bg-ink shadow-sm">
+              <video controls preload="metadata" playsInline className="aspect-video w-full">
+                <source
+                  src="https://vid.cdn-website.com/249de5f7/videos/g8mVT8s4Q8eUpyl1TN3Z_ABCAC+3-v.mp4"
+                  type="video/mp4"
+                />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <CtaButton href="/store/certification-sync" size="lg">Start Your Sync Now</CtaButton>
+              {sync && <PriceTag product={sync} className="text-xl text-brand" />}
+            </div>
           </div>
         </div>
       </Section>
