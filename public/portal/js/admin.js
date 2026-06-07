@@ -30,6 +30,11 @@ function esc(s) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
 }
+// Safe to drop into an inline on*="fn(...)" handler: JSON-encodes (for the JS
+// string literal) then HTML-escapes (so it can't break out of the attribute).
+function escJsAttr(s) {
+  return esc(JSON.stringify(String(s == null ? '' : s)));
+}
 function title(s) {
   return String(s || '').replace(/_/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
 }
@@ -216,7 +221,7 @@ async function loadDocuments() {
     return '<tr>' +
       '<td>' + memberName(d.profiles) + '</td>' +
       '<td>' + esc(title(d.document_type)) + '</td>' +
-      '<td><a href="#" onclick="viewFile(\'member-documents\',\'' + esc(d.file_path) + '\');return false;">' + esc(d.file_name) + '</a></td>' +
+      '<td><a href="#" onclick="viewFile(\'member-documents\',' + escJsAttr(d.file_path) + ');return false;">' + esc(d.file_name) + '</a></td>' +
       '<td>' + fmtDate(d.uploaded_at) + '</td>' +
       '<td>' + badge(d.status) + '</td>' +
       '<td><div class="row-actions">' + reviewButtons('reviewDoc', d.id, d.status) + '</div></td>' +
@@ -264,7 +269,7 @@ async function loadCEUs() {
       '<td>' + esc(r.hours) + '</td>' +
       '<td>' + esc(r.category) + '</td>' +
       '<td>' + fmtDate(r.completion_date) + '</td>' +
-      '<td>' + (r.certificate_url ? '<a href="#" onclick="viewFile(\'ceu-certificates\',\'' + esc(r.certificate_url) + '\');return false;">View</a>' : '—') + '</td>' +
+      '<td>' + (r.certificate_url ? '<a href="#" onclick="viewFile(\'ceu-certificates\',' + escJsAttr(r.certificate_url) + ');return false;">View</a>' : '—') + '</td>' +
       '<td>' + badge(r.status) + '</td>' +
       '<td><div class="row-actions">' + reviewButtons('reviewCEU', r.id, r.status) + '</div></td>' +
       '</tr>';
@@ -317,7 +322,7 @@ function editApplication(id) {
     '<div class="kv"><b>Member</b><span>' + memberName(a.profiles) + '</span></div>' +
     '<div class="kv"><b>Type</b><span>' + esc(title(a.app_type)) + '</span></div>' +
     '<div class="fld" style="margin-top:14px;"><label>Status</label><select class="select" id="appStatus">' + opts + '</select></div>' +
-    '<div class="fld" style="margin-top:12px;"><label>Est. Completion</label><input class="input" type="date" id="appEst" value="' + (a.est_completion || '') + '"></div>' +
+    '<div class="fld" style="margin-top:12px;"><label>Est. Completion</label><input class="input" type="date" id="appEst" value="' + esc(a.est_completion || '') + '"></div>' +
     '<div class="fld" style="margin-top:12px;"><label>Notes to member</label><textarea class="textarea" id="appNotes">' + esc(a.admin_notes || '') + '</textarea></div>',
     'Save', async function () {
       const status = document.getElementById('appStatus').value;
@@ -344,7 +349,7 @@ async function loadRequests() {
   pending += (nc.data || []).filter(function (r) { return r.status === 'pending'; }).length;
   ncBody.innerHTML = (nc.data && nc.data.length) ? nc.data.map(function (r) {
     return '<tr><td>' + memberName(r.profiles) + '</td><td>' + esc(r.current_name) + '</td><td>' + esc(r.new_name) + '</td><td>' + esc(r.reason) + '</td>' +
-      '<td>' + (r.doc_path ? '<a href="#" onclick="viewFile(\'name-change-docs\',\'' + esc(r.doc_path) + '\');return false;">View</a>' : '—') + '</td>' +
+      '<td>' + (r.doc_path ? '<a href="#" onclick="viewFile(\'name-change-docs\',' + escJsAttr(r.doc_path) + ');return false;">View</a>' : '—') + '</td>' +
       '<td>' + badge(r.status) + '</td><td><div class="row-actions">' +
       reqButtons('reviewReq', 'name_change_requests', r.id, r.status, r.member_id, 'Name change') + '</div></td></tr>';
   }).join('') : '<tr><td colspan="7" class="empty">No name change requests.</td></tr>';
