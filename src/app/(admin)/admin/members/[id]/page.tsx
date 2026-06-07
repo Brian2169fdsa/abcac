@@ -1,0 +1,500 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { computeCompliance } from "@/lib/ceu-compliance";
+import { ViewFileButton } from "@/components/view-file-button";
+import { AccountApprovalActions } from "@/components/admin/account-approval-actions";
+import { MemberManage } from "@/components/admin/member-manage";
+import { IssueCertForm } from "@/components/admin/issue-cert-form";
+import { ReviewActions } from "@/components/admin/review-actions";
+import { RequestReviewActions } from "@/components/admin/request-review-actions";
+import { AppStatusControl } from "@/components/admin/app-status-control";
+import { RequestDocumentForm } from "@/components/admin/request-document";
+import { SendMessageForm } from "@/components/admin/send-message-form";
+import { CreateInvoiceForm } from "@/components/admin/create-invoice-form";
+import { MemberDetailSection, FieldGrid, DataTable } from "@/components/admin/member-detail-section";
+
+export const dynamic = "force-dynamic";
+
+function fmt(d: string | null | undefined) {
+  return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+}
+function fmtDT(d: string | null | undefined) {
+  return d ? new Date(d).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—";
+}
+function money(c: number | null | undefined) {
+  return "$" + ((c ?? 0) / 100).toFixed(2);
+}
+function cap(s: string | null | undefined) {
+  return (s ?? "—").replace(/_/g, " ");
+}
+
+/**
+ * Runs an optional Supabase query and degrades gracefully: if the table or a
+ * column does not exist (e.g. a not-yet-applied migration), or the client has
+ * no credentials, return an empty list instead of throwing. This keeps the page
+ * (and `npm run build`) from crashing.
+ */
+async function safeList<T = any>(p: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await p;
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function safeOne<T = any>(p: PromiseLike<{ data: T | null; error: unknown }>): Promise<T | null> {
+  try {
+    const { data, error } = await p;
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function StatusBadge({ status }: { status: string | null | undefined }) {
+  const s = (status ?? "").toLowerCase();
+  const tone =
+    s === "approved" || s === "active" || s === "paid" || s === "completed" || s === "verified" || s === "fulfilled"
+      ? "bg-green-100 text-green-800"
+      : s === "rejected" || s === "not_verified" || s === "expired"
+        ? "bg-red-100 text-red-700"
+        : "bg-amber-100 text-amber-800";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${tone}`}>
+      {cap(status) || "—"}
+    </span>
+  );
+}
+
+export default async function MemberDetailPage({ params }: { params: { id: string } }) {
+  const sb = createSupabaseServerClient();
+  const memberId = params.id;
+
+  const profile = await safeOne<any>(
+    sb.from("profiles").select("*").eq("id", memberId).maybeSingle(),
+  );
+  if (!profile) notFound();
+
+  // Fetch every member surface defensively. Tables/columns from not-yet-applied
+  // migrations degrade to empty rather than crashing the render.
+  const [
+    employment,
+    certs,
+    otherCerts,
+    ceuRecords,
+    documents,
+    docRequests,
+    applications,
+    payments,
+    supervisionAsSupervisor,
+    supervisionAsMember,
+    supervisionAuthorizations,
+    nameChanges,
+    verifications,
+    reciprocity,
+    messages,
+    invoices,
+  ] = await Promise.all([
+    safeList(sb.from("employment_records").select("*").eq("member_id", memberId).order("start_date", { ascending: false })),
+    safeList(sb.from("certifications").select("*").eq("member_id", memberId).order("issued_date", { ascending: false })),
+    safeList(sb.from("other_certifications").select("*").eq("member_id", memberId).order("issued_date", { ascending: false })),
+    safeList(sb.from("ceu_records").select("*").eq("member_id", memberId).order("completion_date", { ascending: false })),
+    safeList(sb.from("documents").select("*").eq("member_id", memberId).order("uploaded_at", { ascending: false })),
+    safeList(sb.from("document_requests").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
+    safeList(sb.from("applications").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
+    safeList(sb.from("payments").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
+    // Supervision records are keyed on supervisor_id (this member supervising others)…
+    safeList(sb.from("supervision_records").select("*").eq("supervisor_id", memberId).order("start_date", { ascending: false })),
+    // …and, if present, where the member is the supervisee.
+    safeList(sb.from("supervision_records").select("*").eq("member_id", memberId).order("start_date", { ascending: false })),
+    // Optional table from a possible future migration.
+    safeList(sb.from("supervision_authorizations").select("*").eq("member_id", memberId)),
+    safeList(sb.from("name_change_requests").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
+    safeList(sb.from("verification_requests").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
+    safeList(sb.from("reciprocity_requests").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
+    safeList(sb.from("messages").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
+    safeList(sb.from("invoices").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
+  ]);
+
+  const compliance = computeCompliance(
+    (ceuRecords as any[]).map((r) => ({ hours: r.hours ?? null, category: r.category ?? null, status: r.status ?? null })),
+  );
+
+  const fullName = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ") || "—";
+
+  // A single-member option for the preselected scoped forms.
+  const memberOption = [{ id: memberId, label: `${[profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member"} (${profile.email ?? ""})` }];
+
+  return (
+    <>
+      <div className="mb-4">
+        <Link href="/admin/members" className="text-sm font-semibold text-brand hover:text-brand-600">← Back to members</Link>
+      </div>
+
+      {/* 1. Header + account/role controls */}
+      <div className="mb-8 rounded-xl border border-line bg-surface p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{fullName}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              <span>{profile.email ?? "—"}</span>
+              <span>{profile.phone ?? "—"}</span>
+              <span>Joined {fmt(profile.created_at)}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-line px-2 py-0.5 capitalize text-muted">Cert: {cap(profile.cert_status)}</span>
+              <StatusBadge status={profile.account_status} />
+              <span className="rounded-full border border-line px-2 py-0.5 capitalize text-muted">Role: {cap(profile.portal_role)}</span>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-3">
+            {profile.account_status === "pending" && (
+              <div>
+                <div className="mb-1 text-right text-xs font-semibold uppercase tracking-wide text-muted">Account review</div>
+                <AccountApprovalActions memberId={memberId} />
+              </div>
+            )}
+            <div>
+              <div className="mb-1 text-right text-xs font-semibold uppercase tracking-wide text-muted">Status / role</div>
+              <MemberManage id={memberId} accountStatus={profile.account_status} role={profile.portal_role} />
+            </div>
+          </div>
+        </div>
+        {profile.account_review_notes && (
+          <p className="mt-4 rounded-lg border border-line bg-bg p-3 text-sm text-muted">
+            <span className="font-semibold text-ink">Review notes:</span> {profile.account_review_notes}
+          </p>
+        )}
+      </div>
+
+      {/* 2. Personal Information + Employment */}
+      <MemberDetailSection title="Personal Information">
+        <FieldGrid
+          items={[
+            { label: "First name", value: profile.first_name ?? "—" },
+            { label: "Middle name", value: profile.middle_name ?? "—" },
+            { label: "Last name", value: profile.last_name ?? "—" },
+            { label: "Email", value: profile.email ?? "—" },
+            { label: "Phone", value: profile.phone ?? "—" },
+            { label: "SSN (last 4)", value: profile.ssn_last4 ?? "—" },
+            { label: "Date of birth", value: fmt(profile.date_of_birth) },
+            { label: "Address", value: profile.address_line1 ?? "—" },
+            { label: "City", value: profile.city ?? "—" },
+            { label: "State", value: profile.state ?? "—" },
+            { label: "ZIP", value: profile.zip_code ?? "—" },
+            { label: "Stripe customer", value: profile.stripe_customer_id ?? "—" },
+          ]}
+        />
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Employment">
+        <DataTable
+          head={["Employer", "Position", "Start", "End", "Current"]}
+          rows={(employment as any[]).map((e) => [
+            e.employer_name ?? "—",
+            e.position_title ?? "—",
+            fmt(e.start_date),
+            e.is_current ? "Present" : fmt(e.end_date),
+            e.is_current ? "Yes" : "No",
+          ])}
+          empty="No employment records."
+        />
+      </MemberDetailSection>
+
+      {/* 3. Certifications + Other Certifications + Issue cert */}
+      <MemberDetailSection title="Certifications">
+        <DataTable
+          head={["Credential", "Number", "Level", "Issued", "Expires", "Sync", "Status"]}
+          rows={(certs as any[]).map((c) => [
+            c.cert_type ?? "—",
+            c.cert_number ?? "—",
+            c.ic_rc_level ?? "—",
+            fmt(c.issued_date),
+            fmt(c.expiration_date),
+            c.sync_enabled ? "On" : "Off",
+            <StatusBadge key="s" status={c.status} />,
+          ])}
+          empty="No certifications issued."
+        />
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Issue a certification to this member</div>
+          <IssueCertForm members={memberOption} defaultMemberId={memberId} />
+        </div>
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Other Certifications">
+        <DataTable
+          head={["Credential", "Number", "Issuing board", "Issued", "Expires", "Document"]}
+          rows={(otherCerts as any[]).map((c) => [
+            c.credential_title ?? "—",
+            c.credential_number ?? "—",
+            c.issuing_board ?? "—",
+            fmt(c.issued_date),
+            fmt(c.expiration_date),
+            c.doc_path ? <ViewFileButton key="v" bucket="member-documents" path={c.doc_path} /> : "—",
+          ])}
+          empty="No other certifications recorded."
+        />
+      </MemberDetailSection>
+
+      {/* 4. CEU records + compliance KPIs + per-record review */}
+      <MemberDetailSection title="Continuing Education (CEUs)">
+        <div className="mb-4 rounded-xl border border-line bg-surface p-5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold">Renewal compliance</span>
+            {compliance.compliant ? (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">Compliant</span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Not yet compliant</span>
+            )}
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-4">
+            <div>
+              <div className="text-sm text-muted">Approved hours</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.totalApproved} / 40</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted">Hours remaining</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.remaining}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted">Ethics</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.ethics} / 3</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted">Cultural Diversity</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.cultural} / 3</div>
+            </div>
+          </div>
+        </div>
+        <DataTable
+          head={["Course", "Provider", "Hrs", "Category", "Completed", "Certificate", "Status", "Actions"]}
+          rows={(ceuRecords as any[]).map((r) => [
+            r.course_name ?? "—",
+            r.provider ?? "—",
+            r.hours ?? "—",
+            r.category ?? "—",
+            fmt(r.completion_date),
+            r.certificate_url ? <ViewFileButton key="v" bucket="ceu-certificates" path={r.certificate_url} /> : "—",
+            <StatusBadge key="s" status={r.status} />,
+            <ReviewActions key="a" table="ceu_records" id={r.id} status={r.status} />,
+          ])}
+          empty="No CEU records."
+        />
+      </MemberDetailSection>
+
+      {/* 5. Documents + review + request-document */}
+      <MemberDetailSection title="Documents">
+        <DataTable
+          head={["File", "Type", "Uploaded", "Status", "Review notes", "View", "Actions"]}
+          rows={(documents as any[]).map((d) => [
+            d.file_name ?? "—",
+            d.document_type ?? "—",
+            fmt(d.uploaded_at),
+            <StatusBadge key="s" status={d.status} />,
+            d.admin_notes ?? "—",
+            d.file_path ? <ViewFileButton key="v" bucket="member-documents" path={d.file_path} label={d.file_name || "View"} /> : "—",
+            <ReviewActions key="a" table="documents" id={d.id} status={d.status} />,
+          ])}
+          empty="No documents uploaded."
+        />
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Open document requests</div>
+          <DataTable
+            head={["Requested document", "Note", "Requested", "Status"]}
+            rows={(docRequests as any[]).map((r) => [
+              r.document_type ?? "—",
+              r.note ?? "—",
+              fmt(r.created_at),
+              <StatusBadge key="s" status={r.status} />,
+            ])}
+            empty="No document requests."
+          />
+        </div>
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Request a document from this member</div>
+          <RequestDocumentForm members={memberOption} defaultMemberId={memberId} />
+        </div>
+      </MemberDetailSection>
+
+      {/* 6. Applications + status control */}
+      <MemberDetailSection title="Applications">
+        <DataTable
+          head={["Type", "Credential", "Submitted", "Reviewed", "Est. completion", "Status", "Actions"]}
+          rows={(applications as any[]).map((a) => [
+            cap(a.app_type),
+            a.cert_type ?? "—",
+            fmt(a.submitted_at),
+            fmt(a.reviewed_at),
+            fmt(a.est_completion),
+            <StatusBadge key="s" status={a.status} />,
+            <AppStatusControl key="a" id={a.id} status={a.status} />,
+          ])}
+          empty="No applications submitted."
+        />
+      </MemberDetailSection>
+
+      {/* 7. Renewals — active certs + days-left, mirroring the member renewals page */}
+      <MemberDetailSection title="Renewals" description="Active credentials and renewal urgency (computed from expiration dates).">
+        <DataTable
+          head={["Credential", "Number", "Expires", "Days left"]}
+          rows={(certs as any[])
+            .filter((c) => c.status === "active")
+            .map((c) => {
+              const days = c.expiration_date
+                ? Math.ceil((new Date(c.expiration_date).getTime() - Date.now()) / 86_400_000)
+                : null;
+              const label =
+                days === null ? "—" : days < 0 ? "Expired" : `${days}d${days <= 90 ? " (renew soon)" : ""}`;
+              return [c.cert_type ?? "—", c.cert_number ?? "—", fmt(c.expiration_date), label];
+            })}
+          empty="No active certifications to renew."
+        />
+      </MemberDetailSection>
+
+      {/* 8. Supervision */}
+      <MemberDetailSection title="Supervision" description="Supervision this member provides (as supervisor) and, if recorded, receives.">
+        <div className="mb-2 text-sm font-semibold">As supervisor</div>
+        <DataTable
+          head={["Supervisee", "Credential", "Start", "End", "Status"]}
+          rows={(supervisionAsSupervisor as any[]).map((s) => [
+            s.supervisee_name ?? "—",
+            s.supervisee_credential ?? "—",
+            fmt(s.start_date),
+            s.end_date ? fmt(s.end_date) : "Present",
+            <StatusBadge key="s" status={s.status} />,
+          ])}
+          empty="No supervision provided."
+        />
+        {(supervisionAsMember.length > 0 || supervisionAuthorizations.length > 0) && (
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-semibold">Authorizations</div>
+            <DataTable
+              head={["Detail", "Start", "End", "Status"]}
+              rows={[
+                ...(supervisionAsMember as any[]).map((s) => [
+                  s.supervisee_name ?? s.supervisor_name ?? "—",
+                  fmt(s.start_date),
+                  s.end_date ? fmt(s.end_date) : "Present",
+                  <StatusBadge key="s" status={s.status} />,
+                ]),
+                ...(supervisionAuthorizations as any[]).map((s) => [
+                  s.detail ?? s.note ?? s.supervisor_name ?? "—",
+                  fmt(s.start_date ?? s.created_at),
+                  fmt(s.end_date),
+                  <StatusBadge key="s" status={s.status} />,
+                ]),
+              ]}
+              empty="No supervision authorizations."
+            />
+          </div>
+        )}
+      </MemberDetailSection>
+
+      {/* 9. Requests: name change, verification, reciprocity */}
+      <MemberDetailSection title="Name Change Requests">
+        <DataTable
+          head={["Current", "New", "Reason", "Submitted", "Doc", "Status", "Actions"]}
+          rows={(nameChanges as any[]).map((r) => [
+            r.current_name ?? "—",
+            r.new_name ?? "—",
+            r.reason ?? "—",
+            fmt(r.submitted_at),
+            r.doc_path ? <ViewFileButton key="v" bucket="name-change-docs" path={r.doc_path} /> : "—",
+            <StatusBadge key="s" status={r.status} />,
+            <RequestReviewActions key="a" table="name_change_requests" id={r.id} status={r.status} />,
+          ])}
+          empty="No name change requests."
+        />
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Verification Requests" description="One-click Verified / Not Verified decisions email the recipient.">
+        <DataTable
+          head={["Purpose", "Recipient", "Submitted", "Result", "Status", "Actions"]}
+          rows={(verifications as any[]).map((r) => [
+            r.purpose ?? "—",
+            [r.recipient_name, r.recipient_email].filter(Boolean).join(" · ") || "—",
+            fmt(r.submitted_at),
+            r.verification_result ? cap(r.verification_result) : "—",
+            <StatusBadge key="s" status={r.status} />,
+            <RequestReviewActions key="a" table="verification_requests" id={r.id} status={r.status} />,
+          ])}
+          empty="No verification requests."
+        />
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Reciprocity Requests">
+        <DataTable
+          head={["Direction", "Credential", "Destination", "Reason", "Submitted", "Status", "Actions"]}
+          rows={(reciprocity as any[]).map((r) => [
+            cap(r.direction),
+            r.credential ?? "—",
+            r.destination ?? "—",
+            r.reason ?? "—",
+            fmt(r.submitted_at),
+            <StatusBadge key="s" status={r.status} />,
+            <RequestReviewActions key="a" table="reciprocity_requests" id={r.id} status={r.status} />,
+          ])}
+          empty="No reciprocity requests."
+        />
+      </MemberDetailSection>
+
+      {/* 10. Messages thread + send box scoped to this member */}
+      <MemberDetailSection title="Messages">
+        <DataTable
+          head={["Date", "From", "Subject", "Message", "Read"]}
+          rows={(messages as any[]).map((m) => [
+            fmtDT(m.created_at),
+            m.from_name ?? "—",
+            m.subject ?? "—",
+            m.body ?? "—",
+            m.is_read ? "Read" : "Unread",
+          ])}
+          empty="No messages."
+        />
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Send a message to this member</div>
+          <SendMessageForm members={memberOption} defaultMemberId={memberId} />
+        </div>
+      </MemberDetailSection>
+
+      {/* 11. Invoices + payments + create invoice scoped to this member */}
+      <MemberDetailSection title="Invoices">
+        <DataTable
+          head={["Invoice #", "Description", "Amount", "Created", "Paid", "Status"]}
+          rows={(invoices as any[]).map((inv) => [
+            inv.invoice_number ?? "—",
+            inv.description ?? "—",
+            money(inv.amount_cents),
+            fmt(inv.created_at),
+            inv.paid_at ? fmt(inv.paid_at) : "—",
+            <StatusBadge key="s" status={inv.status} />,
+          ])}
+          empty="No invoices."
+        />
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Create an invoice for this member</div>
+          <CreateInvoiceForm members={memberOption} defaultMemberId={memberId} />
+        </div>
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Payments">
+        <DataTable
+          head={["Product", "Amount", "Mode", "Status", "Date"]}
+          rows={(payments as any[]).map((p) => [
+            p.product_name ?? p.slug ?? "—",
+            money(p.amount_cents),
+            cap(p.mode),
+            <StatusBadge key="s" status={p.status} />,
+            fmt(p.created_at),
+          ])}
+          empty="No payments recorded."
+        />
+      </MemberDetailSection>
+    </>
+  );
+}

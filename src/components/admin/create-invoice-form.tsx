@@ -7,7 +7,7 @@ import type { MemberOption } from "@/components/admin/send-message-form";
 
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
-export function CreateInvoiceForm({ members }: { members: MemberOption[] }) {
+export function CreateInvoiceForm({ members, defaultMemberId }: { members: MemberOption[]; defaultMemberId?: string }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export function CreateInvoiceForm({ members }: { members: MemberOption[] }) {
   return (
     <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-line bg-surface p-6">
       <label className="block"><span className="mb-1.5 block text-sm font-semibold">Member</span>
-        <select name="member" className={field} defaultValue="">
+        <select name="member" className={field} defaultValue={defaultMemberId ?? ""}>
           <option value="" disabled>— Select member —</option>
           {members.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
