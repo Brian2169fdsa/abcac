@@ -25,7 +25,7 @@ export const MENU: MegaGroup[] = [
   {
     label: "Certification",
     featured: {
-      image: "/brand/menu/certification.svg",
+      image: "/brand/cadac-certificate.png",
       title: "Start your certification",
       text: "Find the credential that fits your career and apply online through our secure portal.",
       href: "/choose-your-cert-path",
