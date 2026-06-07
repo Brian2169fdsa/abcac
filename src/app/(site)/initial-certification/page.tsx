@@ -73,7 +73,7 @@ export default function InitialCertificationPage() {
             />
             <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5">
               <Image
-                src="/brand/initial-cert-hero.svg"
+                src="/brand/initial-cert-hero.png"
                 alt="Initial ABCAC certification"
                 fill
                 priority
