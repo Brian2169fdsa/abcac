@@ -135,7 +135,7 @@ export default function HomePage() {
                 "Working in hospitals, recovery centers, and private practice",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 font-semibold text-white">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-white" aria-hidden />
                   {item}
                 </li>
               ))}
