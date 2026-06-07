@@ -6,10 +6,11 @@
   --bg: #faf9f9;
   --surface: #ffffff;
   --ink: #1c2430;
-  --brand: #1f3a5f;
-  --brand-600: #16304f;
-  --accent: #c8a04a;
+  --brand: #7b1a1a;        /* ABCAC maroon — primary */
+  --brand-600: #5e1414;    /* darker maroon — hover/active */
+  --accent: #c8a04a;       /* gold accent */
   --accent-strong: #806014; /* AA-contrast gold for small text on light bg */
+  --info: #1f3a5f;         /* navy blue — secondary/blue accents */
   --muted: #5b6573;
   --line: #e7e5e3;
   --success: #1f7a4d;
