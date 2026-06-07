@@ -79,21 +79,30 @@ export function MegaMenu() {
 
               {/* Links grid */}
               <div className="grid grid-cols-2 gap-1 p-4">
-                {MENU[open].links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="rounded-lg p-3 transition-colors hover:bg-bg"
-                  >
-                    <div className="text-sm font-semibold text-ink">{link.label}</div>
-                    {link.desc && <div className="mt-0.5 text-xs text-muted">{link.desc}</div>}
-                    {link.image && (
-                      <div className="relative mt-2 aspect-[16/9] overflow-hidden rounded-md border border-line bg-bg">
-                        <Image src={link.image} alt="" fill sizes="240px" className="object-cover" />
-                      </div>
-                    )}
-                  </Link>
-                ))}
+                {MENU[open].links.map((link) => {
+                  const external = link.href.startsWith("http");
+                  const inner = (
+                    <>
+                      <div className="text-sm font-semibold text-ink">{link.label}</div>
+                      {link.desc && <div className="mt-0.5 text-xs text-muted">{link.desc}</div>}
+                      {link.image && (
+                        <div className="relative mt-2 aspect-[16/9] overflow-hidden rounded-md border border-line bg-bg">
+                          <Image src={link.image} alt="" fill sizes="240px" className="object-cover" />
+                        </div>
+                      )}
+                    </>
+                  );
+                  const cls = "rounded-lg p-3 transition-colors hover:bg-bg";
+                  return external ? (
+                    <a key={link.href} href={link.href} target="_blank" rel="noreferrer" className={cls}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <Link key={link.href} href={link.href} className={cls}>
+                      {inner}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
