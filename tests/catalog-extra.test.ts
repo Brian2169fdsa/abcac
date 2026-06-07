@@ -8,8 +8,17 @@ import {
 } from "@/lib/catalog";
 
 describe("getProducts", () => {
-  it("returns 11 products", () => {
-    expect(getProducts()).toHaveLength(11);
+  it("returns 12 products", () => {
+    expect(getProducts()).toHaveLength(12);
+  });
+});
+
+describe("icrc-reciprocity-transfer", () => {
+  it("is a $150 one-time payment product", () => {
+    const product = getProductBySlug("icrc-reciprocity-transfer");
+    expect(product).toBeDefined();
+    expect(product!.price).toBe(150);
+    expect(product!.mode).toBe("payment");
   });
 });
 
