@@ -59,6 +59,21 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const meta = session.metadata ?? {};
   const memberId = session.client_reference_id || meta.member_id || null;
 
+  // If this checkout was paying an IC&RC reciprocity OUT transfer fee ($150),
+  // flip the reciprocity_requests row to paid and record the session id. The
+  // update is idempotent — re-running it just re-sets the same values, and the
+  // event-level idempotency guard above already prevents duplicate processing.
+  if (meta.payment_type === "reciprocity" && meta.reciprocity_request_id) {
+    try {
+      await admin.from("reciprocity_requests").update({
+        payment_status: "paid",
+        stripe_session_id: session.id,
+      }).eq("id", meta.reciprocity_request_id);
+    } catch (err) {
+      console.error("reciprocity mark-paid skipped:", err);
+    }
+  }
+
   // If this checkout was paying an admin-issued invoice, mark it paid.
   if (meta.invoice_id) {
     try {

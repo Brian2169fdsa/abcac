@@ -39,11 +39,33 @@ export default async function ExperiencePage() {
   const { data: { user } } = await supabase.auth.getUser();
   const uid = user!.id;
 
+  // Supervision the member RECEIVES (they are the linked supervisee). Wrapped so
+  // a not-yet-applied migration 023 (no supervisee_member_id column / no RLS
+  // read policy) degrades to empty instead of breaking the page.
+  let supervisedBy: any[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("supervision_records")
+      .select("*, supervisor:supervisor_id(first_name,last_name,email)")
+      .eq("supervisee_member_id", uid)
+      .order("start_date", { ascending: false });
+    if (!error) supervisedBy = data ?? [];
+  } catch { /* migration 023 not applied — leave empty */ }
+
   const [{ data: emp }, { data: certs }, { data: sup }] = await Promise.all([
     supabase.from("employment_records").select("*").eq("member_id", uid).order("start_date", { ascending: false }),
     supabase.from("other_certifications").select("*").eq("member_id", uid).order("issued_date", { ascending: false }),
     supabase.from("supervision_records").select("*").eq("supervisor_id", uid).order("start_date", { ascending: false }),
   ]);
+
+  function supervisorName(s: any): string {
+    const sup = s.supervisor;
+    if (sup) {
+      const n = [sup.first_name, sup.last_name].filter(Boolean).join(" ");
+      return n || sup.email || "Your supervisor";
+    }
+    return "Your supervisor";
+  }
 
   return (
     <>
@@ -82,6 +104,23 @@ export default async function ExperiencePage() {
         />
         <div className="mt-4"><AddSupervisionForm /></div>
       </Section>
+
+      {supervisedBy.length > 0 && (
+        <Section compact surface title="Supervision You Receive">
+          <p className="mb-4 max-w-3xl text-sm text-muted">Supervision records where an ABCAC supervisor has linked you as their supervisee.</p>
+          <Table
+            head={["Supervised by", "Your credential", "Start", "End", "Status"]}
+            rows={supervisedBy.map((s) => [
+              supervisorName(s),
+              s.supervisee_credential,
+              fmt(s.start_date),
+              s.end_date ? fmt(s.end_date) : "Present",
+              s.status,
+            ])}
+            empty="You are not currently recorded as a supervisee."
+          />
+        </Section>
+      )}
     </>
   );
 }

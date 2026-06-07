@@ -10,13 +10,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
   }
 
-  let parsed: { slug?: string; credentialLevel?: string; examMode?: string };
+  let parsed: {
+    slug?: string;
+    credentialLevel?: string;
+    examMode?: string;
+    reciprocityRequestId?: string;
+    // Optional free-form metadata to forward onto the Checkout session. Values
+    // are coerced to strings (Stripe metadata is string→string). Backward
+    // compatible: callers that don't send it behave exactly as before.
+    metadata?: Record<string, unknown>;
+  };
   try {
     parsed = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  const { slug, credentialLevel, examMode } = parsed;
+  const { slug, credentialLevel, examMode, reciprocityRequestId, metadata: extraMetadata } = parsed;
   if (typeof slug !== "string" || !slug) {
     return NextResponse.json({ error: "missing_slug" }, { status: 400 });
   }
@@ -59,6 +68,21 @@ export async function POST(req: Request) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+  // Forward any caller-supplied metadata (coerced to strings) plus a normalized
+  // reciprocity marker. The webhook keys off `payment_type` + `reciprocity_request_id`
+  // to reconcile the $150 IC&RC OUT transfer fee.
+  const forwardedMetadata: Record<string, string> = {};
+  if (extraMetadata && typeof extraMetadata === "object") {
+    for (const [k, v] of Object.entries(extraMetadata)) {
+      if (v == null) continue;
+      forwardedMetadata[k] = String(v);
+    }
+  }
+  if (typeof reciprocityRequestId === "string" && reciprocityRequestId) {
+    forwardedMetadata.reciprocity_request_id = reciprocityRequestId;
+    forwardedMetadata.payment_type = "reciprocity";
+  }
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: product.mode,
@@ -80,6 +104,9 @@ export async function POST(req: Request) {
         exam_mode: examMode ?? "",
         member_id: memberId ?? "",
         ceu_note: product.category === "CEU Endorsement" ? "Submit materials to abcac@abcac.org (4-week review)" : "",
+        // Caller-supplied + reciprocity markers last so they can't clobber the
+        // reserved keys above unless intentionally provided.
+        ...forwardedMetadata,
       },
     });
     return NextResponse.json({ url: session.url });
