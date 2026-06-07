@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { AddEmploymentForm, AddOtherCertForm, AddSupervisionForm } from "@/components/portal-forms";
+import { ViewFileButton } from "@/components/view-file-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Experience & Credentials" };
@@ -10,7 +12,7 @@ function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
 }
 
-function Table({ head, rows, empty }: { head: string[]; rows: (string | null)[][]; empty: string }) {
+function Table({ head, rows, empty }: { head: string[]; rows: ReactNode[][]; empty: string }) {
   if (rows.length === 0) return <p className="text-muted">{empty}</p>;
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -58,8 +60,11 @@ export default async function ExperiencePage() {
 
       <Section compact surface title="Other Certifications">
         <Table
-          head={["Credential", "Number", "Issuing Board", "Issued", "Expires"]}
-          rows={(certs ?? []).map((c) => [c.credential_title, c.credential_number, c.issuing_board, fmt(c.issued_date), fmt(c.expiration_date)])}
+          head={["Credential", "Number", "Issuing Board", "Issued", "Expires", "Document"]}
+          rows={(certs ?? []).map((c) => [
+            c.credential_title, c.credential_number, c.issuing_board, fmt(c.issued_date), fmt(c.expiration_date),
+            c.doc_path ? <ViewFileButton bucket="member-documents" path={c.doc_path} label="View" /> : "—",
+          ])}
           empty="No other certifications recorded."
         />
         <div className="mt-4"><AddOtherCertForm /></div>
