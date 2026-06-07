@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { NAV, HEADER_CTA, MEMBER_PORTAL } from "@/lib/nav";
+import { MENU, MENU_LINKS, HEADER_CTA, MEMBER_PORTAL } from "@/lib/nav";
 import { siteConfig } from "@/lib/site-config";
 import { CtaButton } from "@/components/cta-button";
+import { MegaMenu } from "@/components/mega-menu";
 import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
@@ -32,24 +33,7 @@ export function SiteHeader() {
           <span className="text-[10px] uppercase tracking-wider text-muted">Arizona Board for Certification</span>
         </Link>
 
-        <nav className="hidden items-center gap-5 xl:flex" aria-label="Primary">
-          {NAV.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "text-sm font-semibold text-muted transition-colors hover:text-brand",
-                  active && "text-brand",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <nav aria-label="Primary"><MegaMenu /></nav>
 
         <div className="flex items-center gap-3">
           <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden lg:inline-flex">
@@ -86,20 +70,34 @@ export function SiteHeader() {
                 <X className="h-6 w-6" aria-hidden />
               </button>
             </div>
-            <nav className="flex flex-col gap-1" aria-label="Mobile">
-              {NAV.map((item) => {
-                const active = pathname === item.href;
-                return (
+            <nav className="flex flex-col gap-5" aria-label="Mobile">
+              {MENU.map((group) => (
+                <div key={group.label}>
+                  <div className="mb-1 px-3 text-xs font-bold uppercase tracking-wide text-accent-strong">{group.label}</div>
+                  {group.links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      aria-current={pathname === link.href ? "page" : undefined}
+                      className="block rounded-lg px-3 py-2 text-base font-semibold text-ink hover:bg-line/60"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+              <div className="border-t border-line pt-3">
+                {MENU_LINKS.map((link) => (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className="rounded-lg px-3 py-2.5 text-base font-semibold text-ink hover:bg-line/60"
+                    key={link.href}
+                    href={link.href}
+                    aria-current={pathname === link.href ? "page" : undefined}
+                    className="block rounded-lg px-3 py-2 text-base font-semibold text-ink hover:bg-line/60"
                   >
-                    {item.label}
+                    {link.label}
                   </Link>
-                );
-              })}
+                ))}
+              </div>
             </nav>
             <CtaButton href={MEMBER_PORTAL.href} className="mt-6 w-full">
               {MEMBER_PORTAL.label}
