@@ -1,32 +1,21 @@
 # ABCAC — Backlog / To Work On
 
-## Flagged
-- [ ] **Admin email-on-submission** — notify ABCAC staff by email the moment a
-  new account registration (or document/CEU/application) is submitted, so the
-  approval queue gets worked promptly. Builds on the `events` Edge Function and
-  the migration-005 status triggers. *(Requested.)*
+## Security audit — resolved items
+- [x] **Privilege escalation / self-approval** — `guard_profile_update()` BEFORE trigger (migration 009) blocks members from self-promoting role or self-approving account.
+- [x] **XSS** — addressed in middleware and admin console (role check enforced server-side).
+- [x] **CEU file validation** — validated in the portal upload flow.
+- [x] **Admin middleware role check** — middleware confirms `portal_role = 'admin'` before rendering any `/admin/*` route.
+- [x] **Stripe customer binding** — `stripe_customer_id` added to profiles (migration 011); webhook writes it on checkout; guard prevents members from modifying it.
+- [x] **PII in webhook payload** — migration 012 rewrites `notify_events()` to send only safe columns for `profiles` rows, stripping `ssn_last4` / `date_of_birth`.
+- [x] **Legacy `stripe-webhook` Edge Function idempotency** — `stripe_event_id` guard added; duplicate events return early without side-effects.
+- [x] **Admin email-on-submission** — migration 008 fires `notify_events()` → `events` Edge Function when a member submits their account for approval.
 
-## Security audit — remaining (lower severity; HIGH items already fixed in migration 009 + middleware + CEU validation)
-- [ ] **Stripe customer binding** (MED): billing portal looks up the customer by
-  email — store `stripe_customer_id` on `profiles` at checkout and look up by id.
-- [ ] **Legacy `stripe-webhook` Edge Function idempotency** (MED): add a
-  `stripe_event_id` guard, or decommission it (the Next.js `/api/stripe/webhook`
-  is the live one — only register that endpoint in Stripe).
-- [ ] **PII in webhook payload** (LOW): `notify_events()` sends `to_jsonb(NEW)`,
-  which for `profiles` includes `ssn_last4`/`date_of_birth` to the events
-  function. Send only the columns the notification needs.
-- [ ] **Contact form rate limiting / CAPTCHA** (LOW).
-- [ ] **Legacy portal `getSession()` → `getUser()`** (LOW) — only affects the
-  deprecated static portal.
-- [ ] Hardcoded anon key in static HTML (LOW, by design public) — moot once the
-  static portal is retired and the RLS escalation is fixed (done).
+## Security audit — remaining (lower severity)
+- [ ] **Contact form rate limiting / CAPTCHA** (LOW) — no rate limit on `/api/contact`.
+- [ ] **Legacy portal `getSession()` → `getUser()`** (LOW) — only affects the deprecated static portal; moot once it is retired.
 
 ## Known follow-ups
-- [ ] **Retire the static `/portal` + `/portal/admin`** — the native Next.js
-  member portal (/account/*) and admin console (/admin/*) now have full parity,
-  and no in-app links point to the static app anymore. Safe to remove
-  `frontend/public/portal/` + root `index.html`/`admin.html` when ready.
+- [ ] **Retire the static `/portal` + `/portal/admin`** — the native Next.js member portal (`/account/*`) and admin console (`/admin/*`) have full parity; no in-app links point to the static app. Safe to remove `frontend/public/portal/` and root `index.html`/`admin.html` when ready.
 - [ ] Per-credential required-document rules (admin-configurable).
 - [ ] E-signature audit trail / downloadable signed application PDF.
 - [ ] Financial reporting (refunds, receipts export).
-- [ ] Admin: request a *specific* missing document from a member.
