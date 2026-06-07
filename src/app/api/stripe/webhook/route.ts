@@ -115,8 +115,8 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
           session.amount_total != null
             ? `$${(session.amount_total / 100).toFixed(2)}`
             : "an amount";
-        const productName = meta.product_name || "your purchase";
-        const greeting = member.first_name ? `Hi ${member.first_name},` : "Hi,";
+        const productName = escapeHtml(meta.product_name || "your purchase");
+        const greeting = member.first_name ? `Hi ${escapeHtml(member.first_name)},` : "Hi,";
 
         const html = `
 <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
@@ -178,8 +178,26 @@ async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
   // Recurring subscription renewal (Certification Sync, annual provider fee).
   const invoice = event.data.object as Stripe.Invoice;
   if (invoice.billing_reason === "subscription_create") return; // first invoice handled by checkout.session.completed
+
+  // Attribute the renewal to a member by resolving the Stripe customer id back to
+  // a profile (persisted on checkout.session.completed). If it can't be resolved,
+  // fall back to null rather than crashing.
+  let memberId: string | null = null;
+  if (invoice.customer) {
+    try {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("stripe_customer_id", String(invoice.customer))
+        .maybeSingle();
+      memberId = profile?.id ?? null;
+    } catch (err) {
+      console.error("invoice member resolve skipped:", err);
+    }
+  }
+
   await writePayment(admin, {
-    member_id: null,
+    member_id: memberId,
     stripe_session_id: (invoice.id as string) ?? "",
     stripe_event_id: event.id,
     slug: "",
@@ -210,4 +228,8 @@ interface PaymentRow {
 async function writePayment(admin: Admin, row: PaymentRow) {
   const { error } = await admin.from("payments").insert(row);
   if (error) console.error("payments insert failed:", error.message);
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }

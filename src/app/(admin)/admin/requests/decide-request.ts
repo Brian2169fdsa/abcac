@@ -70,6 +70,28 @@ export async function decideRequest(
     .maybeSingle();
   if (error) return { ok: false, error: error.message };
 
+  // 2b. Approving a name change must also write the requested new name back to
+  //     the member's canonical profile — otherwise approval is cosmetic and the
+  //     displayed/certificate name stays stale. `new_name` is a single full-name
+  //     string; split it into first/last to match the profiles columns.
+  //     Service-role write, already guarded by the admin re-check above.
+  if (decision === "approve" && table === "name_change_requests" && row?.member_id) {
+    const fullName = String(row.new_name ?? "").trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      const firstName = parts[0];
+      const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+      try {
+        await admin
+          .from("profiles")
+          .update({ first_name: firstName, last_name: lastName })
+          .eq("id", row.member_id);
+      } catch (err) {
+        console.error("name change profile update skipped:", err);
+      }
+    }
+  }
+
   // 3. Best-effort audit log.
   try {
     await admin.from("admin_audit_log").insert({
