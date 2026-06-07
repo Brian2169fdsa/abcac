@@ -49,16 +49,16 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-content items-center gap-10 px-5 py-16 md:grid-cols-[1fr_1.3fr] md:px-8 md:py-24">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-[1fr_1.35fr] md:px-10 md:py-24 lg:px-16">
           {/* Left: copy */}
-          <div className="md:max-w-xl">
+          <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
               Certification &amp; Testing Support
             </p>
             <h1>{siteConfig.tagline}</h1>
             <p className="mt-5 max-w-xl text-lg text-muted">
               Apply for initial certification, renew your credentials, register for IC&amp;RC exams, earn
-              CEUs, and transfer your credential through reciprocity — all in one place for Arizona&apos;s
+              CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -66,7 +66,7 @@ export default function HomePage() {
               <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
-              {["IC&RC Recognized", "Arizona-Based", "1,200+ Certified"].map((item) => (
+              {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
                 <li key={item} className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />
                   {item}
