@@ -115,14 +115,45 @@ export default function HomePage() {
       </Section>
 
       {/* Why it matters */}
-      <Section title="Why Addiction Counselors Matter">
-        <p className="max-w-3xl text-lg text-muted">
-          Addictions counselors help people reclaim their lives from substance use disorders. They provide support,
-          education, and treatment planning to individuals, families, and communities. Whether working in hospitals,
-          recovery centers, or private practice, these professionals guide clients through one of the most important
-          transformations of their lives.
-        </p>
-      </Section>
+      <section className="bg-info text-white">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-2 md:px-10 md:py-24 lg:px-16">
+          {/* Left: copy */}
+          <div>
+            <div className="mb-4 h-1 w-10 rounded bg-brand" aria-hidden />
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">Why It Matters</p>
+            <h2 className="text-white">Why Addiction Counselors Matter</h2>
+            <p className="mt-5 max-w-xl text-lg text-white/75">
+              Addictions counselors help people reclaim their lives from substance use disorders. They provide
+              support, education, and treatment planning to individuals, families, and communities. Whether working
+              in hospitals, recovery centers, or private practice, these professionals guide clients through one of
+              the most important transformations of their lives.
+            </p>
+            <ul className="mt-8 space-y-3">
+              {[
+                "Support, education, and treatment planning",
+                "Serving individuals, families, and communities",
+                "Working in hospitals, recovery centers, and private practice",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-3 font-semibold text-white">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right: image placeholder */}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-white/5 shadow-lg ring-1 ring-white/10">
+            <Image
+              src="/brand/why-counselors.svg"
+              alt="Addiction counselor working with a client"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Credential teaser */}
       <Section eyebrow="Credentials" title="Which Credential Is Right for You?" intro="Whether you're just starting out, advancing your clinical skills, or supporting others through lived experience — ABCAC offers the credential that aligns with your path." surface>
