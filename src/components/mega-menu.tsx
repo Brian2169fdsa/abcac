@@ -87,6 +87,11 @@ export function MegaMenu() {
                   >
                     <div className="text-sm font-semibold text-ink">{link.label}</div>
                     {link.desc && <div className="mt-0.5 text-xs text-muted">{link.desc}</div>}
+                    {link.image && (
+                      <div className="relative mt-2 aspect-[16/9] overflow-hidden rounded-md border border-line bg-bg">
+                        <Image src={link.image} alt="" fill sizes="240px" className="object-cover" />
+                      </div>
+                    )}
                   </Link>
                 ))}
               </div>

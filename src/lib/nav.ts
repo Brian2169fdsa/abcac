@@ -14,6 +14,7 @@ export interface MenuLink {
   label: string;
   href: string;
   desc?: string;
+  image?: string;
 }
 export interface MegaGroup {
   label: string;
@@ -33,7 +34,7 @@ export const MENU: MegaGroup[] = [
     },
     links: [
       { label: "Choose Your Cert Path", href: "/choose-your-cert-path", desc: "Not sure where to start? Find your path." },
-      { label: "Initial Certification", href: "/initial-certification", desc: "Apply for your first ABCAC credential." },
+      { label: "Initial Certification", href: "/initial-certification", desc: "Apply for your first ABCAC credential.", image: "/brand/menu/int-cert.png" },
       { label: "Certification Renewal", href: "/certification-renewal", desc: "Renew every two years with your CEUs." },
       { label: "Initial or Renewal", href: "/initial-or-renewal", desc: "Pay the right certification fee." },
     ],

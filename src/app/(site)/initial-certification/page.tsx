@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PageHero } from "@/components/page-hero";
+import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 import { Section } from "@/components/section";
 import { CtaButton } from "@/components/cta-button";
 import { PriceTag } from "@/components/price-tag";
@@ -36,11 +37,53 @@ export default function InitialCertificationPage() {
 
   return (
     <>
-      <PageHero
-        eyebrow="Initial Certification"
-        title="Take Your First Step Toward Certification"
-        intro="If you're applying for certification for the first time, ABCAC makes the process clear and accessible. Each credential includes clear requirements, step-by-step application guidance, and access to study materials and exam registration."
-      />
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-line bg-surface">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-[1fr_1.35fr] md:px-10 md:py-24 lg:px-16">
+          {/* Left: copy */}
+          <div>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
+              Initial Certification
+            </p>
+            <h1>Take Your First Step Toward Certification</h1>
+            <p className="mt-5 max-w-xl text-lg text-muted">
+              If you&apos;re applying for certification for the first time, ABCAC makes the process clear and
+              accessible. Each credential includes clear requirements, step-by-step application guidance, and access
+              to study materials and exam registration.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <CtaButton href="/choose-your-cert-path" size="lg">Choose Your Cert Path</CtaButton>
+              <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
+            </div>
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
+              {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
+                <li key={item} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right: hero image placeholder with maroon arc accent */}
+          <div className="relative">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-4 -top-6 h-28 w-28 rounded-full border-[6px] border-brand/70 md:-right-6 md:h-36 md:w-36"
+            />
+            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5">
+              <Image
+                src="/brand/initial-cert-hero.svg"
+                alt="Initial ABCAC certification"
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       <Section title="The application process">
         <ol className="max-w-3xl space-y-3">
