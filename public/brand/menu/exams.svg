@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Exams &amp; IC&amp;RC image placeholder">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b1a1a"/><stop offset="1" stop-color="#5e1414"/></linearGradient></defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <rect x="24" y="24" width="752" height="552" rx="16" fill="none" stroke="#c8a04a" stroke-width="3" stroke-dasharray="14 12"/>
+  <text x="400" y="288" fill="#ffffff" font-family="Arial,Helvetica,sans-serif" font-size="44" font-weight="700" text-anchor="middle">Exams &amp; IC&amp;RC</text>
+  <text x="400" y="334" fill="#e9d29a" font-family="Arial,Helvetica,sans-serif" font-size="22" text-anchor="middle">Image placeholder · drop a 4:3 photo here</text>
+</svg>

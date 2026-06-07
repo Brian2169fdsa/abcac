@@ -16,6 +16,7 @@ const config: Config = {
           DEFAULT: "var(--accent)",
           strong: "var(--accent-strong)",
         },
+        info: "var(--info)",
         muted: "var(--muted)",
         line: "var(--line)",
         success: "var(--success)",

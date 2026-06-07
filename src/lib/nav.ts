@@ -25,7 +25,7 @@ export const MENU: MegaGroup[] = [
   {
     label: "Certification",
     featured: {
-      image: "/brand/abcac-logo.jpg",
+      image: "/brand/menu/certification.svg",
       title: "Start your certification",
       text: "Find the credential that fits your career and apply online through our secure portal.",
       href: "/choose-your-cert-path",
@@ -41,7 +41,7 @@ export const MENU: MegaGroup[] = [
   {
     label: "Exams & IC&RC",
     featured: {
-      image: "/brand/icrc-logo.png",
+      image: "/brand/menu/exams.svg",
       title: "IC&RC testing",
       text: "Computer-based IC&RC exams, in person at an Arizona center or remote-proctored.",
       href: "/testing",
@@ -57,7 +57,7 @@ export const MENU: MegaGroup[] = [
   {
     label: "CEU & Store",
     featured: {
-      image: "/brand/abcac-logo.jpg",
+      image: "/brand/menu/ceu.svg",
       title: "Sync your certifications",
       text: "One unified renewal date for all your credentials — just $15/month forward.",
       href: "/store/certification-sync",
@@ -92,10 +92,10 @@ export const NAV: NavItem[] = [
   { label: "Contact Us", href: "/contact" },
 ];
 
-// Primary entry to the member portal — the native Next.js portal at /account.
-// (The classic static portal remains reachable at /portal for screens not yet
-// ported.) Overridable via NEXT_PUBLIC_PORTAL_URL.
+// Primary entry to the member portal. Points to the standalone member portal
+// page (/portal), which works on its own without extra configuration. Plain
+// link — no dropdown/submenu.
 export const MEMBER_PORTAL = {
   label: "Member Portal",
-  href: process.env.NEXT_PUBLIC_PORTAL_URL || "/account",
+  href: "/portal",
 };

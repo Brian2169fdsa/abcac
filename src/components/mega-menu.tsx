@@ -66,7 +66,7 @@ export function MegaMenu() {
                     alt=""
                     fill
                     sizes="260px"
-                    className="object-contain p-4"
+                    className="object-cover"
                   />
                 </div>
                 <h3 className="text-white">{MENU[open].featured.title}</h3>
