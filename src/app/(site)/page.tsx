@@ -192,7 +192,7 @@ export default function HomePage() {
         <div className="grid items-start gap-10 lg:grid-cols-2">
           {/* Left: heading + certificate */}
           <div>
-            <h2 className="text-brand">Sync Your Certifications – One Date, One Renewal, Less Stress.</h2>
+            <h2>Sync Your Certifications – One Date, One Renewal, Less Stress.</h2>
             <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-xl border border-line bg-white shadow-sm">
               <Image
                 src="/brand/cadac-certificate.png"
