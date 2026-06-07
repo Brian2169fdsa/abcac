@@ -17,9 +17,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FROM = Deno.env.get("RESEND_FROM_EMAIL") ?? "noreply@abcac.org";
 const PORTAL = Deno.env.get("VERCEL_URL") ?? "https://portal.abcac.org";
-const REQUIRED_CEU_HOURS = 40;
+// Defaults used when a credential has no cert_schedules row (graceful fallback).
+const DEFAULT_REQUIRED_CEU_HOURS = 40;
 const REMINDER_DAYS = [90, 60, 30];
 const RENEWAL_AMOUNT_CENTS = 15000; // $150.00
+
+interface CertScheduleRow {
+  credential_type: string;
+  renewal_cycle_months: number;
+  ceu_total_required: number;
+  ceu_ethics_required: number;
+  ceu_cultural_required: number;
+  grace_period_days: number;
+}
 
 Deno.serve(async () => {
   // RESEND_API_KEY is optional — emails are skipped when absent but DB work
@@ -35,6 +45,25 @@ Deno.serve(async () => {
   let sent = 0;
   let invoicesCreated = 0;
 
+  // Load the per-credential renewal rules (cert_schedules) once and index them
+  // by credential_type. Degrade gracefully: if the table is absent or empty we
+  // fall back to the legacy 40-CEU / 90-60-30 behavior for every credential.
+  const scheduleByCredential = new Map<string, CertScheduleRow>();
+  try {
+    const { data: schedules } = await admin
+      .from("cert_schedules")
+      .select(
+        "credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days",
+      );
+    for (const s of (schedules as CertScheduleRow[] | null) ?? []) {
+      if (s?.credential_type) {
+        scheduleByCredential.set(s.credential_type.trim().toLowerCase(), s);
+      }
+    }
+  } catch (err) {
+    console.error("cert_schedules load failed; using defaults", err);
+  }
+
   const { data: certs } = await admin
     .from("certifications")
     .select("member_id, cert_type, expiration_date, status")
@@ -43,6 +72,12 @@ Deno.serve(async () => {
 
   for (const cert of certs ?? []) {
     const days = Math.ceil((new Date(cert.expiration_date).getTime() - today.getTime()) / 86400000);
+
+    // Resolve this credential's schedule-driven rules (or defaults).
+    const schedule = cert.cert_type
+      ? scheduleByCredential.get(String(cert.cert_type).trim().toLowerCase())
+      : undefined;
+    const requiredCeuHours = schedule?.ceu_total_required ?? DEFAULT_REQUIRED_CEU_HOURS;
 
     const { data: member } = await admin
       .from("profiles").select("email, first_name").eq("id", cert.member_id).single();
@@ -56,7 +91,7 @@ Deno.serve(async () => {
         `<p>Hi ${member.first_name ?? "there"},</p>
          <p>Your <strong>${cert.cert_type}</strong> certification expires on
          ${fmt(cert.expiration_date)} — ${days} days from now. Renewal requires
-         ${REQUIRED_CEU_HOURS} CEU hours and the renewal fee.</p>
+         ${requiredCeuHours} CEU hours and the renewal fee.</p>
          <p><a href="${PORTAL}">Start your renewal</a></p>`);
       sent++;
     }
@@ -66,13 +101,13 @@ Deno.serve(async () => {
       const { data: ceus } = await admin
         .from("ceu_records").select("hours").eq("member_id", cert.member_id).eq("status", "approved");
       const total = (ceus ?? []).reduce((s: number, r: { hours: number }) => s + Number(r.hours || 0), 0);
-      if (total < REQUIRED_CEU_HOURS) {
+      if (total < requiredCeuHours) {
         await send(RESEND_API_KEY, member.email, "CEU hours still needed before renewal",
           `<p>Hi ${member.first_name ?? "there"},</p>
-           <p>You have <strong>${total} of ${REQUIRED_CEU_HOURS}</strong> required CEU hours
+           <p>You have <strong>${total} of ${requiredCeuHours}</strong> required CEU hours
            with ${days} days until your ${cert.cert_type} expires
            (${fmt(cert.expiration_date)}). Please complete the remaining
-           ${REQUIRED_CEU_HOURS - total} hours.</p>
+           ${requiredCeuHours - total} hours.</p>
            <p><a href="${PORTAL}">Log CEU hours</a></p>`);
         sent++;
       }

@@ -3,7 +3,8 @@ import { CtaButton } from "@/components/cta-button";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { computeCompliance, CeuLike } from "@/lib/ceu-compliance";
+import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
+import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
 
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
@@ -67,6 +68,7 @@ export default async function AccountPage() {
   let certifications: Certification[] = [];
   let payments: Payment[] = [];
   let ceuRecords: CeuRecord[] = [];
+  let schedules: CertSchedule[] = [];
   let unreadMessages = 0;
   let openDocRequests = 0;
   let backendReady = true;
@@ -92,6 +94,18 @@ export default async function AccountPage() {
       certifications = (certs as Certification[]) ?? [];
       payments = (pays as Payment[]) ?? [];
       ceuRecords = (ceus as CeuRecord[]) ?? [];
+      // Reference rules — fetched separately and best-effort so a missing
+      // cert_schedules table never breaks the dashboard (falls back to 90d / 40 CEU).
+      try {
+        const { data: scheds } = await supabase
+          .from("cert_schedules")
+          .select(
+            "credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes",
+          );
+        schedules = (scheds as CertSchedule[]) ?? [];
+      } catch {
+        schedules = [];
+      }
       unreadMessages = msgCount ?? 0;
       openDocRequests = docCount ?? 0;
     } catch {
@@ -106,11 +120,31 @@ export default async function AccountPage() {
   const isAdmin = (profile as { portal_role?: string | null } | null)?.portal_role === "admin";
 
   // Action items
-  const ceuCompliance = computeCompliance(ceuRecords);
-  const ninety = Date.now() + 90 * 86400000;
-  const expiringCerts = certifications.filter(
-    (c) => c.status === "active" && c.expiration_date !== null && new Date(c.expiration_date).getTime() <= ninety && new Date(c.expiration_date).getTime() > Date.now(),
-  );
+  // CEU compliance is shown against the soonest-expiring active credential's
+  // schedule when known; otherwise the 40/3/3 default applies.
+  const activeCerts = certifications.filter((c) => c.status === "active");
+  const primaryCert = activeCerts
+    .slice()
+    .sort((a, b) => {
+      const aD = a.expiration_date ? new Date(a.expiration_date).getTime() : Infinity;
+      const bD = b.expiration_date ? new Date(b.expiration_date).getTime() : Infinity;
+      return aD - bD;
+    })[0];
+  const primarySchedule = findScheduleFor(schedules, primaryCert?.cert_type);
+  const ceuCompliance = computeCompliance(ceuRecords, requirementsFromSchedule(primarySchedule));
+  // "Expiring within 90 days" uses the schedule engine (grace-aware) per cert
+  // when a matching schedule exists; otherwise falls back to raw expiration.
+  const expiringCerts = activeCerts.filter((c) => {
+    if (!c.expiration_date) return false;
+    const schedule = findScheduleFor(schedules, c.cert_type);
+    if (schedule) {
+      const due = computeDueFromExpiration(schedule, c.expiration_date);
+      // Surface anything within 90 days OR currently inside its grace window.
+      return (due.daysUntilDue <= 90 && due.daysUntilDue > 0) || due.inGracePeriod;
+    }
+    const t = new Date(c.expiration_date).getTime();
+    return t <= Date.now() + 90 * 86400000 && t > Date.now();
+  });
   // Only nag about CEUs once the member actually holds an active credential to
   // renew — otherwise a brand-new member with no certs sees "40 hours needed."
   const hasActiveCert = certifications.some((c) => c.status === "active");
@@ -193,7 +227,7 @@ export default async function AccountPage() {
                     {ceuCompliance.remaining} CEU hour{ceuCompliance.remaining !== 1 ? "s" : ""} still needed for renewal
                   </h3>
                   <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
-                    You need {ceuCompliance.remaining} more approved CEU hour{ceuCompliance.remaining !== 1 ? "s" : ""} to meet the {40}-hour requirement.
+                    You need {ceuCompliance.remaining} more approved CEU hour{ceuCompliance.remaining !== 1 ? "s" : ""} to meet the {ceuCompliance.requiredTotal}-hour requirement.
                   </p>
                 </div>
                 <span className="font-semibold text-amber-700 dark:text-amber-400">Add CEUs →</span>
@@ -276,7 +310,16 @@ export default async function AccountPage() {
         ) : (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {certifications.map((c) => {
-              const d = daysLeft(c.expiration_date);
+              // Next renewal date comes from the cert_schedules engine when this
+              // credential has a matching schedule + expiration; else raw expiry.
+              const schedule = findScheduleFor(schedules, c.cert_type);
+              const due =
+                schedule && c.expiration_date
+                  ? computeDueFromExpiration(schedule, c.expiration_date)
+                  : null;
+              const nextDue = due?.nextDueDate ?? c.expiration_date;
+              const d = due ? due.daysUntilDue : daysLeft(c.expiration_date);
+              const lapsed = due ? due.lapsed : d !== null && d < 0;
               return (
                 <div key={c.id} className="rounded-xl border border-line bg-surface p-6">
                   <div className="flex items-center justify-between">
@@ -287,8 +330,14 @@ export default async function AccountPage() {
                   </div>
                   {c.cert_number && <p className="mt-1 text-sm text-muted">No. {c.cert_number}</p>}
                   <p className="mt-2 text-sm text-muted">
-                    Expires {fmtDate(c.expiration_date)}
-                    {d !== null && d > 0 ? ` · ${d} days left` : d !== null ? " · expired" : ""}
+                    Next renewal {fmtDate(nextDue)}
+                    {due?.inGracePeriod
+                      ? " · in grace period"
+                      : lapsed
+                        ? " · lapsed"
+                        : d !== null && d > 0
+                          ? ` · ${d} days left`
+                          : ""}
                   </p>
                   <CtaButton href={`/store/${RENEWAL_SLUG}`} variant="outline" size="sm" className="mt-4">Renew</CtaButton>
                 </div>

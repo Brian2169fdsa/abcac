@@ -2,12 +2,11 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CeuSubmitForm } from "@/components/ceu-submit-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { computeCompliance } from "@/lib/ceu-compliance";
+import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
+import { type CertSchedule, findScheduleFor } from "@/lib/schedules";
 
 export const metadata = { title: "CEU Tracker" };
 export const dynamic = "force-dynamic";
-
-const REQUIRED = 40;
 
 interface Ceu {
   id: string; course_name: string | null; provider: string | null; hours: number | null;
@@ -20,17 +19,35 @@ function fmt(d: string | null) {
 export default async function CeusPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data } = await supabase.from("ceu_records").select("*").eq("member_id", user!.id).order("completion_date", { ascending: false });
+  const [{ data }, { data: certData }, { data: scheduleData }] = await Promise.all([
+    supabase.from("ceu_records").select("*").eq("member_id", user!.id).order("completion_date", { ascending: false }),
+    supabase.from("certifications").select("cert_type, expiration_date, status").eq("member_id", user!.id).eq("status", "active"),
+    supabase
+      .from("cert_schedules")
+      .select("credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes"),
+  ]);
   const records = (data as Ceu[]) ?? [];
+  const activeCerts = (certData as { cert_type: string | null; expiration_date: string | null }[]) ?? [];
+  const schedules = (scheduleData as CertSchedule[]) ?? [];
+  // Use the soonest-expiring active credential's schedule when known.
+  const primaryCert = activeCerts
+    .slice()
+    .sort((a, b) => {
+      const aD = a.expiration_date ? new Date(a.expiration_date).getTime() : Infinity;
+      const bD = b.expiration_date ? new Date(b.expiration_date).getTime() : Infinity;
+      return aD - bD;
+    })[0];
+  const requirements = requirementsFromSchedule(findScheduleFor(schedules, primaryCert?.cert_type));
+  const REQUIRED = requirements.total;
   const approved = records.filter((r) => r.status === "approved");
   const total = approved.reduce((s, r) => s + Number(r.hours || 0), 0);
   const pct = Math.min(100, Math.round((total / REQUIRED) * 100));
   const byCat = (cat: string) => approved.filter((r) => r.category === cat).reduce((s, r) => s + Number(r.hours || 0), 0);
-  const compliance = computeCompliance(records);
+  const compliance = computeCompliance(records, requirements);
 
   return (
     <>
-      <PageHero eyebrow="Member Portal" title="Continuing Education Tracker" intro="Log your CEU hours and track progress toward your 40-hour renewal requirement." />
+      <PageHero eyebrow="Member Portal" title="Continuing Education Tracker" intro={`Log your CEU hours and track progress toward your ${REQUIRED}-hour renewal requirement.`} />
       <Section compact>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-line bg-surface p-6">
@@ -39,11 +56,11 @@ export default async function CeusPage() {
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={total} aria-valuemin={0} aria-valuemax={REQUIRED} aria-label="Approved CEU hours toward renewal"><div className="h-full bg-brand" style={{ width: `${pct}%` }} /></div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{byCat("Ethics")} / 3</div>
+            <div className="font-display text-3xl font-bold text-brand">{byCat("Ethics")} / {requirements.ethics}</div>
             <div className="mt-1 text-sm text-muted">Ethics hours</div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{byCat("Cultural Diversity")} / 3</div>
+            <div className="font-display text-3xl font-bold text-brand">{byCat("Cultural Diversity")} / {requirements.cultural}</div>
             <div className="mt-1 text-sm text-muted">Cultural Diversity hours</div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
@@ -68,14 +85,14 @@ export default async function CeusPage() {
             </div>
             <div>
               <div className="text-sm text-muted">Ethics</div>
-              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.ethics} / 3</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.ethics} / {compliance.requiredEthics}</div>
               {compliance.ethicsRemaining > 0 && (
                 <div className="mt-0.5 text-xs text-amber-600">{compliance.ethicsRemaining} hr{compliance.ethicsRemaining !== 1 ? "s" : ""} needed</div>
               )}
             </div>
             <div>
               <div className="text-sm text-muted">Cultural Diversity</div>
-              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.cultural} / 3</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink">{compliance.cultural} / {compliance.requiredCultural}</div>
               {compliance.culturalRemaining > 0 && (
                 <div className="mt-0.5 text-xs text-amber-600">{compliance.culturalRemaining} hr{compliance.culturalRemaining !== 1 ? "s" : ""} needed</div>
               )}

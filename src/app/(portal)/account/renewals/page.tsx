@@ -2,7 +2,12 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { computeCompliance } from "@/lib/ceu-compliance";
+import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
+import {
+  type CertSchedule,
+  findScheduleFor,
+  computeDueFromExpiration,
+} from "@/lib/schedules";
 import Link from "next/link";
 
 export const metadata = { title: "Renewals" };
@@ -45,13 +50,20 @@ export default async function RenewalsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: certsData }, { data: ceuData }] = await Promise.all([
+  const [{ data: certsData }, { data: ceuData }, { data: scheduleData }] = await Promise.all([
     supabase
       .from("certifications")
       .select("*")
       .eq("member_id", user!.id)
       .eq("status", "active"),
     supabase.from("ceu_records").select("*").eq("member_id", user!.id),
+    // Reference rules — read-only to any authenticated member. Degrade gracefully
+    // if the table/rows are absent (falls back to the 90-day / 40-CEU defaults).
+    supabase
+      .from("cert_schedules")
+      .select(
+        "credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes",
+      ),
   ]);
 
   const certs: Cert[] = (certsData ?? []).sort((a, b) => {
@@ -60,8 +72,14 @@ export default async function RenewalsPage() {
     return aDate - bDate;
   });
 
+  const schedules: CertSchedule[] = (scheduleData as CertSchedule[]) ?? [];
+
   const ceuRecords: CeuRecord[] = ceuData ?? [];
-  const compliance = computeCompliance(ceuRecords);
+  // CEU readiness is shown against the soonest-expiring active credential's
+  // schedule when known; otherwise the 40/3/3 default applies.
+  const primaryCredential = certs[0]?.cert_type ?? null;
+  const primarySchedule = findScheduleFor(schedules, primaryCredential);
+  const compliance = computeCompliance(ceuRecords, requirementsFromSchedule(primarySchedule));
 
   return (
     <>
@@ -93,13 +111,13 @@ export default async function RenewalsPage() {
                 {compliance.remaining}
               </div>
               <div className="mt-0.5 text-xs text-muted">
-                {compliance.totalApproved} / 40 approved
+                {compliance.totalApproved} / {compliance.requiredTotal} approved
               </div>
             </div>
             <div>
               <div className="text-sm text-muted">Ethics</div>
               <div className="mt-1 font-display text-2xl font-bold text-ink">
-                {compliance.ethics} / 3
+                {compliance.ethics} / {compliance.requiredEthics}
               </div>
               {compliance.ethicsRemaining > 0 && (
                 <div className="mt-0.5 text-xs text-amber-600">
@@ -110,7 +128,7 @@ export default async function RenewalsPage() {
             <div>
               <div className="text-sm text-muted">Cultural Diversity</div>
               <div className="mt-1 font-display text-2xl font-bold text-ink">
-                {compliance.cultural} / 3
+                {compliance.cultural} / {compliance.requiredCultural}
               </div>
               {compliance.culturalRemaining > 0 && (
                 <div className="mt-0.5 text-xs text-amber-600">
@@ -149,9 +167,23 @@ export default async function RenewalsPage() {
                 </thead>
                 <tbody>
                   {certs.map((c) => {
-                    const days = daysLeft(c.expiration_date);
-                    const isExpired = days !== null && days < 0;
-                    const isSoon = days !== null && days >= 0 && days <= 90;
+                    // Prefer the schedule engine (grace-aware) when this credential
+                    // has a cert_schedules row AND a known expiration date; otherwise
+                    // fall back to the prior raw days-until-expiry behavior.
+                    const schedule = findScheduleFor(schedules, c.cert_type);
+                    const due =
+                      schedule && c.expiration_date
+                        ? computeDueFromExpiration(schedule, c.expiration_date)
+                        : null;
+                    const days = due ? due.daysUntilDue : daysLeft(c.expiration_date);
+                    // Past due date but still inside grace = treat as "soon"/amber,
+                    // only flag Expired once the grace window has fully lapsed.
+                    const isExpired = due
+                      ? due.lapsed
+                      : days !== null && days < 0;
+                    const isSoon = due
+                      ? !due.lapsed && days !== null && days <= 90
+                      : days !== null && days >= 0 && days <= 90;
                     return (
                       <tr key={c.id} className="border-b border-line last:border-0">
                         <td className="px-4 py-3 font-semibold text-ink">{c.cert_type ?? "—"}</td>
@@ -163,6 +195,10 @@ export default async function RenewalsPage() {
                           ) : isExpired ? (
                             <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
                               Expired
+                            </span>
+                          ) : due?.inGracePeriod ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                              In grace
                             </span>
                           ) : isSoon ? (
                             <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
