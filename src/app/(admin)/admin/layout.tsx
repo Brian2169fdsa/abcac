@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { ChatWidget } from "@/components/assistant/chat-widget";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "ABCAC Admin Console" };
@@ -41,6 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <main id="main" className="mx-auto w-full max-w-content px-5 py-8 md:px-8">{children}</main>
+      <ChatWidget surface="admin" />
     </div>
   );
 }
