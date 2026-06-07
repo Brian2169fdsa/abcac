@@ -72,6 +72,19 @@
       ]
     },
     {
+      "slug": "icrc-reciprocity-transfer",
+      "name": "IC&RC Reciprocity Transfer",
+      "price": 150.0,
+      "category": "Service",
+      "exam_mode": null,
+      "short": "Processing fee to transfer an approved IC&RC credential to or from Arizona through ABCAC. Due upon approval.",
+      "includes": [
+        "IC&RC reciprocity transfer processing",
+        "Coordination with the destination / origin member board",
+        "Applies to transfers into or out of Arizona"
+      ]
+    },
+    {
       "slug": "testing-for-licensure-with-azbbhe",
       "name": "Testing for Certification with ABCAC and/or Licensure with AZBBHE \u2013 In Person",
       "price": 225.0,

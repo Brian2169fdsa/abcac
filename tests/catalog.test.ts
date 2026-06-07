@@ -6,8 +6,8 @@ import {
 } from "@/lib/catalog";
 
 describe("getProducts", () => {
-  it("returns 11 products", () => {
-    expect(getProducts()).toHaveLength(11);
+  it("returns 12 products", () => {
+    expect(getProducts()).toHaveLength(12);
   });
 
   it("every product has a non-empty slug", () => {
