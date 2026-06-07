@@ -271,16 +271,30 @@ export default function HomePage() {
       </section>
 
       {/* Become a Board Member */}
-      <Section compact>
-        <div className="rounded-xl border border-line bg-bg p-8 md:flex md:items-center md:justify-between md:gap-8">
-          <div className="max-w-2xl">
-            <h3>Become an ABCAC Board Member</h3>
-            <p className="mt-2 text-muted">
-              If you possess expertise in behavioral or mental health, we extend a warm invitation for you to join our
-              board of directors. Your insights are invaluable.
-            </p>
+      <Section>
+        <div className="rounded-2xl border border-line bg-bg p-8 md:p-12">
+          <div className="grid items-center gap-10 md:grid-cols-2">
+            {/* Left: text + button */}
+            <div>
+              <h2>Become an ABCAC Board Member</h2>
+              <p className="mt-4 text-lg text-muted">
+                If you possess expertise in behavioral or mental health, we extend a warm invitation for you to join
+                our board of directors. Your insights are invaluable, and your leadership helps shape the future of
+                addiction counselor certification in Arizona.
+              </p>
+              <CtaButton href="/contact" size="lg" className="mt-6">Express Interest</CtaButton>
+            </div>
+            {/* Right: image placeholder */}
+            <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+              <Image
+                src="/brand/board-member.svg"
+                alt="ABCAC board members"
+                fill
+                sizes="(max-width: 768px) 100vw, 45vw"
+                className="object-cover"
+              />
+            </div>
           </div>
-          <CtaButton href="/contact" className="mt-4 md:mt-0">Express Interest</CtaButton>
         </div>
       </Section>
     </>
