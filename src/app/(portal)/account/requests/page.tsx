@@ -72,7 +72,21 @@ export default async function RequestsPage() {
 
       <Section compact title="IC&RC Reciprocity">
         <div className="rounded-xl border border-line bg-surface p-6"><ReciprocityForm /></div>
-        {history((rec ?? []).map((r) => ({ id: r.id, status: r.status, submitted_at: r.submitted_at, label: `${r.credential ?? "Credential"} → ${r.destination ?? ""}` })))}
+        {(rec ?? []).length > 0 && (
+          <ul className="mt-4 space-y-1 text-sm text-muted">
+            {(rec ?? []).map((r) => {
+              const dir = r.direction === "out_of_az" ? "OUT of AZ" : r.direction === "into_az" ? "INTO AZ" : (r.direction ?? "");
+              const pay = r.direction === "out_of_az" && r.payment_status && r.payment_status !== "none"
+                ? ` · fee ${r.payment_status}`
+                : "";
+              return (
+                <li key={r.id}>
+                  {dir}: {r.credential ?? "Credential"} → {r.destination ?? ""} — <span className="capitalize">{r.status ?? "pending"}</span>{pay} · {fmt(r.submitted_at)}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Section>
     </>
   );
