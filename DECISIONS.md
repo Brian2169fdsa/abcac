@@ -36,3 +36,16 @@ Running log of decisions and constraints observed for the ABCAC Member Portal + 
 
 ### (e) Automation stack decision — Edge Functions over n8n
 - The implemented automation layer is **Supabase Edge Functions + pg_cron + Resend**, not n8n. The build brief (`ABCAC-MEMBER-PORTAL-BUILD.md`) references n8n Cloud, but the repo contains no n8n workflow JSON; `supabase/functions/scheduled-reminders` is the renewal-alerts implementation. Treat n8n `ABCAC-01-RENEWAL-ALERTS` as superseded unless the owner specifically requires the n8n artifact.
+
+---
+
+## Signup cert numbers + approval credentials email — 2026-06-07
+
+### (f) Self-reported certification numbers at signup
+- **Members cannot insert into `public.certifications`** (migration 013 made it member-read-only — it is the system of record for ISSUED credentials, written only by ABCAC staff / the service role). So at signup, cert holders (`cert_status` `active_holder` / `reciprocity_transfer`) self-report their existing number(s) via a dynamic field on `/signup`. The numbers are passed through `supabase.auth.signUp({ options: { data: { cert_numbers } } })` as a single compact TEXT string (e.g. `"12345 (AAC), 67890"`) — raw metadata the anon user is allowed to set on themselves.
+- **Migration `021_signup_cert_numbers.sql` (additive)**: adds nullable `profiles.submitted_cert_numbers TEXT` and re-creates `handle_new_user` (based on the 007 version) to also copy `raw_user_meta_data->>'cert_numbers'` into it. All prior trigger behavior is preserved (profile from metadata, `account_status='pending'`, notification prefs). Additive-only; must be applied manually (Supabase SQL editor / `supabase db push`) like all migrations.
+- `/admin/approvals` surfaces `submitted_cert_numbers` (already returned by `select("*")`) next to the existing `certifications` join, so an admin can verify the self-reported numbers before approving. Approve/reject unchanged.
+
+### (g) Approval credentials email — we email the username (email) + login link, NOT a password
+- **We CANNOT email a plaintext password.** Supabase stores credentials hashed (bcrypt) and never exposes them; there is no plaintext to send. **Decision:** on approval we email the member that (a) their **username is their email**, (b) a portal **login link** (`NEXT_PUBLIC_SITE_URL` + `/login`, falling back to `http://localhost:3000` to match the rest of the app), and (c) an instruction to sign in with the password they chose at signup, with a forgot-password path back to the sign-in page. All interpolated values are HTML-escaped.
+- **Implementation:** new admin-gated server action `src/app/(admin)/admin/approvals/approve-account.ts` (`sendApprovalCredentialsEmail`), mirroring `decide-verification.ts`: re-checks `portal_role='admin'` on the cookie-bound session, fetches the member's email **server-side** via the service role (authoritative username, not client-supplied), then sends inline via Resend. **Graceful no-op without `RESEND_API_KEY`** — returns `{ ok: true }` without sending, so `npm run build` passes with no env vars. The existing `admin-notify` Edge Function call is kept as a best-effort secondary path; the inline email does not depend on it.

@@ -37,7 +37,14 @@ export default async function AdminApprovals() {
                   <td className="px-5 py-3 font-semibold">{[p.first_name, p.last_name].filter(Boolean).join(" ") || "—"}</td>
                   <td className="px-5 py-3 text-muted">{p.email}</td>
                   <td className="px-5 py-3 text-muted">{p.phone ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{certs}</td>
+                  <td className="px-5 py-3 text-muted">
+                    <div>{certs}</div>
+                    {p.submitted_cert_numbers ? (
+                      <div className="mt-1 text-xs">
+                        <span className="font-semibold">Self-reported #:</span> {p.submitted_cert_numbers}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className="px-5 py-3 text-muted">{fmt(p.account_submitted_at)}</td>
                   <td className="px-5 py-3"><AccountApprovalActions memberId={p.id} /></td>
                 </tr>

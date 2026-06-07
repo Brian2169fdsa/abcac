@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { sendApprovalCredentialsEmail } from "@/app/(admin)/admin/approvals/approve-account";
 
 // Approve/reject a new member account. On approval, the member's self-reported
 // certifications are activated, and the member is emailed via admin-notify.
@@ -33,6 +34,10 @@ export function AccountApprovalActions({ memberId }: { memberId: string }) {
       if (error) { alert("Approve failed: " + error.message); return; }
       await supabase.from("certifications").update({ status: "active" }).eq("member_id", memberId).eq("status", "pending");
       notify("Your ABCAC account is approved", "Welcome! Your member portal account has been approved. You can now sign in and access the full portal.");
+      // Send the credentials email (admin-gated server action; fetches the
+      // member's email server-side and emails inline via Resend, no-op without a
+      // key). Best-effort — the approval is already committed above.
+      try { await sendApprovalCredentialsEmail(memberId); } catch { /* best-effort */ }
       try {
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.from("admin_audit_log").insert({
