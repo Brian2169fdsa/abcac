@@ -8,6 +8,16 @@ const nextConfig = {
       { source: "/portal/admin", destination: "/portal/admin.html" },
     ];
   },
+  async redirects() {
+    // Preserve inbound links/bookmarks from the old abcac.org URL scheme.
+    return [
+      { source: "/contact-us", destination: "/contact", permanent: true },
+      { source: "/newpage", destination: "/testing", permanent: true },
+      { source: "/initial-or-renewal-of-cert", destination: "/initial-or-renewal", permanent: true },
+      { source: "/home", destination: "/", permanent: true },
+      { source: "/product/:slug", destination: "/store/:slug", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

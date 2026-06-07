@@ -9,6 +9,7 @@ import { TrustBadge } from "@/components/trust-badge";
 import { getProductBySlug } from "@/lib/catalog";
 import { PriceTag } from "@/components/price-tag";
 import { siteConfig } from "@/lib/site-config";
+import { FAQS, TESTIMONIALS } from "@/lib/faqs";
 
 export const metadata: Metadata = {
   title: "ABCAC — Arizona Board for Certification of Addiction Counselors",
@@ -131,6 +132,19 @@ export default function HomePage() {
             <CtaButton href="/store/certification-sync" variant="accent" size="lg">Start Your Sync Now</CtaButton>
             {sync && <PriceTag product={sync} className="text-xl text-white" />}
           </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              "Count the months you need to move forward to align your certifications.",
+              "Enter that quantity when prompted (e.g., 5 months = $75).",
+              "Complete your payment securely online.",
+              "After payment, upload your completed sync form to finalize your request.",
+            ].map((step, i) => (
+              <div key={i} className="rounded-xl bg-white/10 p-4">
+                <div className="font-display text-lg font-bold text-accent">Step {i + 1}</div>
+                <p className="mt-1 text-sm text-white/85">{step}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </Section>
 
@@ -145,6 +159,47 @@ export default function HomePage() {
             <a href={siteConfig.contact.emailHref} className="font-semibold text-brand">{siteConfig.contact.email}</a>{" "}
             or submit your request through the ABCAC portal.
           </p>
+        </div>
+      </Section>
+
+      {/* Testimonials */}
+      <Section eyebrow="Testimonials" title="What people say about us">
+        <div className="grid gap-5 md:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <figure key={t.author} className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
+              <blockquote className="flex-1 text-muted">“{t.quote}”</blockquote>
+              <figcaption className="mt-4 text-sm font-semibold text-ink">— {t.author}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </Section>
+
+      {/* FAQ */}
+      <Section eyebrow="Questions" title="Frequently Asked Questions" surface>
+        <div className="mx-auto max-w-3xl divide-y divide-line">
+          {FAQS.map((f) => (
+            <div key={f.q} className="py-5">
+              <h3 className="text-base">{f.q}</h3>
+              <p className="mt-2 text-sm text-muted">{f.a}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <CtaButton href="/faq" variant="outline">See all FAQs</CtaButton>
+        </div>
+      </Section>
+
+      {/* Become a Board Member */}
+      <Section compact>
+        <div className="rounded-xl border border-line bg-bg p-8 md:flex md:items-center md:justify-between md:gap-8">
+          <div className="max-w-2xl">
+            <h3>Become an ABCAC Board Member</h3>
+            <p className="mt-2 text-muted">
+              If you possess expertise in behavioral or mental health, we extend a warm invitation for you to join our
+              board of directors. Your insights are invaluable.
+            </p>
+          </div>
+          <CtaButton href="/contact" className="mt-4 md:mt-0">Express Interest</CtaButton>
         </div>
       </Section>
     </>
