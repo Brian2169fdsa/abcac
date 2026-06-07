@@ -49,9 +49,9 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-content items-center gap-10 px-5 py-16 md:grid-cols-2 md:px-8 md:py-24">
+        <div className="mx-auto grid w-full max-w-content items-center gap-10 px-5 py-16 md:grid-cols-[1fr_1.3fr] md:px-8 md:py-24">
           {/* Left: copy */}
-          <div>
+          <div className="md:max-w-xl">
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
               Certification &amp; Testing Support
             </p>
