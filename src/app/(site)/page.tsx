@@ -5,6 +5,7 @@ import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
 import { ServiceCard } from "@/components/service-card";
 import { CtaButton } from "@/components/cta-button";
+import { FaqAccordion } from "@/components/faq-accordion";
 import { getProductBySlug } from "@/lib/catalog";
 import { PriceTag } from "@/components/price-tag";
 import { siteConfig } from "@/lib/site-config";
@@ -242,19 +243,18 @@ export default function HomePage() {
       </Section>
 
       {/* FAQ */}
-      <Section eyebrow="Questions" title="Frequently Asked Questions" surface>
-        <div className="mx-auto max-w-3xl divide-y divide-line">
-          {FAQS.map((f) => (
-            <div key={f.q} className="py-5">
-              <h3 className="text-base">{f.q}</h3>
-              <p className="mt-2 text-sm text-muted">{f.a}</p>
-            </div>
-          ))}
+      <section className="bg-info text-white">
+        <div className="mx-auto w-full max-w-content px-5 py-16 md:px-8 md:py-24">
+          <div className="mb-10 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">Questions</p>
+            <h2 className="text-white">Frequently Asked Questions</h2>
+          </div>
+          <FaqAccordion items={FAQS} />
+          <div className="mt-8 text-center">
+            <CtaButton href="/faq">See all FAQs</CtaButton>
+          </div>
         </div>
-        <div className="mt-8 text-center">
-          <CtaButton href="/faq" variant="outline">See all FAQs</CtaButton>
-        </div>
-      </Section>
+      </section>
 
       {/* Become a Board Member */}
       <Section compact>
