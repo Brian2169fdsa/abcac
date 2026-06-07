@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
-import { AddEmploymentForm, AddOtherCertForm, AddSupervisionForm } from "@/components/portal-forms";
+import { AddEmploymentForm, EditEmploymentForm, AddOtherCertForm, AddSupervisionForm } from "@/components/portal-forms";
 import { ViewFileButton } from "@/components/view-file-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -51,8 +51,11 @@ export default async function ExperiencePage() {
 
       <Section compact title="Employment History">
         <Table
-          head={["Employer", "Position", "Start", "End"]}
-          rows={(emp ?? []).map((e) => [e.employer_name, e.position_title, fmt(e.start_date), e.is_current ? "Present" : fmt(e.end_date)])}
+          head={["Employer", "Position", "Start", "End", ""]}
+          rows={(emp ?? []).map((e) => [
+            e.employer_name, e.position_title, fmt(e.start_date), e.is_current ? "Present" : fmt(e.end_date),
+            <EditEmploymentForm key="edit" record={{ id: e.id, employer_name: e.employer_name, position_title: e.position_title, start_date: e.start_date, end_date: e.end_date, is_current: e.is_current }} />,
+          ])}
           empty="No employment records yet."
         />
         <div className="mt-4"><AddEmploymentForm /></div>

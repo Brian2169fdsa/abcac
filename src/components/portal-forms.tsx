@@ -63,38 +63,88 @@ function Collapsible({ label, children }: { label: string; children: React.React
   return <div className="rounded-xl border border-line bg-surface p-6">{children}</div>;
 }
 
-// ─── Employment ───
-export function AddEmploymentForm() {
-  const { run, loading, error } = useInsert("employment_records");
+// ─── Employment (add + edit; member-writable employment_records) ───
+export interface EmploymentRecord {
+  id: string;
+  employer_name: string | null;
+  position_title: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean | null;
+}
+
+// The shared add/edit fieldset. When `record` is present we UPDATE that row in
+// place (CRUD edit); otherwise we INSERT a new employment record.
+function EmploymentFields({ record, onSaved }: { record?: EmploymentRecord; onSaved?: () => void }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
-    const ok = await run((uid) => ({
-      member_id: uid,
+    const current = g("current").checked;
+    const payload = {
       employer_name: g("employer").value.trim(),
       position_title: g("position").value.trim(),
       start_date: g("start").value || null,
-      end_date: g("current").checked ? null : g("end").value || null,
-      is_current: g("current").checked,
-    }));
-    if (ok) f.reset();
+      end_date: current ? null : g("end").value || null,
+      is_current: current,
+    };
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+      const q = record
+        ? supabase.from("employment_records").update(payload).eq("id", record.id).eq("member_id", user.id)
+        : supabase.from("employment_records").insert({ member_id: user.id, ...payload });
+      const { error: err } = await q;
+      if (err) throw err;
+      if (!record) f.reset();
+      router.refresh();
+      onSaved?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <h3>{record ? "Edit Employment Record" : "Add Employment Record"}</h3>
+      <label className="block"><span className={labelCls}>Employer *</span><input name="employer" className={field} required defaultValue={record?.employer_name ?? ""} /></label>
+      <label className="block"><span className={labelCls}>Position / Title *</span><input name="position" className={field} required defaultValue={record?.position_title ?? ""} /></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block"><span className={labelCls}>Start date</span><input name="start" type="date" className={field} defaultValue={record?.start_date ?? ""} /></label>
+        <label className="block"><span className={labelCls}>End date</span><input name="end" type="date" className={field} defaultValue={record?.end_date ?? ""} /></label>
+      </div>
+      <label className="flex items-center gap-2 text-sm"><input name="current" type="checkbox" className="h-4 w-4" defaultChecked={record?.is_current ?? false} /> Currently employed here</label>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : record ? "Save Changes" : "Add Record"}</Button>
+    </form>
+  );
+}
+
+export function AddEmploymentForm() {
   return (
     <Collapsible label="+ Add Employment">
-      <form onSubmit={onSubmit} className="space-y-4">
-        <h3>Add Employment Record</h3>
-        <label className="block"><span className={labelCls}>Employer *</span><input name="employer" className={field} required /></label>
-        <label className="block"><span className={labelCls}>Position / Title *</span><input name="position" className={field} required /></label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block"><span className={labelCls}>Start date</span><input name="start" type="date" className={field} /></label>
-          <label className="block"><span className={labelCls}>End date</span><input name="end" type="date" className={field} /></label>
-        </div>
-        <label className="flex items-center gap-2 text-sm"><input name="current" type="checkbox" className="h-4 w-4" /> Currently employed here</label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Add Record"}</Button>
-      </form>
+      <EmploymentFields />
     </Collapsible>
+  );
+}
+
+// Inline edit for an existing employment row (used on the Experience page).
+export function EditEmploymentForm({ record }: { record: EmploymentRecord }) {
+  const [open, setOpen] = useState(false);
+  if (!open) return <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Edit</Button>;
+  return (
+    <div className="rounded-xl border border-line bg-surface p-6">
+      <EmploymentFields record={record} onSaved={() => setOpen(false)} />
+    </div>
   );
 }
 
@@ -296,31 +346,125 @@ export function VerificationForm({ certOptions = [] }: { certOptions?: VerifyCer
   );
 }
 
+// IC&RC reciprocity — full OUT-of-Arizona and INTO-Arizona flows.
+//
+//  • Transfer OUT of Arizona (member-initiated): carries the $150 IC&RC transfer
+//    fee. We persist the request first (so admin always sees it even if the
+//    member abandons payment), then start a credit-card-only Stripe Checkout via
+//    the existing /api/stripe/checkout. We capture the DESTINATION BOARD EMAIL so
+//    the admin can notify the receiving board on approval. If online payment is
+//    not configured/seeded, the request still persists and the member is told
+//    ABCAC will invoice the $150 fee — `npm run build` stays green with no env.
+//
+//  • Transfer INTO Arizona (inbound notice): no fee. Creates an admin-visible
+//    record (origin board + credential) and confirms to the member.
+const RECIPROCITY_FEE_CENTS = 15000; // $150 IC&RC transfer fee (OUT only)
+const RECIPROCITY_SLUG = "icrc-reciprocity-transfer"; // catalog slug for the $150 fee, if seeded
+
 export function ReciprocityForm() {
-  const { run, loading, error, done } = useInsert("reciprocity_requests");
-  if (done) return <SuccessNote>IC&RC reciprocity request submitted. ABCAC will contact you within 5 business days.</SuccessNote>;
+  const router = useRouter();
+  const [direction, setDirection] = useState<"out_of_az" | "into_az">("out_of_az");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<null | "out_paid" | "out_invoice" | "into">(null);
+
+  if (done === "into")
+    return <SuccessNote>Inbound IC&RC reciprocity notice received. ABCAC has your request on file and will contact you within 5 business days. No fee is due for transfers into Arizona.</SuccessNote>;
+  if (done === "out_invoice")
+    return <SuccessNote>Your outbound IC&RC reciprocity request was submitted. Online payment isn’t available right now — ABCAC will invoice you the $150 transfer fee. We’ll notify the destination board once your transfer is approved.</SuccessNote>;
+  if (done === "out_paid")
+    return <SuccessNote>Your outbound IC&RC reciprocity request was submitted. Redirecting you to pay the $150 transfer fee…</SuccessNote>;
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
-    await run((uid) => ({
-      member_id: uid, direction: g("direction").value, credential: g("credential").value.trim() || null,
-      destination: g("destination").value.trim() || null, reason: g("reason").value.trim() || null, status: "pending",
-    }));
+    const isOut = direction === "out_of_az";
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+
+      const row: Record<string, unknown> = {
+        member_id: user.id,
+        direction,
+        credential: g("credential").value.trim() || null,
+        destination: g("destination").value.trim() || null,
+        reason: g("reason").value.trim() || null,
+        status: "pending",
+      };
+      if (isOut) {
+        row.destination_board_email = g("boardEmail").value.trim() || null;
+        row.fee_cents = RECIPROCITY_FEE_CENTS;
+        row.payment_status = "unpaid";
+      } else {
+        row.origin_board = g("destination").value.trim() || null;
+        row.origin_board_email = g("boardEmail").value.trim() || null;
+        row.fee_cents = 0;
+        row.payment_status = "none";
+      }
+
+      const { error: insErr } = await supabase.from("reciprocity_requests").insert(row);
+      if (insErr) throw insErr;
+
+      // INTO Arizona: no fee — confirm and we're done.
+      if (!isOut) { setDone("into"); router.refresh(); return; }
+
+      // OUT of Arizona: start the $150 credit-card Stripe Checkout. Degrade
+      // gracefully if payments aren't configured/seeded.
+      try {
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: RECIPROCITY_SLUG }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.url) { setDone("out_paid"); window.location.href = data.url as string; return; }
+      } catch { /* fall through to invoice messaging */ }
+      // Checkout unavailable — request is saved; ABCAC will invoice the fee.
+      setDone("out_invoice");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const isOut = direction === "out_of_az";
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <label className="block"><span className={labelCls}>Direction *</span>
-        <select name="direction" className={field} defaultValue="out_of_az">
-          <option value="out_of_az">Transfer out of Arizona</option>
-          <option value="into_az">Transfer into Arizona</option>
+        <select
+          name="direction"
+          className={field}
+          value={direction}
+          onChange={(e) => setDirection(e.target.value as "out_of_az" | "into_az")}
+        >
+          <option value="out_of_az">Transfer OUT of Arizona ($150 fee)</option>
+          <option value="into_az">Transfer INTO Arizona (no fee)</option>
         </select>
       </label>
       <label className="block"><span className={labelCls}>Credential</span><input name="credential" className={field} placeholder="e.g. CADAC" /></label>
-      <label className="block"><span className={labelCls}>Destination / origin board</span><input name="destination" className={field} /></label>
-      <label className="block"><span className={labelCls}>Reason</span><input name="reason" className={field} /></label>
+      <label className="block">
+        <span className={labelCls}>{isOut ? "Destination board (where you're transferring TO)" : "Origin board (where you're transferring FROM)"}</span>
+        <input name="destination" className={field} placeholder="e.g. Texas Certification Board" />
+      </label>
+      <label className="block">
+        <span className={labelCls}>{isOut ? "Destination board email *" : "Origin board email"}</span>
+        <input name="boardEmail" type="email" className={field} required={isOut} placeholder="board contact email" />
+        {isOut && <span className="mt-1 block text-xs text-muted">We’ll notify this board once ABCAC approves your transfer.</span>}
+      </label>
+      <label className="block"><span className={labelCls}>Reason / notes</span><input name="reason" className={field} /></label>
+      {isOut
+        ? <p className="text-sm text-muted">A <strong>$150 IC&amp;RC transfer fee</strong> applies and is paid by credit card after you submit.</p>
+        : <p className="text-sm text-muted">Inbound transfers carry <strong>no fee</strong>. ABCAC will review your notice and follow up.</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Submit Request"}</Button>
+      <Button type="submit" disabled={loading}>
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : isOut ? "Submit & Pay $150" : "Submit Inbound Notice"}
+      </Button>
     </form>
   );
 }
