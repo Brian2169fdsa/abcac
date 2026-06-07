@@ -10,6 +10,9 @@ const field =
 
 const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"] as const;
 
+const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
+
 export function IssueCertForm({ members, defaultMemberId }: { members: { id: string; label: string }[]; defaultMemberId?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -28,6 +31,7 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
     const icRcLevel = (f.elements.namedItem("ic_rc_level") as HTMLInputElement).value.trim();
     const issuedDate = (f.elements.namedItem("issued_date") as HTMLInputElement).value;
     const expirationDate = (f.elements.namedItem("expiration_date") as HTMLInputElement).value;
+    const file = (f.elements.namedItem("certificate_file") as HTMLInputElement).files?.[0];
 
     if (!memberId || !credential) {
       setMsg("Select a member and a credential.");
@@ -35,9 +39,40 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
       return;
     }
 
+    if (file) {
+      if (file.size > MAX_BYTES) {
+        setMsg("Certificate file must be under 10MB.");
+        setIsError(true);
+        return;
+      }
+      if (!ALLOWED_EXT.includes((file.name.split(".").pop() || "").toLowerCase())) {
+        setMsg("Certificate file must be a PDF, JPG, or PNG.");
+        setIsError(true);
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
+
+      // Upload the physical certificate (optional) to the existing private
+      // member-documents bucket under <member_id>/certs/... so the member-read
+      // policy (keyed on the leading folder = their uid) can serve it back.
+      let certificatePath: string | null = null;
+      if (file) {
+        const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+        certificatePath = `${memberId}/certs/${Date.now()}_${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("member-documents")
+          .upload(certificatePath, file, { upsert: false });
+        if (upErr) {
+          setMsg("Certificate file upload failed: " + upErr.message);
+          setIsError(true);
+          return;
+        }
+      }
+
       const { error } = await supabase.from("certifications").insert({
         member_id: memberId,
         cert_type: credential,
@@ -45,6 +80,7 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
         ic_rc_level: icRcLevel || null,
         issued_date: issuedDate || null,
         expiration_date: expirationDate || null,
+        certificate_url: certificatePath,
         status: "active",
       });
 
@@ -117,6 +153,14 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
           <input name="expiration_date" type="date" className={field} />
         </label>
       </div>
+
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-semibold">
+          Physical Certificate File <span className="font-normal text-muted">(optional — PDF/JPG/PNG, max 10MB)</span>
+        </span>
+        <input name="certificate_file" type="file" accept=".pdf,.jpg,.jpeg,.png" className="text-sm" />
+        <span className="mt-1 block text-xs text-muted">If attached, the member can download it from their Certificate &amp; Wallet Card page.</span>
+      </label>
 
       {msg && (
         <p className={`text-sm ${isError ? "text-destructive" : "text-muted"}`}>{msg}</p>

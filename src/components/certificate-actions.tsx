@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 interface Cert {
@@ -8,6 +10,8 @@ interface Cert {
   ic_rc_level: string | null;
   issued_date: string | null;
   expiration_date: string | null;
+  /** Storage path (member-documents) to the admin-uploaded physical certificate, if any. */
+  certificate_url?: string | null;
 }
 
 function fmt(d: string | null) {
@@ -24,8 +28,28 @@ function openPrint(html: string) {
   setTimeout(() => w.print(), 400);
 }
 
-/** Generates a printable certificate / wallet card (print-to-PDF). */
+/** Generates a printable certificate / wallet card (print-to-PDF), plus a
+ *  download for the admin-uploaded physical certificate file when one exists. */
 export function CertificateActions({ cert, memberName }: { cert: Cert; memberName: string }) {
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadFile() {
+    if (!cert.certificate_url) return;
+    setDownloading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.storage
+        .from("member-documents")
+        .createSignedUrl(cert.certificate_url, 3600);
+      if (error || !data) throw error || new Error("no url");
+      window.open(data.signedUrl, "_blank");
+    } catch {
+      alert("Could not open your certificate file. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   function certificate() {
     openPrint(
       `<!DOCTYPE html><html><head><title>ABCAC Certificate</title><style>
@@ -56,8 +80,14 @@ export function CertificateActions({ cert, memberName }: { cert: Cert; memberNam
     );
   }
   return (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" onClick={certificate}>Certificate</Button>
+    <div className="flex flex-wrap gap-2">
+      {cert.certificate_url ? (
+        <Button variant="outline" size="sm" onClick={downloadFile} disabled={downloading}>
+          {downloading ? "Opening…" : "Download Certificate"}
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" onClick={certificate}>Certificate</Button>
+      )}
       <Button variant="outline" size="sm" onClick={wallet}>Wallet Card</Button>
     </div>
   );

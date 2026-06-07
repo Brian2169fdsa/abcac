@@ -29,15 +29,16 @@ export default async function CertificationsPage() {
           <p className="text-muted">No certifications issued yet. Once ABCAC approves your application, your credential will appear here.</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-            <table className="w-full text-sm">
+            <h2 className="px-4 pt-4 text-base font-semibold text-ink">Issued Certificates</h2>
+            <table className="mt-2 w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3">Certification</th>
                   <th className="px-4 py-3">Number</th>
-                  <th className="px-4 py-3">Issued</th>
-                  <th className="px-4 py-3">Expires</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Download</th>
+                  <th className="px-4 py-3">Date Issued</th>
+                  <th className="px-4 py-3">Expiration</th>
+                  <th className="px-4 py-3">IC&amp;RC Level</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -47,7 +48,7 @@ export default async function CertificationsPage() {
                     <td className="px-4 py-3 text-muted">{c.cert_number ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{fmt(c.issued_date)}</td>
                     <td className="px-4 py-3 text-muted">{fmt(c.expiration_date)}</td>
-                    <td className="px-4 py-3 capitalize text-muted">{c.status ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted">{c.ic_rc_level ?? "—"}</td>
                     <td className="px-4 py-3">
                       {c.status === "active" ? <CertificateActions cert={c} memberName={memberName} /> : <span className="text-muted">—</span>}
                     </td>
