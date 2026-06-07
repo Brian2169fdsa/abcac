@@ -22,7 +22,7 @@ function showNotification(message, type) {
 
   toast.innerHTML =
     '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
-    '<span class="toast-message">' + message + '</span>' +
+    '<span class="toast-message">' + escHtml(message) + '</span>' +
     '<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
 
   container.appendChild(toast);
@@ -68,7 +68,7 @@ function getStatusBadge(status) {
   };
   const c = colors[status] || colors.pending;
   const label = (status || 'unknown').replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
-  return '<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:' + c.bg + ';color:' + c.color + ';border:1px solid ' + c.border + ';">' + label + '</span>';
+  return '<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:' + c.bg + ';color:' + c.color + ';border:1px solid ' + c.border + ';">' + escHtml(label) + '</span>';
 }
 
 function setButtonLoading(btn, loading) {
@@ -493,15 +493,15 @@ async function loadCertifications(memberId) {
         tbody.innerHTML = data.map(function(cert) {
           var actions = getStatusBadge(cert.status);
           if (cert.status === 'active') {
-            actions += ' <button class="btn btn-sm btn-outline" onclick="downloadCertificate(\'' + cert.id + '\')">Certificate</button>' +
-                       ' <button class="btn btn-sm btn-outline" onclick="downloadWalletCard(\'' + cert.id + '\')">Wallet Card</button>';
+            actions += ' <button class="btn btn-sm btn-outline" onclick="downloadCertificate(' + escJsAttr(cert.id) + ')">Certificate</button>' +
+                       ' <button class="btn btn-sm btn-outline" onclick="downloadWalletCard(' + escJsAttr(cert.id) + ')">Wallet Card</button>';
           }
           return '<tr>' +
-            '<td>' + (cert.cert_type || '\u2014') + '</td>' +
-            '<td>' + (cert.cert_number || '\u2014') + '</td>' +
+            '<td>' + (escHtml(cert.cert_type) || '\u2014') + '</td>' +
+            '<td>' + (escHtml(cert.cert_number) || '\u2014') + '</td>' +
             '<td>' + formatDate(cert.issued_date) + '</td>' +
             '<td>' + formatDate(cert.expiration_date) + '</td>' +
-            '<td>' + (cert.ic_rc_level || '\u2014') + '</td>' +
+            '<td>' + (escHtml(cert.ic_rc_level) || '\u2014') + '</td>' +
             '<td><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + actions + '</div></td>' +
             '</tr>';
         }).join('');
@@ -547,11 +547,11 @@ function downloadCertificate(certId) {
     '<div class="cert">' +
     '<h1>Arizona Board for Certification of Addiction Counselors</h1>' +
     '<div class="sub">Certifies that</div>' +
-    '<div class="name">' + name + '</div>' +
+    '<div class="name">' + escHtml(name) + '</div>' +
     '<div class="body">has met all requirements and is hereby recognized as a<br><strong>' +
-    (cert.cert_type || '') + '</strong>' + (cert.ic_rc_level ? ' (' + cert.ic_rc_level + ')' : '') + '</div>' +
+    escHtml(cert.cert_type || '') + '</strong>' + (cert.ic_rc_level ? ' (' + escHtml(cert.ic_rc_level) + ')' : '') + '</div>' +
     '<div class="row">' +
-    '<div>Certificate No.<br><b>' + (cert.cert_number || '\u2014') + '</b></div>' +
+    '<div>Certificate No.<br><b>' + (escHtml(cert.cert_number) || '\u2014') + '</b></div>' +
     '<div>Issued<br><b>' + formatDate(cert.issued_date) + '</b></div>' +
     '<div>Valid Through<br><b>' + formatDate(cert.expiration_date) + '</b></div>' +
     '</div></div></body></html>'
@@ -574,8 +574,8 @@ function downloadWalletCard(certId) {
     '@media print{body{padding:0;}}</style></head><body>' +
     '<div class="card"><div class="t">Arizona Board for Certification</div>' +
     '<div class="org">of Addiction Counselors</div>' +
-    '<div class="nm">' + name + '</div>' +
-    '<div class="cr">' + (cert.cert_type || '') + (cert.cert_number ? ' \u00b7 ' + cert.cert_number : '') + '</div>' +
+    '<div class="nm">' + escHtml(name) + '</div>' +
+    '<div class="cr">' + escHtml(cert.cert_type || '') + (cert.cert_number ? ' \u00b7 ' + escHtml(cert.cert_number) : '') + '</div>' +
     '<div class="f"><span>Issued: ' + formatDate(cert.issued_date) + '</span>' +
     '<span>Expires: ' + formatDate(cert.expiration_date) + '</span></div></div></body></html>'
   );
@@ -644,12 +644,12 @@ async function loadCEURecords(memberId) {
       } else {
         tbody.innerHTML = records.map(function(r) {
           return '<tr>' +
-            '<td>' + (r.course_name || '\u2014') + '</td>' +
-            '<td>' + (r.provider || '\u2014') + '</td>' +
-            '<td>' + (r.hours || '\u2014') + '</td>' +
-            '<td>' + (r.category || '\u2014') + '</td>' +
+            '<td>' + (escHtml(r.course_name) || '\u2014') + '</td>' +
+            '<td>' + (escHtml(r.provider) || '\u2014') + '</td>' +
+            '<td>' + (escHtml(r.hours) || '\u2014') + '</td>' +
+            '<td>' + (escHtml(r.category) || '\u2014') + '</td>' +
             '<td>' + formatDate(r.completion_date) + '</td>' +
-            '<td>' + (r.certificate_url ? '<a href="#" onclick="viewCEUCert(\'' + r.certificate_url + '\')">View</a>' : '\u2014') + '</td>' +
+            '<td>' + (r.certificate_url ? '<a href="#" onclick="viewCEUCert(' + escJsAttr(r.certificate_url) + ');return false;">View</a>' : '\u2014') + '</td>' +
             '<td>' + getStatusBadge(r.status) + '</td>' +
             '</tr>';
         }).join('');
@@ -665,13 +665,12 @@ async function loadCEURecords(memberId) {
 // ═══ LOAD DOCUMENTS ═══
 async function loadDocuments(memberId) {
   return loadTableData('documents', memberId, 'docsTableBody', function(doc) {
-    var path = (doc.file_path || '').replace(/'/g, "\\'");
     return '<tr>' +
-      '<td><strong>' + (doc.file_name || '\u2014') + '</strong></td>' +
-      '<td>' + (doc.document_type || '\u2014') + '</td>' +
+      '<td><strong>' + (escHtml(doc.file_name) || '\u2014') + '</strong></td>' +
+      '<td>' + (escHtml(doc.document_type) || '\u2014') + '</td>' +
       '<td>' + formatDate(doc.uploaded_at) + '</td>' +
       '<td>' + getStatusBadge(doc.status) + '</td>' +
-      '<td>' + (doc.file_path ? '<button class="btn btn-sm btn-outline" onclick="downloadDocument(\'' + path + '\')">View</button>' : '\u2014') + '</td>' +
+      '<td>' + (doc.file_path ? '<button class="btn btn-sm btn-outline" onclick="downloadDocument(' + escJsAttr(doc.file_path) + ')">View</button>' : '\u2014') + '</td>' +
       '</tr>';
   }, 'uploaded_at');
 }
@@ -730,7 +729,7 @@ async function loadMessages(memberId) {
       return;
     }
     container.innerHTML = data.map(function(msg) {
-      return '<div class="msg-item" onclick="viewMessage(\'' + msg.id + '\')">' +
+      return '<div class="msg-item" onclick="viewMessage(' + escJsAttr(msg.id) + ')">' +
         '<div class="msg-dot' + (msg.is_read ? ' read' : '') + '"></div>' +
         '<div class="msg-info">' +
         '<div class="msg-from">' + escHtml(msg.from_name || 'ABCAC Admin') + '</div>' +
@@ -750,11 +749,11 @@ async function loadInvoices(memberId) {
     if (inv.status === 'paid') {
       action = 'Paid ' + formatDate(inv.paid_at);
     } else {
-      action = '<button class="btn btn-sm btn-gold" onclick="payInvoice(\'' + inv.id + '\')">Pay Now</button>';
+      action = '<button class="btn btn-sm btn-gold" onclick="payInvoice(' + escJsAttr(inv.id) + ')">Pay Now</button>';
     }
     return '<tr>' +
-      '<td>' + (inv.invoice_number || '\u2014') + '</td>' +
-      '<td>' + (inv.description || '\u2014') + '</td>' +
+      '<td>' + (escHtml(inv.invoice_number) || '\u2014') + '</td>' +
+      '<td>' + (escHtml(inv.description) || '\u2014') + '</td>' +
       '<td>' + formatDate(inv.created_at) + '</td>' +
       '<td>' + formatCurrency(inv.amount_cents) + '</td>' +
       '<td>' + getStatusBadge(inv.status) + '</td>' +
@@ -793,8 +792,8 @@ async function payInvoice(invoiceId) {
 async function loadEmploymentRecords(memberId) {
   return loadTableData('employment_records', memberId, 'employmentTableBody', function(emp) {
     return '<tr>' +
-      '<td>' + (emp.employer_name || '\u2014') + '</td>' +
-      '<td>' + (emp.position_title || '\u2014') + '</td>' +
+      '<td>' + (escHtml(emp.employer_name) || '\u2014') + '</td>' +
+      '<td>' + (escHtml(emp.position_title) || '\u2014') + '</td>' +
       '<td>' + formatDate(emp.start_date) + '</td>' +
       '<td>' + (emp.is_current ? 'Present' : formatDate(emp.end_date)) + '</td>' +
       '<td>' + (emp.is_current ? getStatusBadge('active') : '\u2014') + '</td>' +
@@ -806,9 +805,9 @@ async function loadEmploymentRecords(memberId) {
 async function loadOtherCertifications(memberId) {
   return loadTableData('other_certifications', memberId, 'otherCertsTableBody', function(cert) {
     return '<tr>' +
-      '<td>' + (cert.credential_title || '\u2014') + '</td>' +
-      '<td>' + (cert.credential_number || '\u2014') + '</td>' +
-      '<td>' + (cert.issuing_board || '\u2014') + '</td>' +
+      '<td>' + (escHtml(cert.credential_title) || '\u2014') + '</td>' +
+      '<td>' + (escHtml(cert.credential_number) || '\u2014') + '</td>' +
+      '<td>' + (escHtml(cert.issuing_board) || '\u2014') + '</td>' +
       '<td>' + formatDate(cert.issued_date) + '</td>' +
       '<td>' + formatDate(cert.expiration_date) + '</td>' +
       '</tr>';
@@ -819,8 +818,8 @@ async function loadOtherCertifications(memberId) {
 async function loadApplications(memberId) {
   return loadTableData('applications', memberId, 'applicationsTableBody', function(app) {
     return '<tr>' +
-      '<td>' + ((app.app_type || '').replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); })) + '</td>' +
-      '<td>' + (app.cert_type || '\u2014') + '</td>' +
+      '<td>' + escHtml((app.app_type || '').replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); })) + '</td>' +
+      '<td>' + (escHtml(app.cert_type) || '\u2014') + '</td>' +
       '<td>' + formatDate(app.submitted_at) + '</td>' +
       '<td>' + (app.est_completion ? formatDate(app.est_completion) : '\u2014') + '</td>' +
       '<td>' + getStatusBadge(app.status) + '</td>' +
@@ -1043,6 +1042,14 @@ function escHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
+}
+
+// Safe for use inside an inline on*="fn('...')" handler: the value is first
+// JSON-encoded (escapes quotes/backslashes for the JS string literal) and then
+// HTML-escaped (so it cannot break out of the attribute). Decodes back to the
+// original string when the handler runs.
+function escJsAttr(s) {
+  return escHtml(JSON.stringify(String(s == null ? '' : s)));
 }
 
 async function viewMessage(messageId) {
@@ -1479,10 +1486,10 @@ function loadRenewal(certs, ceuRecords) {
     : '<span style="color:var(--amber);font-size:13px;">' + approvedHours + ' / ' + REQUIRED_CEU_HOURS + ' hrs</span>';
 
   tbody.innerHTML = active.map(function(cert) {
-    var btn = '<button class="btn btn-sm btn-gold" onclick="requestRenewal(\'' + cert.id + '\',\'' + (cert.cert_type || '') + '\')">Pay Renewal Fee</button>';
+    var btn = '<button class="btn btn-sm btn-gold" onclick="requestRenewal(' + escJsAttr(cert.id) + ',' + escJsAttr(cert.cert_type || '') + ')">Pay Renewal Fee</button>';
     return '<tr>' +
-      '<td>' + (cert.cert_type || '—') + '</td>' +
-      '<td>' + (cert.cert_number || '—') + '</td>' +
+      '<td>' + (escHtml(cert.cert_type) || '—') + '</td>' +
+      '<td>' + (escHtml(cert.cert_number) || '—') + '</td>' +
       '<td>' + formatDate(cert.expiration_date) + '</td>' +
       '<td>' + ceuStatus + '</td>' +
       '<td>' + formatCurrency(RENEWAL_FEE_CENTS) + '</td>' +
@@ -1540,8 +1547,8 @@ async function loadSupervision(userId) {
     }
     tbody.innerHTML = data.map(function(s) {
       return '<tr>' +
-        '<td>' + (s.supervisee_name || '—') + '</td>' +
-        '<td>' + (s.supervisee_credential || '—') + '</td>' +
+        '<td>' + (escHtml(s.supervisee_name) || '—') + '</td>' +
+        '<td>' + (escHtml(s.supervisee_credential) || '—') + '</td>' +
         '<td>' + formatDate(s.start_date) + '</td>' +
         '<td>' + (s.end_date ? formatDate(s.end_date) : 'Present') + '</td>' +
         '<td>' + getStatusBadge(s.status) + '</td>' +
