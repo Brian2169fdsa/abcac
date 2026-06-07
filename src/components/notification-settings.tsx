@@ -17,6 +17,7 @@ const TOGGLES: {
   label: string;
   help: string;
   gated: boolean;
+  comingSoon?: boolean;
 }[] = [
   {
     key: "renewal_reminders",
@@ -33,14 +34,16 @@ const TOGGLES: {
   {
     key: "abcac_announcements",
     label: "ABCAC announcements",
-    help: "General announcements and news posted to your portal inbox by ABCAC staff.",
+    help: "General announcements and news from ABCAC staff. This channel isn't sending yet — your preference is saved and will take effect once announcements launch.",
     gated: false,
+    comingSoon: true,
   },
   {
     key: "icrc_updates",
     label: "IC&RC updates",
-    help: "Updates relating to IC&RC reciprocity and credentialing.",
+    help: "Updates relating to IC&RC reciprocity and credentialing. This channel isn't sending yet — your preference is saved and will take effect once IC&RC updates launch.",
     gated: false,
+    comingSoon: true,
   },
 ];
 
@@ -135,6 +138,11 @@ export function NotificationSettings({
                 {t.gated && (
                   <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
                     gates email reminders
+                  </span>
+                )}
+                {t.comingSoon && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                    coming soon
                   </span>
                 )}
               </span>

@@ -210,33 +210,77 @@ export function AddOtherCertForm() {
 }
 
 // ─── Clinical supervision (keyed on supervisor_id) ───
+//
+// Optionally links the supervisee to their ABCAC member profile by email so the
+// supervised member can SEE the record and the admin can show it in both
+// directions (migration 023). The link is resolved server-side via the
+// find_member_id_by_email RPC, which exposes only the matched id (or NULL for
+// off-platform supervisees — those still record fine via the free-text name).
 export function AddSupervisionForm() {
-  const { run, loading, error } = useInsert("supervision_records");
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
+    setNote(null);
     const f = e.currentTarget;
     const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
     const end = g("end").value;
-    const ok = await run((uid) => ({
-      supervisor_id: uid,
-      supervisee_name: g("name").value.trim(),
-      supervisee_credential: g("cred").value.trim() || null,
-      start_date: g("start").value || null,
-      end_date: end || null,
-      status: end ? "completed" : "active",
-    }));
-    if (ok) f.reset();
+    const supEmail = g("supEmail").value.trim();
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+
+      // Resolve an ABCAC member id from the supervisee's email, if provided.
+      let superviseeMemberId: string | null = null;
+      if (supEmail) {
+        const { data: matchId } = await supabase.rpc("find_member_id_by_email", { p_email: supEmail });
+        superviseeMemberId = (matchId as string | null) ?? null;
+        if (!superviseeMemberId) {
+          setNote("No ABCAC member found for that email — saved as an off-platform supervisee. They won't see this record in their portal.");
+        }
+      }
+
+      const { error: insErr } = await supabase.from("supervision_records").insert({
+        supervisor_id: user.id,
+        supervisee_name: g("name").value.trim(),
+        supervisee_credential: g("cred").value.trim() || null,
+        supervisee_member_id: superviseeMemberId,
+        start_date: g("start").value || null,
+        end_date: end || null,
+        status: end ? "completed" : "active",
+      });
+      if (insErr) throw insErr;
+      f.reset();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
     <Collapsible label="+ Add Supervision Record">
       <form onSubmit={onSubmit} className="space-y-4">
         <h3>Add Supervision Record</h3>
         <label className="block"><span className={labelCls}>Supervisee name *</span><input name="name" className={field} required /></label>
         <label className="block"><span className={labelCls}>Supervisee credential</span><input name="cred" className={field} placeholder="e.g. CAC applicant" /></label>
+        <label className="block">
+          <span className={labelCls}>Supervisee ABCAC member email</span>
+          <input name="supEmail" type="email" className={field} placeholder="optional — links them so they can see this record" />
+          <span className="mt-1 block text-xs text-muted">If your supervisee is an ABCAC member, enter their account email to link the record to them.</span>
+        </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block"><span className={labelCls}>Start date</span><input name="start" type="date" className={field} /></label>
           <label className="block"><span className={labelCls}>End date</span><input name="end" type="date" className={field} /></label>
         </div>
+        {note && <p className="text-sm text-amber-700">{note}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Add Record"}</Button>
       </form>
@@ -406,7 +450,15 @@ export function ReciprocityForm() {
         row.payment_status = "none";
       }
 
-      const { error: insErr } = await supabase.from("reciprocity_requests").insert(row);
+      // Persist FIRST and read back the new row id so we can hand it to Stripe
+      // Checkout. The id rides in the session metadata so the webhook can flip
+      // payment_status='paid' on success — without it the $150 fee never
+      // reconciles (gap #5).
+      const { data: inserted, error: insErr } = await supabase
+        .from("reciprocity_requests")
+        .insert(row)
+        .select("id")
+        .single();
       if (insErr) throw insErr;
 
       // INTO Arizona: no fee — confirm and we're done.
@@ -418,7 +470,7 @@ export function ReciprocityForm() {
         const res = await fetch("/api/stripe/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: RECIPROCITY_SLUG }),
+          body: JSON.stringify({ slug: RECIPROCITY_SLUG, reciprocityRequestId: inserted?.id }),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data?.url) { setDone("out_paid"); window.location.href = data.url as string; return; }

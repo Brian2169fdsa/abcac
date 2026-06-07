@@ -108,9 +108,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     safeList(sb.from("applications").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
     safeList(sb.from("payments").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
     // Supervision records are keyed on supervisor_id (this member supervising others)…
-    safeList(sb.from("supervision_records").select("*").eq("supervisor_id", memberId).order("start_date", { ascending: false })),
-    // …and, if present, where the member is the supervisee.
-    safeList(sb.from("supervision_records").select("*").eq("member_id", memberId).order("start_date", { ascending: false })),
+    safeList(sb.from("supervision_records").select("*, supervisor:supervisor_id(first_name,last_name,email)").eq("supervisor_id", memberId).order("start_date", { ascending: false })),
+    // …and, since migration 023, where the member is the linked supervisee.
+    safeList(sb.from("supervision_records").select("*, supervisor:supervisor_id(first_name,last_name,email)").eq("supervisee_member_id", memberId).order("start_date", { ascending: false })),
     // Optional table from a possible future migration.
     safeList(sb.from("supervision_authorizations").select("*").eq("member_id", memberId)),
     safeList(sb.from("name_change_requests").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
@@ -356,39 +356,50 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         />
       </MemberDetailSection>
 
-      {/* 8. Supervision */}
-      <MemberDetailSection title="Supervision" description="Supervision this member provides (as supervisor) and, if recorded, receives.">
+      {/* 8. Supervision — both directions (as supervisor / as supervisee, migration 023) */}
+      <MemberDetailSection title="Supervision" description="Supervision this member provides (as supervisor) and receives (as supervisee).">
         <div className="mb-2 text-sm font-semibold">As supervisor</div>
         <DataTable
-          head={["Supervisee", "Credential", "Start", "End", "Status"]}
+          head={["Supervisee", "Credential", "Linked member", "Start", "End", "Status"]}
           rows={(supervisionAsSupervisor as any[]).map((s) => [
             s.supervisee_name ?? "—",
             s.supervisee_credential ?? "—",
+            s.supervisee_member_id ? "Yes" : "—",
             fmt(s.start_date),
             s.end_date ? fmt(s.end_date) : "Present",
             <StatusBadge key="s" status={s.status} />,
           ])}
           empty="No supervision provided."
         />
-        {(supervisionAsMember.length > 0 || supervisionAuthorizations.length > 0) && (
-          <div className="mt-4">
+        <div className="mb-2 mt-6 text-sm font-semibold">As supervisee</div>
+        <DataTable
+          head={["Supervised by", "Their credential note", "Start", "End", "Status"]}
+          rows={(supervisionAsMember as any[]).map((s) => {
+            const sup = s.supervisor;
+            const supName = sup
+              ? ([sup.first_name, sup.last_name].filter(Boolean).join(" ") || sup.email || "—")
+              : "—";
+            return [
+              supName,
+              s.supervisee_credential ?? "—",
+              fmt(s.start_date),
+              s.end_date ? fmt(s.end_date) : "Present",
+              <StatusBadge key="s" status={s.status} />,
+            ];
+          })}
+          empty="Not recorded as a supervisee."
+        />
+        {supervisionAuthorizations.length > 0 && (
+          <div className="mt-6">
             <div className="mb-2 text-sm font-semibold">Authorizations</div>
             <DataTable
               head={["Detail", "Start", "End", "Status"]}
-              rows={[
-                ...(supervisionAsMember as any[]).map((s) => [
-                  s.supervisee_name ?? s.supervisor_name ?? "—",
-                  fmt(s.start_date),
-                  s.end_date ? fmt(s.end_date) : "Present",
-                  <StatusBadge key="s" status={s.status} />,
-                ]),
-                ...(supervisionAuthorizations as any[]).map((s) => [
-                  s.detail ?? s.note ?? s.supervisor_name ?? "—",
-                  fmt(s.start_date ?? s.created_at),
-                  fmt(s.end_date),
-                  <StatusBadge key="s" status={s.status} />,
-                ]),
-              ]}
+              rows={(supervisionAuthorizations as any[]).map((s) => [
+                s.detail ?? s.note ?? s.supervisor_name ?? "—",
+                fmt(s.start_date ?? s.created_at),
+                fmt(s.end_date),
+                <StatusBadge key="s" status={s.status} />,
+              ])}
               empty="No supervision authorizations."
             />
           </div>
