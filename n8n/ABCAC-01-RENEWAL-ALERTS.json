@@ -1,0 +1,210 @@
+{
+  "name": "ABCAC-01-RENEWAL-ALERTS",
+  "active": false,
+  "settings": {
+    "errorWorkflow": "",
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "America/Phoenix"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 7am MST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-640, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/cert_renewal_candidates",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {}
+      },
+      "id": "query-supabase",
+      "name": "Query Renewal Candidates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-420, 220],
+      "notes": "Calls a Supabase RPC/View that joins certifications + profiles + cert_schedules + approved CEU progress + notification_preferences. See CERT-DUE-DATES-ENGINE.md for the SQL. Each returned row should include: member_id, email, first_name, cert_type, expiration_date, renewal_cycle_months, ceu_total_required, ceu_total_approved, renewal_reminders (bool)."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "split-rows",
+      "name": "Split Out Rows",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [-200, 220],
+      "notes": "If the RPC returns a bare array, set 'Field to Split Out' to the array path. Adjust to '' / item if the HTTP node already returns one item per row."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute days-until-due and the 90/60/30/7-day reminder tier.\n// Mirrors src/lib/schedules.ts so the n8n workflow and the in-app engine agree.\nconst TIERS = [90, 60, 30, 7];\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (!r.expiration_date) continue;\n  const today = new Date();\n  today.setUTCHours(0, 0, 0, 0);\n  const due = new Date(r.expiration_date.length <= 10 ? r.expiration_date + 'T00:00:00Z' : r.expiration_date);\n  due.setUTCHours(0, 0, 0, 0);\n  const daysUntilDue = Math.round((due.getTime() - today.getTime()) / 86400000);\n  // Fire only on the exact threshold days (matches scheduled-reminders behaviour).\n  if (!TIERS.includes(daysUntilDue)) continue;\n  const tier = daysUntilDue + '-day';\n  const ceuRemaining = Math.max(0, Number(r.ceu_total_required || 0) - Number(r.ceu_total_approved || 0));\n  out.push({ json: { ...r, daysUntilDue, tier, ceuRemaining } });\n}\nreturn out;"
+      },
+      "id": "compute-tier",
+      "name": "Compute Due Tier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20, 220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "opted-in",
+              "leftValue": "={{ $json.renewal_reminders }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-optin",
+      "name": "Opted Into Alerts",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [240, 220],
+      "notes": "notification_preferences.renewal_reminders is the alert-preference column (SCHEMA-CURRENT.md). Members are alerted unless they have explicitly turned it off (!== false)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM_EMAIL || 'noreply@abcac.org', to: $json.email, subject: 'Your ' + $json.cert_type + ' renews in ' + $json.daysUntilDue + ' days', html: '<p>Hi ' + ($json.first_name || 'there') + ',</p><p>Your <strong>' + $json.cert_type + '</strong> certification expires on ' + $json.expiration_date + ' — ' + $json.daysUntilDue + ' days from now. You have ' + $json.ceuRemaining + ' CEU hours remaining for this renewal cycle.</p><p><a href=\"' + ($env.PORTAL_URL || 'https://portal.abcac.org') + '/account/renew\">Start your renewal</a></p>' }) }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Renewal Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 220],
+      "notes": "Resend transactional email. Swap for the n8n SMTP / 'Send Email' node if you prefer SMTP. RESEND_API_KEY / RESEND_FROM_EMAIL / PORTAL_URL are env-based placeholders — no secrets in this file."
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-420, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM_EMAIL || 'noreply@abcac.org', to: $env.ALERT_OPS_EMAIL || 'ops@abcac.org', subject: 'ABCAC-01-RENEWAL-ALERTS failed', html: '<p>The renewal-alerts workflow failed.</p><p><strong>Workflow:</strong> ' + ($json.workflow ? $json.workflow.name : 'ABCAC-01-RENEWAL-ALERTS') + '</p><p><strong>Error:</strong> ' + ($json.execution && $json.execution.error ? $json.execution.error.message : 'see n8n execution log') + '</p>' }) }}",
+        "options": {}
+      },
+      "id": "notify-failure",
+      "name": "Notify Ops Of Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-200, 520],
+      "notes": "Routes any execution failure to the ops inbox (ALERT_OPS_EMAIL env)."
+    }
+  ],
+  "connections": {
+    "Daily 7am MST": {
+      "main": [[{ "node": "Query Renewal Candidates", "type": "main", "index": 0 }]]
+    },
+    "Query Renewal Candidates": {
+      "main": [[{ "node": "Split Out Rows", "type": "main", "index": 0 }]]
+    },
+    "Split Out Rows": {
+      "main": [[{ "node": "Compute Due Tier", "type": "main", "index": 0 }]]
+    },
+    "Compute Due Tier": {
+      "main": [[{ "node": "Opted Into Alerts", "type": "main", "index": 0 }]]
+    },
+    "Opted Into Alerts": {
+      "main": [[{ "node": "Send Renewal Email", "type": "main", "index": 0 }]]
+    },
+    "On Error": {
+      "main": [[{ "node": "Notify Ops Of Failure", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateId": "ABCAC-01-RENEWAL-ALERTS"
+  },
+  "tags": [
+    { "name": "ABCAC" },
+    { "name": "renewals" }
+  ]
+}
