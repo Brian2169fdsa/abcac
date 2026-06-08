@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
+import { ApplicationsStatusChip } from "@/components/account/applications-status-chip";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Application Status" };
@@ -105,10 +106,10 @@ export default async function ApplicationsPage() {
               <div key={a.id} className="rounded-xl border border-line bg-surface p-6">
                 <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg">{title(a.app_type)}{a.cert_type ? ` — ${a.cert_type}` : ""}</h3>
+                    <h3 className="font-display text-lg font-bold text-ink">{title(a.app_type)}{a.cert_type ? ` — ${a.cert_type}` : ""}</h3>
                     <p className="text-sm text-muted">Submitted {fmt(a.submitted_at)}</p>
                   </div>
-                  <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold capitalize text-muted">{title(a.status)}</span>
+                  <ApplicationsStatusChip status={a.status} />
                 </div>
 
                 <Timeline status={a.status} />
