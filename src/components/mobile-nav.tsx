@@ -43,6 +43,17 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // Auto-close when the viewport grows to xl — the drawer is `xl:hidden` and the
+  // hamburger disappears there, so without this the body scroll lock would stick.
+  useEffect(() => {
+    if (!open) return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => mq.matches && onClose();
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
