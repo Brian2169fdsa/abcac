@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { computeCompliance } from "@/lib/ceu-compliance";
+import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
+import { type CertSchedule, findScheduleFor } from "@/lib/schedules";
 import { ViewFileButton } from "@/components/view-file-button";
 import { AccountApprovalActions } from "@/components/admin/account-approval-actions";
 import { MemberManage } from "@/components/admin/member-manage";
@@ -38,9 +39,15 @@ function cap(s: string | null | undefined) {
 async function safeList<T = any>(p: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
   try {
     const { data, error } = await p;
-    if (error) return [];
+    if (error) {
+      // Surface the real failure server-side so an RLS/query error is visible in
+      // logs instead of silently rendering as "No records" (E2E #5).
+      console.error("[admin/members/[id]] safeList query failed:", error);
+      return [];
+    }
     return data ?? [];
-  } catch {
+  } catch (err) {
+    console.error("[admin/members/[id]] safeList threw:", err);
     return [];
   }
 }
@@ -48,9 +55,13 @@ async function safeList<T = any>(p: PromiseLike<{ data: T[] | null; error: unkno
 async function safeOne<T = any>(p: PromiseLike<{ data: T | null; error: unknown }>): Promise<T | null> {
   try {
     const { data, error } = await p;
-    if (error) return null;
+    if (error) {
+      console.error("[admin/members/[id]] safeOne query failed:", error);
+      return null;
+    }
     return data ?? null;
-  } catch {
+  } catch (err) {
+    console.error("[admin/members/[id]] safeOne threw:", err);
     return null;
   }
 }
@@ -98,6 +109,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     reciprocity,
     messages,
     invoices,
+    schedules,
   ] = await Promise.all([
     safeList(sb.from("employment_records").select("*").eq("member_id", memberId).order("start_date", { ascending: false })),
     safeList(sb.from("certifications").select("*").eq("member_id", memberId).order("issued_date", { ascending: false })),
@@ -118,10 +130,34 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     safeList(sb.from("reciprocity_requests").select("*").eq("member_id", memberId).order("submitted_at", { ascending: false })),
     safeList(sb.from("messages").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
     safeList(sb.from("invoices").select("*").eq("member_id", memberId).order("created_at", { ascending: false })),
+    // Per-credential renewal rules (cert_schedules, migration 016). Read-only;
+    // degrades to [] when the table/rows are absent → 40/3/3 default applies.
+    safeList(
+      sb
+        .from("cert_schedules")
+        .select(
+          "credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes",
+        ),
+    ),
   ]);
+
+  // CEU denominators come from the member's actual credential. Mirror the member
+  // dashboard / CEU page: use the soonest-expiring active credential's schedule
+  // when known, defaulting to 40/3/3 when no cert_schedules row matches.
+  const primaryCredential = (certs as any[])
+    .filter((c) => c.status === "active")
+    .slice()
+    .sort((a, b) => {
+      const aD = a.expiration_date ? new Date(a.expiration_date).getTime() : Infinity;
+      const bD = b.expiration_date ? new Date(b.expiration_date).getTime() : Infinity;
+      return aD - bD;
+    })[0]?.cert_type ?? null;
+  const primarySchedule = findScheduleFor(schedules as CertSchedule[], primaryCredential);
+  const requirements = requirementsFromSchedule(primarySchedule);
 
   const compliance = computeCompliance(
     (ceuRecords as any[]).map((r) => ({ hours: r.hours ?? null, category: r.category ?? null, status: r.status ?? null })),
+    requirements,
   );
 
   const fullName = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ") || "—";
@@ -255,7 +291,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           <div className="mt-4 grid gap-4 sm:grid-cols-4">
             <div>
               <div className="text-sm text-muted">Approved hours</div>
-              <div className="mt-1 text-2xl font-bold text-ink">{compliance.totalApproved} / 40</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.totalApproved} / {compliance.requiredTotal}</div>
             </div>
             <div>
               <div className="text-sm text-muted">Hours remaining</div>
@@ -263,11 +299,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             </div>
             <div>
               <div className="text-sm text-muted">Ethics</div>
-              <div className="mt-1 text-2xl font-bold text-ink">{compliance.ethics} / 3</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.ethics} / {compliance.requiredEthics}</div>
             </div>
             <div>
               <div className="text-sm text-muted">Cultural Diversity</div>
-              <div className="mt-1 text-2xl font-bold text-ink">{compliance.cultural} / 3</div>
+              <div className="mt-1 text-2xl font-bold text-ink">{compliance.cultural} / {compliance.requiredCultural}</div>
             </div>
           </div>
         </div>
