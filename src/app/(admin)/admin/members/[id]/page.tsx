@@ -18,6 +18,7 @@ import { MemberDocsPanel } from "@/components/admin/member-docs-panel";
 import { MemberProgressPanel } from "@/components/admin/member-progress-panel";
 import { MemberDuePanel } from "@/components/admin/member-due-panel";
 import { CockpitQuickActions } from "@/components/admin/cockpit-quick-actions";
+import { MemberTasksPanel, type MemberTask } from "@/components/admin/member-tasks-panel";
 import { RoleManager } from "@/components/admin/role-manager";
 import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
 
@@ -131,6 +132,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     messages,
     invoices,
     schedules,
+    tasks,
   ] = await Promise.all([
     safeList(sb.from("employment_records").select("*").eq("member_id", memberId).order("start_date", { ascending: false })),
     safeList(sb.from("certifications").select("*").eq("member_id", memberId).order("issued_date", { ascending: false })),
@@ -159,6 +161,16 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         .select(
           "credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes",
         ),
+    ),
+    // Per-member tasks (member_tasks) — the ClickUp replacement. Ordered so the
+    // panel can re-sort; active-first by due date is finalized client-side.
+    safeList(
+      sb
+        .from("member_tasks")
+        .select("*")
+        .eq("member_id", memberId)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false }),
     ),
   ]);
 
@@ -250,6 +262,12 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         <div className="mt-6">
           <div className="mb-2 text-sm font-semibold text-ink">Quick actions</div>
           <CockpitQuickActions memberId={memberId} />
+        </div>
+
+        {/* Tasks — the ClickUp replacement: per-member task manager. */}
+        <div className="mt-6">
+          <div className="mb-2 text-sm font-semibold text-ink">Tasks</div>
+          <MemberTasksPanel memberId={memberId} tasks={tasks as MemberTask[]} />
         </div>
 
         {/* Superadmin-only role management. */}
