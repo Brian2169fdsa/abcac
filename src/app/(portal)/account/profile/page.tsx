@@ -4,6 +4,8 @@ import { PageHero } from "@/components/page-hero";
 import { ProfileForm, type ProfileData, type Prefs } from "@/components/profile-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ExportButton } from "@/components/account/export-button";
+import { StatusChip } from "@/components/account/status-chip";
+import { ProfileCompleteness } from "@/components/account/profile-completeness";
 
 function title(s: string | null) {
   return (s ?? "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -37,18 +39,48 @@ export default async function ProfilePage() {
       }
     : DEFAULT_PREFS;
 
+  const certStatus = (profile as { cert_status?: string | null })?.cert_status ?? "applying";
+
+  // Key contact fields that signal a complete member profile.
+  const completenessFields = [
+    { label: "First name", value: profileData.first_name },
+    { label: "Last name", value: profileData.last_name },
+    { label: "Phone", value: profileData.phone },
+    { label: "Date of birth", value: profileData.date_of_birth },
+    { label: "Street address", value: profileData.address_line1 },
+    { label: "City", value: profileData.city },
+    { label: "State", value: profileData.state },
+    { label: "ZIP code", value: profileData.zip_code },
+  ];
+
   return (
     <>
       <PageHero eyebrow="Member Portal" title="Profile & Settings" intro="Update your contact information, notification preferences, and password." />
 
       <Section compact>
-        <div className="rounded-xl border border-line bg-surface p-6">
-          <h3 className="mb-4">Account</h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div><div className="text-xs uppercase tracking-wide text-muted">Login email</div><div className="mt-1 font-semibold text-ink">{profileData.email ?? "—"}</div></div>
-            <div><div className="text-xs uppercase tracking-wide text-muted">Certification status</div><div className="mt-1 font-semibold text-ink">{title((profile as { cert_status?: string | null })?.cert_status ?? "applying")}</div></div>
-            <div className="flex items-end"><Link href="/logout" className="font-semibold text-brand hover:text-brand-600">Sign out</Link></div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+            <h3 className="mb-4 font-display text-base font-bold text-ink">Account</h3>
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Login email</dt>
+                <dd className="mt-1 font-semibold text-ink">{profileData.email ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Certification status</dt>
+                <dd className="mt-1 flex items-center gap-2">
+                  <StatusChip status={title(certStatus)} />
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-5 border-t border-line pt-4">
+              <Link href="/logout" className="text-sm font-semibold text-brand hover:text-brand-600">
+                Sign out
+              </Link>
+            </div>
           </div>
+
+          <ProfileCompleteness fields={completenessFields} />
         </div>
       </Section>
 
@@ -57,9 +89,9 @@ export default async function ProfilePage() {
       </Section>
 
       <Section compact>
-        <div className="rounded-xl border border-line bg-surface p-6">
-          <h3 className="mb-4">Your data</h3>
-          <p className="mb-4 text-muted">Download a copy of your ABCAC portal data.</p>
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <h3 className="mb-2 font-display text-base font-bold text-ink">Your data</h3>
+          <p className="mb-4 text-sm text-muted">Download a copy of your ABCAC portal data.</p>
           <ExportButton />
         </div>
       </Section>
