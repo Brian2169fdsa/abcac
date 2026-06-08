@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
+import { checkRateLimit, getClientIp } from "@/lib/public-rate-limit";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,16 @@ export const runtime = "nodejs";
 // the service-role client (RLS: anon has no INSERT policy — service role only),
 // mark it source='public', and email the requester a best-effort confirmation.
 export async function POST(req: Request) {
+  // Per-IP abuse protection (in-memory v1; see public-rate-limit.ts).
+  const ip = getClientIp(req);
+  const rl = checkRateLimit("verification", ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let body: {
     requesterName?: string;
     requesterEmail?: string;
@@ -17,11 +28,18 @@ export async function POST(req: Request) {
     subjectName?: string;
     subjectCertNumber?: string;
     reason?: string;
+    company_website?: string;
   };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  // Honeypot: real forms never send `company_website`. Bots that auto-fill
+  // hidden fields do — silently succeed without doing any work.
+  if (body?.company_website) {
+    return NextResponse.json({ ok: true });
   }
 
   const requesterName = (body.requesterName ?? "").trim();
