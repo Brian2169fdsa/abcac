@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Menu, LogOut } from "lucide-react";
+import { Mail, Menu, LogOut, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function initials(name: string): string {
@@ -30,7 +30,16 @@ export function PortalTopbar({
   return (
     <>
       {/* Maroon top bar */}
-      <div className="flex h-12 items-center justify-end gap-2 bg-brand px-3 md:px-6">
+      <div className="flex h-12 items-center justify-between gap-2 bg-brand px-3 md:px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          <span className="hidden sm:inline">Back to Site</span>
+        </Link>
+
+        <div className="flex items-center gap-2">
         <Link
           href="/account/messages"
           className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white"
@@ -64,6 +73,7 @@ export function PortalTopbar({
           <LogOut className="h-4 w-4 sm:hidden" aria-hidden />
           <span className="hidden sm:inline">Sign Out</span>
         </Link>
+        </div>
       </div>
 
       {/* White brand bar */}
