@@ -9,22 +9,40 @@ import { isAssistantConfigured } from "@/lib/assistant/anthropic";
 import { runAssistant, type AssistantTool, type ToolExecutor } from "@/lib/assistant/run";
 import { getMemberTools, getMemberExecutors } from "@/lib/assistant/member-tools";
 import { getAdminTools, getAdminExecutors } from "@/lib/assistant/admin-tools";
+import { getWebsiteTools, getWebsiteExecutors } from "@/lib/assistant/website-tools";
+import {
+  WEBSITE_SYSTEM_DEFAULT,
+  MEMBER_SYSTEM_DEFAULT,
+  ADMIN_SYSTEM_DEFAULT,
+} from "@/lib/assistant/prompts";
+import {
+  checkRateLimit,
+  callerIp,
+  checkConversationLength,
+} from "@/lib/assistant/rate-limit";
 
 /**
- * POST /api/assistant — the conversational assistant endpoint.
+ * POST /api/assistant — the conversational assistant endpoint (all 3 surfaces).
  *
  * Flow:
  *  1. If ANTHROPIC_API_KEY is missing → 503 { error: "assistant_not_configured" }
  *     (the widget degrades gracefully). Build passes with no env vars.
- *  2. Authenticate via the Supabase cookie session. No session → 401.
- *  3. Resolve the caller's role from their profile. Admins get the admin
- *     toolset (which itself re-checks is_admin() on every write); everyone else
- *     gets the member toolset (own-rows-only, RLS-scoped).
- *  4. Run the manual tool-use loop and return { reply, actions }.
+ *  2. Parse + sanitize the posted history to text turns only (no injected
+ *     tool_result blocks or non user/assistant roles).
+ *  3. PUBLIC surface: if surface === "website", serve the Level-1 public
+ *     assistant with NO personal-data tools — it never requires a session and
+ *     never reads any member's data. (Even a signed-in visitor on a public page
+ *     gets the public, data-free assistant for this surface.)
+ *  4. Otherwise authenticate via the Supabase cookie session. No session → 401.
+ *     Admins on the "admin" surface get the admin toolset (re-checks is_admin()
+ *     on every write); everyone else gets the member toolset (own-rows-only,
+ *     RLS-scoped).
  *
- * The client posts the running message history as `messages`
- * (Anthropic.MessageParam[] with text content). We sanitize it to user/assistant
- * text turns so a client can never inject tool_result blocks or other roles.
+ * WP-D guardrails applied to ALL surfaces:
+ *  - Per-caller rate limit (per IP for public, per user id for authed).
+ *  - Conversation length / input-size cap (reject overly long input → 400).
+ *  - Bounded max_tokens (ASSISTANT_MAX_TOKENS) + capped tool loop in run.ts.
+ *  - 429 with a friendly message when rate limited.
  */
 
 interface IncomingMessage {
@@ -53,23 +71,22 @@ function sanitizeMessages(raw: unknown): Anthropic.MessageParam[] {
   return out;
 }
 
-const MEMBER_SYSTEM = `You are the ABCAC member portal assistant. You help THIS member with their own certification account. Before performing any action that writes data or submits a request, briefly confirm the details with the user and wait for them to say yes. Never reveal or act on anyone else's data. Be concise and friendly. You can also tell them which page to visit.`;
-
-const ADMIN_SYSTEM = `You are the ABCAC admin assistant for ABCAC staff. You can look up any member and take administrative actions. Before approving, rejecting, issuing a credential, deciding a verification, or creating an invoice, confirm the specifics with the admin first. Summarize what you did after each action.`;
+function rateLimited(retryAfter: number): Response {
+  return Response.json(
+    {
+      error: "rate_limited",
+      message:
+        "You're sending messages too quickly. Please wait a moment and try again.",
+      retryAfter,
+    },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } },
+  );
+}
 
 export async function POST(req: Request): Promise<Response> {
   // 1. Graceful degradation when the key is absent.
   if (!isAssistantConfigured()) {
     return Response.json({ error: "assistant_not_configured" }, { status: 503 });
-  }
-
-  // 2. Authenticate via the cookie session.
-  const sb = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
   let body: unknown;
@@ -78,19 +95,62 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
+
+  const requested = (body as { surface?: unknown })?.surface;
   const messages = sanitizeMessages((body as { messages?: unknown })?.messages);
   if (messages.length === 0) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  // 3. Resolve role + the requested surface (member vs admin).
+  // WP-D: reject overly long conversations/inputs before any upstream spend.
+  const lengthCheck = checkConversationLength(messages);
+  if (!lengthCheck.ok) {
+    return Response.json(
+      { error: "input_too_large", message: lengthCheck.error },
+      { status: 400 },
+    );
+  }
+
+  // ── PUBLIC (Level 1) surface ────────────────────────────────────────────
+  // No session required, NO personal-data tools, never reads any member's data.
+  if (requested === "website") {
+    const limit = checkRateLimit(`ip:${callerIp(req)}`);
+    if (!limit.ok) return rateLimited(limit.retryAfter);
+
+    try {
+      const result = await runAssistant({
+        system: WEBSITE_SYSTEM_DEFAULT, // SWAP: MASTER-PLAN §3.A (later WP)
+        messages,
+        tools: getWebsiteTools(),
+        executors: getWebsiteExecutors(),
+      });
+      return Response.json({ reply: result.reply, actions: result.actions });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "assistant_error";
+      return Response.json({ error: "assistant_error", detail: message }, { status: 500 });
+    }
+  }
+
+  // ── AUTHENTICATED (Level 2/3) surfaces ──────────────────────────────────
+  const sb = createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // WP-D: rate-limit authed callers per user id.
+  const limit = checkRateLimit(`user:${user.id}`);
+  if (!limit.ok) return rateLimited(limit.retryAfter);
+
+  // Resolve role + the requested surface (member vs admin).
   const { data: profile } = await sb
     .from("profiles")
     .select("portal_role,first_name,last_name,cert_status,account_status")
     .eq("id", user.id)
     .maybeSingle();
   const isAdmin = profile?.portal_role === "admin";
-  const requested = (body as { surface?: unknown })?.surface;
   const useAdmin = isAdmin && requested === "admin";
 
   let system: string;
@@ -99,7 +159,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (useAdmin) {
     const admin = createSupabaseAdminClient();
-    system = ADMIN_SYSTEM;
+    system = ADMIN_SYSTEM_DEFAULT; // SWAP: MASTER-PLAN §3.B (later WP)
     tools = getAdminTools();
     executors = getAdminExecutors({ sb, admin, uid: user.id });
   } else {
@@ -110,7 +170,7 @@ export async function POST(req: Request): Promise<Response> {
       user.email ||
       "Member";
     system =
-      `${MEMBER_SYSTEM}\n\nContext: You are speaking with ${name}` +
+      `${MEMBER_SYSTEM_DEFAULT}\n\nContext: You are speaking with ${name}` + // SWAP: MASTER-PLAN §3.C (later WP)
       ` (account status: ${profile?.account_status ?? "unknown"},` +
       ` certification status: ${profile?.cert_status ?? "unknown"}).`;
     tools = getMemberTools();

@@ -14,7 +14,7 @@ import { MessageCircle, X, Loader2, Send } from "lucide-react";
  * friendly "AI assistant isn't enabled yet" notice instead of an error.
  */
 
-type Surface = "member" | "admin";
+type Surface = "member" | "admin" | "website";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -37,7 +37,15 @@ export function ChatWidget({ surface }: { surface: Surface }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = surface === "admin";
-  const accent = isAdmin ? "ABCAC Admin Assistant" : "ABCAC Assistant";
+  const isWebsite = surface === "website";
+  const accent = isAdmin
+    ? "ABCAC Admin Assistant"
+    : isWebsite
+      ? "ABCAC Website Guide"
+      : "ABCAC Assistant";
+  const subtitle = isWebsite
+    ? "Questions about certification? Ask away"
+    : "Ask, and I can take action for you";
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -68,6 +76,19 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       }
       if (res.status === 401) {
         setNotice("Your session expired — please sign in again.");
+        return;
+      }
+      if (res.status === 429) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        setNotice(
+          data.message ??
+            "You're sending messages too quickly. Please wait a moment and try again.",
+        );
+        return;
+      }
+      if (res.status === 400) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        setNotice(data.message ?? "That message couldn't be sent. Please try a shorter one.");
         return;
       }
       if (!res.ok) {
@@ -116,7 +137,7 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       <div className="flex items-center justify-between bg-brand px-4 py-3 text-white">
         <div className="flex flex-col leading-tight">
           <span className="text-sm font-semibold">{accent}</span>
-          <span className="text-[11px] text-white/70">Ask, and I can take action for you</span>
+          <span className="text-[11px] text-white/70">{subtitle}</span>
         </div>
         <button
           type="button"
@@ -133,7 +154,9 @@ export function ChatWidget({ surface }: { surface: Surface }) {
           <p className="text-sm text-muted">
             {isAdmin
               ? "Hi! I can look up members and take admin actions — approvals, CEUs, verifications, invoices, and more. Try “show me pending CEUs.”"
-              : "Hi! I can help with your certifications, CEUs, renewals, documents, and requests. Try “how many CEU hours do I still need?”"}
+              : isWebsite
+                ? "Hi! I'm the ABCAC Website Guide. Ask me about certification paths, fees, exams, IC&RC, reciprocity, CEUs, or how to apply. Try “How do I get certified?”"
+                : "Hi! I can help with your certifications, CEUs, renewals, documents, and requests. Try “how many CEU hours do I still need?”"}
           </p>
         )}
 
