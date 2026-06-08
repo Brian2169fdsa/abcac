@@ -19,6 +19,7 @@ import { MemberDocsPanel } from "@/components/admin/member-docs-panel";
 import { MemberProgressPanel } from "@/components/admin/member-progress-panel";
 import { MemberDuePanel } from "@/components/admin/member-due-panel";
 import { CockpitQuickActions } from "@/components/admin/cockpit-quick-actions";
+import { SendReminderButton } from "@/components/admin/send-reminder-button";
 import { MemberTasksPanel, type MemberTask } from "@/components/admin/member-tasks-panel";
 import { MemberInvoicesPanel } from "@/components/admin/member-invoices-panel";
 import { MemberMessagesThread } from "@/components/admin/member-messages-thread";
@@ -305,6 +306,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         <div className="mt-6">
           <div className="mb-2 text-sm font-semibold text-ink">Quick actions</div>
           <CockpitQuickActions memberId={memberId} />
+          <div className="mt-3">
+            <SendReminderButton memberId={memberId} />
+          </div>
         </div>
 
         {/* Tasks — the ClickUp replacement: per-member task manager. */}
