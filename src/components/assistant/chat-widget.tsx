@@ -1,25 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MessageCircle, X, Loader2, Send } from "lucide-react";
+import { MessageCircle, X, Loader2, Send, Sparkles } from "lucide-react";
+import { Markdown } from "@/components/assistant/markdown";
 
 /**
- * Floating conversational-assistant widget. Launcher button bottom-right opens
- * a panel with the conversation + a compact "Actions taken" list. It posts the
- * running message history to /api/assistant with the surface ("member" |
- * "admin"); the server determines the actual toolset from the session role, so
- * the surface prop only requests the admin toolset when on an admin page.
+ * Floating conversational-assistant widget. The launcher (bottom-right) opens a
+ * rich panel: markdown-rendered replies (tables, headings, lists), inline
+ * tool-call chips for actions the assistant took, contextual suggested prompts,
+ * and a polished composer. It posts the running message history to
+ * /api/assistant with the surface ("member" | "admin" | "website"); the server
+ * decides the real toolset from the session role.
  *
- * Graceful degradation: a 503 { error: "assistant_not_configured" } renders a
- * friendly "AI assistant isn't enabled yet" notice instead of an error.
+ * Graceful degradation: 503 { error: "assistant_not_configured" } renders a
+ * friendly "not enabled yet" notice instead of an error.
  */
 
 type Surface = "member" | "admin" | "website";
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
 
 interface ActionEntry {
   tool: string;
@@ -27,10 +24,51 @@ interface ActionEntry {
   summary: string;
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  actions?: ActionEntry[];
+}
+
+const SUGGESTIONS: Record<Surface, string[]> = {
+  website: [
+    "How do I get certified?",
+    "What are the CEU requirements?",
+    "How much does certification cost?",
+    "Register for the IC&RC exam",
+    "Transfer my credential to Arizona",
+  ],
+  member: [
+    "How many CEU hours do I still need?",
+    "When does my certification expire?",
+    "What documents are still required?",
+    "Start my renewal",
+    "What's my next step?",
+  ],
+  admin: [
+    "Show me pending CEUs",
+    "Who's awaiting account approval?",
+    "Certifications expiring in 60 days",
+    "Summarize a member's status",
+    "Draft a renewal reminder",
+  ],
+};
+
+const PLACEHOLDER: Record<Surface, string> = {
+  website: "Ask about certification, exams, CEUs, fees…",
+  member: "Ask about your certs, CEUs, renewals, documents…",
+  admin: "Ask about members, approvals, CEUs, invoices…",
+};
+
+const FOOTER_NOTE: Record<Surface, string> = {
+  website: "General info · no account data",
+  member: "Secure · your data only",
+  admin: "Read-only context · actions audited",
+};
+
 export function ChatWidget({ surface }: { surface: Surface }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [actions, setActions] = useState<ActionEntry[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -38,14 +76,13 @@ export function ChatWidget({ surface }: { surface: Surface }) {
 
   const isAdmin = surface === "admin";
   const isWebsite = surface === "website";
-  const accent = isAdmin
-    ? "ABCAC Admin Assistant"
+  const title = isAdmin ? "ABCAC Admin Assistant" : isWebsite ? "ABCAC Website Guide" : "ABCAC Assistant";
+  const subtitle = isWebsite ? "Questions about certification? Ask away." : "Ask, and I can take action for you.";
+  const greeting = isAdmin
+    ? "Hi! I can look up members and take admin actions — approvals, CEUs, verifications, invoices — and help you plan. Try a prompt below."
     : isWebsite
-      ? "ABCAC Website Guide"
-      : "ABCAC Assistant";
-  const subtitle = isWebsite
-    ? "Questions about certification? Ask away"
-    : "Ask, and I can take action for you";
+      ? "Hi! I'm the ABCAC Website Guide. Ask me about certification paths, fees, exams, IC&RC, reciprocity, or CEUs."
+      : "Hi! I can help with your certifications, CEUs, renewals, documents, and requests — and guide your next step.";
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -53,11 +90,11 @@ export function ChatWidget({ surface }: { surface: Surface }) {
     });
   }
 
-  async function send() {
-    const text = input.trim();
-    if (!text || busy) return;
+  async function sendText(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
     setNotice(null);
-    const nextMessages: ChatMessage[] = [...messages, { role: "user", content: text }];
+    const nextMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
     setMessages(nextMessages);
     setInput("");
     setBusy(true);
@@ -67,7 +104,7 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ surface, messages: nextMessages }),
+        body: JSON.stringify({ surface, messages: nextMessages.map(({ role, content }) => ({ role, content })) }),
       });
 
       if (res.status === 503) {
@@ -80,10 +117,7 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       }
       if (res.status === 429) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
-        setNotice(
-          data.message ??
-            "You're sending messages too quickly. Please wait a moment and try again.",
-        );
+        setNotice(data.message ?? "You're sending messages too quickly. Please wait a moment and try again.");
         return;
       }
       if (res.status === 400) {
@@ -99,11 +133,8 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       const data = (await res.json()) as { reply?: string; actions?: ActionEntry[] };
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.reply ?? "(no response)" },
+        { role: "assistant", content: data.reply ?? "(no response)", actions: data.actions ?? [] },
       ]);
-      if (Array.isArray(data.actions) && data.actions.length > 0) {
-        setActions((prev) => [...prev, ...data.actions!]);
-      }
     } catch {
       setNotice("Couldn't reach the assistant. Check your connection and try again.");
     } finally {
@@ -115,7 +146,7 @@ export function ChatWidget({ surface }: { surface: Surface }) {
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      send();
+      sendText(input);
     }
   }
 
@@ -132,12 +163,23 @@ export function ChatWidget({ surface }: { surface: Surface }) {
     );
   }
 
+  const suggestions = SUGGESTIONS[surface];
+
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex h-[32rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-line bg-bg shadow-2xl">
+    <div className="fixed bottom-5 right-5 z-50 flex h-[40rem] max-h-[calc(100vh-2.5rem)] w-[28rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-line bg-bg shadow-2xl">
+      {/* Header */}
       <div className="flex items-center justify-between bg-brand px-4 py-3 text-white">
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold">{accent}</span>
-          <span className="text-[11px] text-white/70">{subtitle}</span>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+            <Sparkles className="h-4 w-4" aria-hidden />
+          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold">{title}</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-white/75">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400" aria-hidden />
+              {subtitle}
+            </span>
+          </div>
         </div>
         <button
           type="button"
@@ -149,29 +191,61 @@ export function ChatWidget({ surface }: { surface: Surface }) {
         </button>
       </div>
 
+      {/* Conversation */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-        {messages.length === 0 && !notice && (
-          <p className="text-sm text-muted">
-            {isAdmin
-              ? "Hi! I can look up members and take admin actions — approvals, CEUs, verifications, invoices, and more. Try “show me pending CEUs.”"
-              : isWebsite
-                ? "Hi! I'm the ABCAC Website Guide. Ask me about certification paths, fees, exams, IC&RC, reciprocity, CEUs, or how to apply. Try “How do I get certified?”"
-                : "Hi! I can help with your certifications, CEUs, renewals, documents, and requests. Try “how many CEU hours do I still need?”"}
-          </p>
+        {messages.length === 0 && (
+          <div className="space-y-4">
+            <div className="rounded-2xl rounded-bl-sm border border-line bg-surface px-4 py-3 text-sm text-ink/90">
+              {greeting}
+            </div>
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Try asking</div>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => sendText(s)}
+                    className="rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink transition-colors hover:border-brand hover:text-brand"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={
-              m.role === "user"
-                ? "ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-brand px-3 py-2 text-sm text-white"
-                : "mr-auto max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-line bg-surface px-3 py-2 text-sm"
-            }
-          >
-            {m.content}
-          </div>
-        ))}
+        {messages.map((m, i) =>
+          m.role === "user" ? (
+            <div key={i} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-ink px-3.5 py-2 text-sm text-white">
+              {m.content}
+            </div>
+          ) : (
+            <div key={i} className="mr-auto max-w-[92%] space-y-2">
+              {m.actions && m.actions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {m.actions.map((a, j) => (
+                    <span
+                      key={j}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] font-medium text-muted"
+                      title={a.summary}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${a.ok ? "bg-success" : "bg-amber-500"}`}
+                        aria-hidden
+                      />
+                      {a.tool}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="rounded-2xl rounded-bl-sm border border-line bg-surface px-4 py-3">
+                <Markdown>{m.content}</Markdown>
+              </div>
+            </div>
+          ),
+        )}
 
         {busy && (
           <div className="mr-auto flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 text-sm text-muted">
@@ -180,49 +254,53 @@ export function ChatWidget({ surface }: { surface: Surface }) {
         )}
 
         {notice && (
-          <div className="rounded-lg border border-accent/40 bg-accent/5 px-3 py-2 text-sm text-muted">
-            {notice}
-          </div>
-        )}
-
-        {actions.length > 0 && (
-          <div className="rounded-lg border border-line bg-surface p-3">
-            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Actions taken
-            </div>
-            <ul className="space-y-1">
-              {actions.map((a, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs">
-                  <span aria-hidden>{a.ok ? "✅" : "⚠️"}</span>
-                  <span className="text-muted">
-                    <span className="font-medium text-ink">{a.tool}</span> — {a.summary}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-muted">{notice}</div>
         )}
       </div>
 
-      <div className="border-t border-line p-3">
+      {/* Persistent suggestion chips (once the conversation has started) */}
+      {messages.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto border-t border-line px-3 py-2">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => sendText(s)}
+              disabled={busy}
+              className="whitespace-nowrap rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Composer */}
+      <div className="border-t border-line bg-surface p-3">
         <div className="flex items-end gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
-            placeholder="Type a message…"
-            className="max-h-28 flex-1 resize-none rounded-lg border border-line bg-bg px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            placeholder={PLACEHOLDER[surface]}
+            className="max-h-28 flex-1 resize-none rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           />
           <button
             type="button"
-            onClick={send}
+            onClick={() => sendText(input)}
             disabled={busy || !input.trim()}
             aria-label="Send message"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
           >
             <Send className="h-4 w-4" aria-hidden />
           </button>
+        </div>
+        <div className="mt-2 flex items-center justify-between px-0.5 text-[10px] text-muted">
+          <span className="font-medium">
+            Powered by <span className="font-semibold text-ink">Manage AI</span>
+          </span>
+          <span>{FOOTER_NOTE[surface]}</span>
         </div>
       </div>
     </div>
