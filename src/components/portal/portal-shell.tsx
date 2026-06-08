@@ -14,10 +14,12 @@ import { cn } from "@/lib/utils";
 export function PortalShell({
   memberName,
   messageCount,
+  isAdmin = false,
   children,
 }: {
   memberName: string;
   messageCount?: number;
+  isAdmin?: boolean;
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -43,6 +45,7 @@ export function PortalShell({
         <PortalTopbar
           memberName={memberName}
           messageCount={messageCount}
+          isAdmin={isAdmin}
           onMenuToggle={() => setDrawerOpen((o) => !o)}
         />
       </div>
@@ -52,7 +55,7 @@ export function PortalShell({
 
       <div className="flex">
         {/* Desktop sidebar (fixed) */}
-        <PortalSidebar className="fixed bottom-0 left-0 top-[120px] z-30 hidden lg:block" />
+        <PortalSidebar isAdmin={isAdmin} className="fixed bottom-0 left-0 top-[120px] z-30 hidden lg:block" />
 
         {/* Mobile drawer + overlay */}
         {drawerOpen && (
@@ -69,7 +72,7 @@ export function PortalShell({
             drawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <PortalSidebar className="h-full" onClose={() => setDrawerOpen(false)} />
+          <PortalSidebar isAdmin={isAdmin} className="h-full" onClose={() => setDrawerOpen(false)} />
         </div>
 
         {/* Main content */}

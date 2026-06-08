@@ -1,5 +1,6 @@
 import { PortalShell } from "@/components/portal/portal-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function PortalLayout({ children }: { children: React.React
   // portal top bar. Failures degrade gracefully to defaults.
   let memberName = "Member";
   let messageCount = 0;
+  let isAdmin = false;
 
   try {
     const supabase = createSupabaseServerClient();
@@ -20,7 +22,7 @@ export default async function PortalLayout({ children }: { children: React.React
       const [{ data: profile }, { count }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name,last_name")
+          .select("first_name,last_name,portal_role")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
@@ -33,13 +35,14 @@ export default async function PortalLayout({ children }: { children: React.React
       const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
       if (name) memberName = name;
       messageCount = count ?? 0;
+      isAdmin = isAdminRole((profile as { portal_role?: string | null } | null)?.portal_role);
     }
   } catch {
     // Render with defaults if Supabase is unavailable.
   }
 
   return (
-    <PortalShell memberName={memberName} messageCount={messageCount}>
+    <PortalShell memberName={memberName} messageCount={messageCount} isAdmin={isAdmin}>
       {children}
     </PortalShell>
   );
