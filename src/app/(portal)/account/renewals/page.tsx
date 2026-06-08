@@ -1,6 +1,7 @@
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
+import { RenewalCertStatus } from "@/components/account/renewals-cert-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
 import {
@@ -193,17 +194,11 @@ export default async function RenewalsPage() {
                           {days === null ? (
                             <span className="text-muted">—</span>
                           ) : isExpired ? (
-                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                              Expired
-                            </span>
+                            <RenewalCertStatus tone="expired" label="Expired" />
                           ) : due?.inGracePeriod ? (
-                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                              In grace
-                            </span>
+                            <RenewalCertStatus tone="grace" label="In grace" />
                           ) : isSoon ? (
-                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                              {days}d
-                            </span>
+                            <RenewalCertStatus tone="soon" label={`${days}d`} />
                           ) : (
                             <span className="text-muted">{days}d</span>
                           )}

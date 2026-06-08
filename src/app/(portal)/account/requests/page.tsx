@@ -2,14 +2,11 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { NameChangeForm, VerificationForm, ReciprocityForm, type VerifyCertOption } from "@/components/portal-forms";
 import { ViewFileButton } from "@/components/view-file-button";
+import { RequestsHistoryList, type RequestHistoryRow } from "@/components/account/requests-history-list";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Requests" };
 export const dynamic = "force-dynamic";
-
-function fmt(d: string | null) {
-  return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
-}
 
 export default async function RequestsPage() {
   const supabase = createSupabaseServerClient();
@@ -40,53 +37,73 @@ export default async function RequestsPage() {
     })),
   ];
 
-  const history = (items: { id: string; status: string | null; submitted_at: string | null; label: string }[]) =>
-    items.length > 0 && (
-      <ul className="mt-4 space-y-1 text-sm text-muted">
-        {items.map((i) => <li key={i.id}>{i.label} — <span className="capitalize">{i.status ?? "pending"}</span> · {fmt(i.submitted_at)}</li>)}
-      </ul>
-    );
+  const nameChangeRows: RequestHistoryRow[] = (nc ?? []).map((r) => ({
+    id: r.id,
+    label: <>→ {r.new_name}</>,
+    status: r.status,
+    submittedAt: r.submitted_at,
+    trailing: r.doc_path ? (
+      <ViewFileButton bucket="name-change-docs" path={r.doc_path} label="View ID" />
+    ) : undefined,
+  }));
+
+  const verificationRows: RequestHistoryRow[] = (ver ?? []).map((r) => ({
+    id: r.id,
+    label: `${r.purpose} → ${r.recipient_name}`,
+    status: r.status,
+    submittedAt: r.submitted_at,
+  }));
+
+  const reciprocityRows: RequestHistoryRow[] = (rec ?? []).map((r) => {
+    const dir =
+      r.direction === "out_of_az" ? "OUT of AZ" : r.direction === "into_az" ? "INTO AZ" : r.direction ?? "";
+    const pay =
+      r.direction === "out_of_az" && r.payment_status && r.payment_status !== "none"
+        ? ` · fee ${r.payment_status}`
+        : "";
+    return {
+      id: r.id,
+      label: `${dir}: ${r.credential ?? "Credential"} → ${r.destination ?? ""}${pay}`,
+      status: r.status,
+      submittedAt: r.submitted_at,
+    };
+  });
 
   return (
     <>
       <PageHero eyebrow="Member Portal" title="Requests" intro="Submit a name change, request a verification of certification, or start an IC&RC reciprocity transfer." />
 
       <Section compact title="Name Change">
-        <div className="rounded-xl border border-line bg-surface p-6"><NameChangeForm currentName={currentName} /></div>
-        {(nc ?? []).length > 0 && (
-          <ul className="mt-4 space-y-1 text-sm text-muted">
-            {(nc ?? []).map((r) => (
-              <li key={r.id}>
-                → {r.new_name} — <span className="capitalize">{r.status ?? "pending"}</span> · {fmt(r.submitted_at)}
-                {r.doc_path && <> · <ViewFileButton bucket="name-change-docs" path={r.doc_path} label="View ID" /></>}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="rounded-xl border border-line bg-surface p-6">
+          <NameChangeForm currentName={currentName} />
+          <RequestsHistoryList
+            title="Submitted name changes"
+            rows={nameChangeRows}
+            emptyLabel="No name change requests submitted yet."
+          />
+        </div>
       </Section>
 
       <Section compact surface title="Verification of Certification">
-        <div className="rounded-xl border border-line bg-surface p-6"><VerificationForm certOptions={certOptions} /></div>
-        {history((ver ?? []).map((r) => ({ id: r.id, status: r.status, submitted_at: r.submitted_at, label: `${r.purpose} → ${r.recipient_name}` })))}
+        <div className="rounded-xl border border-line bg-surface p-6">
+          <VerificationForm certOptions={certOptions} />
+          <RequestsHistoryList
+            title="Verification requests"
+            rows={verificationRows}
+            emptyLabel="No verification requests submitted yet."
+          />
+        </div>
       </Section>
 
       <Section compact title="IC&RC Reciprocity">
-        <div className="rounded-xl border border-line bg-surface p-6"><ReciprocityForm /></div>
-        {(rec ?? []).length > 0 && (
-          <ul className="mt-4 space-y-1 text-sm text-muted">
-            {(rec ?? []).map((r) => {
-              const dir = r.direction === "out_of_az" ? "OUT of AZ" : r.direction === "into_az" ? "INTO AZ" : (r.direction ?? "");
-              const pay = r.direction === "out_of_az" && r.payment_status && r.payment_status !== "none"
-                ? ` · fee ${r.payment_status}`
-                : "";
-              return (
-                <li key={r.id}>
-                  {dir}: {r.credential ?? "Credential"} → {r.destination ?? ""} — <span className="capitalize">{r.status ?? "pending"}</span>{pay} · {fmt(r.submitted_at)}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <div className="rounded-xl border border-line bg-surface p-6">
+          <ReciprocityForm />
+          <RequestsHistoryList
+            title="Reciprocity transfers"
+            rows={reciprocityRows}
+            emptyLabel="No reciprocity transfers started yet."
+          />
+        </div>
       </Section>
     </>
   );
