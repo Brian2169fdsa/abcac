@@ -14,6 +14,9 @@ import { RequestDocumentForm } from "@/components/admin/request-document";
 import { SendMessageForm } from "@/components/admin/send-message-form";
 import { CreateInvoiceForm } from "@/components/admin/create-invoice-form";
 import { MemberDetailSection, FieldGrid, DataTable } from "@/components/admin/member-detail-section";
+import { MemberDocsPanel } from "@/components/admin/member-docs-panel";
+import { MemberProgressPanel } from "@/components/admin/member-progress-panel";
+import { MemberDuePanel } from "@/components/admin/member-due-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -206,6 +209,25 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           </p>
         )}
       </div>
+
+      {/* 1.5 Client-management cockpit — progress, what's due, and docs at a glance */}
+      <MemberDetailSection
+        title="Client Cockpit"
+        description="Everything the owner used to track in ClickUp — this member's standing, what's due, and their documents — all from Supabase."
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <MemberProgressPanel certs={certs as any[]} compliance={compliance} applications={applications as any[]} />
+          <MemberDuePanel
+            certs={certs as any[]}
+            docRequests={docRequests as any[]}
+            ceuRecords={ceuRecords as any[]}
+            applications={applications as any[]}
+          />
+        </div>
+        <div className="mt-6">
+          <MemberDocsPanel documents={documents as any[]} />
+        </div>
+      </MemberDetailSection>
 
       {/* 2. Personal Information + Employment */}
       <MemberDetailSection title="Personal Information">
