@@ -1,10 +1,36 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import type { AdminCounts } from "@/components/admin/admin-nav";
 import { ChatWidget } from "@/components/assistant/chat-widget";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "ABCAC Admin Console" };
 export const dynamic = "force-dynamic";
+
+type Sb = ReturnType<typeof createSupabaseServerClient>;
+
+async function countOf(sb: Sb, table: string, build?: (q: any) => any) {
+  try {
+    let q = sb.from(table).select("*", { count: "exact", head: true });
+    if (build) q = build(q);
+    const { count } = await q;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function queueCounts(sb: Sb): Promise<AdminCounts> {
+  const [approvals, documents, ceus, ncReq, verReq, recReq] = await Promise.all([
+    countOf(sb, "profiles", (q) => q.eq("account_status", "pending").not("account_submitted_at", "is", null)),
+    countOf(sb, "documents", (q) => q.eq("status", "pending")),
+    countOf(sb, "ceu_records", (q) => q.eq("status", "pending")),
+    countOf(sb, "name_change_requests", (q) => q.eq("status", "pending")),
+    countOf(sb, "verification_requests", (q) => q.eq("status", "pending")),
+    countOf(sb, "reciprocity_requests", (q) => q.eq("status", "pending")),
+  ]);
+  return { approvals, documents, ceus, requests: ncReq + verReq + recReq };
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Middleware already requires a session; here we enforce admin role.
@@ -23,26 +49,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Admin";
+  const counts = await queueCounts(supabase);
 
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="bg-brand">
-        <div className="mx-auto flex w-full max-w-content flex-col gap-3 px-5 py-3 md:px-8">
-          <div className="flex items-center justify-between">
-            <Link href="/admin" className="flex flex-col leading-none">
-              <span className="font-display text-lg font-bold text-white">ABCAC</span>
-              <span className="text-[10px] uppercase tracking-wider text-white/70">Admin Console</span>
-            </Link>
-            <div className="flex items-center gap-4 text-sm text-white/80">
-              <span className="hidden sm:inline">{name}</span>
-              <Link href="/logout" className="font-semibold text-white hover:text-white/80">Sign out</Link>
-            </div>
-          </div>
-          <AdminNav />
-        </div>
-      </header>
-      <main id="main" className="mx-auto w-full max-w-content px-5 py-8 md:px-8">{children}</main>
+    <AdminSidebar name={name} counts={counts}>
+      {children}
       <ChatWidget surface="admin" />
-    </div>
+    </AdminSidebar>
   );
 }
