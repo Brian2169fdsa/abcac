@@ -6,6 +6,8 @@ import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/activity-timeline";
+import { NextSteps } from "@/components/dashboard/next-steps";
+import { buildMemberPlan, type AccountStatus } from "@/lib/member-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
@@ -216,6 +218,30 @@ export default async function AccountPage() {
           ? `Your certifications are active and in good standing — ${primaryDue.days} days until your next renewal.`
           : "Your certifications are active and in good standing.";
 
+  // ── "Your Next Steps" guided plan ──────────────────────────────────────────
+  // Map already-fetched data into the pure plan builder. For active certs we
+  // pass the schedule-aware next-due date (same date the KPI/credential cards
+  // show) so the renewal step lines up with the rest of the dashboard.
+  const planCerts = certifications.map((c) => {
+    const sched = findScheduleFor(schedules, c.cert_type);
+    const nextDue =
+      sched && c.expiration_date
+        ? computeDueFromExpiration(sched, c.expiration_date).nextDueDate
+        : c.expiration_date ?? null;
+    return { cert_type: c.cert_type, status: c.status, expiration_date: nextDue };
+  });
+  const planAccountStatus: AccountStatus =
+    activeCerts.length > 0
+      ? "active"
+      : ((latestApp?.status as AccountStatus | undefined) ?? "none");
+  const planSteps = buildMemberPlan({
+    profileCompleteness: profilePct,
+    accountStatus: planAccountStatus,
+    certifications: planCerts,
+    ceuCompliance,
+    missingDocuments: openDocRequests,
+  });
+
   const quickActions = [
     { href: "/account/ceus", label: "Log CEU Hours", icon: "📚" },
     { href: "/account/renew", label: "Renew Certification", icon: "🔄" },
@@ -320,6 +346,11 @@ export default async function AccountPage() {
           />
           <KpiCard label="IC&RC Status" value={statusKpi.value} sub={statusKpi.sub} />
         </div>
+      </Section>
+
+      {/* Your Next Steps — guided plan toward certification / renewal */}
+      <Section title="Your Next Steps" compact>
+        <NextSteps steps={planSteps} />
       </Section>
 
       {/* Action items */}
