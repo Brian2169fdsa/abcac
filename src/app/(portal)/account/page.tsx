@@ -2,6 +2,10 @@ import Link from "next/link";
 import { CtaButton } from "@/components/cta-button";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
+import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/activity-timeline";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
@@ -37,6 +41,15 @@ interface Profile {
 }
 interface CeuRecord extends CeuLike {
   id: string;
+  course_name?: string | null;
+  submitted_at?: string | null;
+}
+interface Application {
+  id: string;
+  app_type: string | null;
+  cert_type: string | null;
+  status: string | null;
+  submitted_at: string | null;
 }
 
 function completeness(p: Profile | null): number {
@@ -59,6 +72,9 @@ function daysLeft(d: string | null) {
 function money(cents: number | null) {
   return "$" + ((cents ?? 0) / 100).toFixed(2);
 }
+function titleCase(s: string) {
+  return s.replace(/\b\w/g, (l) => l.toUpperCase());
+}
 
 export default async function AccountPage() {
   const supabase = createSupabaseServerClient();
@@ -68,6 +84,7 @@ export default async function AccountPage() {
   let certifications: Certification[] = [];
   let payments: Payment[] = [];
   let ceuRecords: CeuRecord[] = [];
+  let applications: Application[] = [];
   let schedules: CertSchedule[] = [];
   let unreadMessages = 0;
   let openDocRequests = 0;
@@ -82,18 +99,28 @@ export default async function AccountPage() {
         { data: certs },
         { data: pays },
         { data: ceus },
+        { data: apps },
         { count: msgCount },
         { count: docCount },
       ] = await Promise.all([
         supabase.from("certifications").select("*").eq("member_id", user.id),
         supabase.from("payments").select("*").eq("member_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("ceu_records").select("id, hours, category, status").eq("member_id", user.id),
+        supabase
+          .from("ceu_records")
+          .select("id, hours, category, status, course_name, submitted_at")
+          .eq("member_id", user.id),
+        supabase
+          .from("applications")
+          .select("id, app_type, cert_type, status, submitted_at")
+          .eq("member_id", user.id)
+          .order("submitted_at", { ascending: false }),
         supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("is_read", false),
         supabase.from("document_requests").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("status", "open"),
       ]);
       certifications = (certs as Certification[]) ?? [];
       payments = (pays as Payment[]) ?? [];
       ceuRecords = (ceus as CeuRecord[]) ?? [];
+      applications = (apps as Application[]) ?? [];
       // Reference rules — fetched separately and best-effort so a missing
       // cert_schedules table never breaks the dashboard (falls back to 90d / 40 CEU).
       try {
@@ -152,6 +179,79 @@ export default async function AccountPage() {
   const hasActionItems =
     unreadMessages > 0 || openDocRequests > 0 || showCeuActionItem || expiringCerts.length > 0;
 
+  // ── Home dashboard (KPI cards + quick actions + activity) ──────────────────
+  const firstName = profile?.first_name?.trim() || displayName.split(" ")[0] || "Member";
+
+  // KPI 3: Next renewal — soonest-expiring active credential, schedule-aware.
+  const primaryDue =
+    primaryCert && primaryCert.expiration_date
+      ? (() => {
+          const sched = findScheduleFor(schedules, primaryCert.cert_type);
+          const nextDue = sched
+            ? computeDueFromExpiration(sched, primaryCert.expiration_date).nextDueDate
+            : primaryCert.expiration_date;
+          return { date: nextDue, days: daysLeft(nextDue) };
+        })()
+      : null;
+
+  // KPI 4: IC&RC / cert status — derive from active certs or the latest app.
+  const latestApp = applications[0];
+  const statusKpi: { value: string; sub: string } = activeCerts.length > 0
+    ? { value: "Active", sub: "Certification in good standing" }
+    : latestApp
+      ? {
+          value: titleCase(latestApp.status ?? "submitted"),
+          sub: titleCase((latestApp.app_type ?? "Application").replace(/_/g, " ")),
+        }
+      : { value: "—", sub: "No active certification" };
+
+  // Banner message mirrors the static portal's contextual copy.
+  const bannerMessage =
+    activeCerts.length === 0
+      ? "Complete your profile and upload your supporting documents to get started with your certification."
+      : ceuCompliance.remaining > 0
+        ? `Your certifications are active. ${ceuCompliance.remaining} CEU hour${ceuCompliance.remaining !== 1 ? "s" : ""} remaining to stay compliant.`
+        : primaryDue?.days && primaryDue.days > 0
+          ? `Your certifications are active and in good standing — ${primaryDue.days} days until your next renewal.`
+          : "Your certifications are active and in good standing.";
+
+  const quickActions = [
+    { href: "/account/ceus", label: "Log CEU Hours", icon: "📚" },
+    { href: "/account/renew", label: "Renew Certification", icon: "🔄" },
+    { href: "/account/certifications", label: "View Certificate", icon: "🏅" },
+    { href: "/account/documents", label: "Upload Documents", icon: "📄" },
+    { href: "/account/requests", label: "IC&RC Transfer", icon: "🌐" },
+    {
+      href: "/account/messages",
+      label: unreadMessages > 0 ? `Messages (${unreadMessages})` : "Messages",
+      icon: "✉️",
+    },
+  ];
+
+  // Recent activity — derived from real CEU / application / payment rows.
+  const activityEvents: ActivityEvent[] = [
+    ...ceuRecords
+      .filter((r) => r.submitted_at)
+      .map<ActivityEvent>((r) => ({
+        date: r.submitted_at ?? null,
+        title: `CEU ${r.status === "approved" ? "Approved" : "Submitted"}: ${r.course_name ?? "Course"}${r.hours ? ` (${r.hours} hrs)` : ""}`,
+        status: r.status === "approved" ? "done" : "current",
+      })),
+    ...applications.map<ActivityEvent>((a) => ({
+      date: a.submitted_at,
+      title: `${a.cert_type ?? titleCase((a.app_type ?? "Certification").replace(/_/g, " "))} Application — ${titleCase((a.status ?? "submitted").replace(/_/g, " "))}`,
+      status: a.status === "approved" ? "done" : "current",
+    })),
+    ...payments.map<ActivityEvent>((p) => ({
+      date: p.created_at,
+      title: `${p.status === "succeeded" || p.status === "paid" ? "Payment Received" : "Payment"}: ${money(p.amount_cents)}${p.product_name ? ` · ${p.product_name}` : ""}`,
+      status: p.status === "succeeded" || p.status === "paid" ? "done" : "default",
+    })),
+  ]
+    .filter((e) => e.date)
+    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+    .slice(0, 6);
+
   return (
     <>
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
@@ -180,6 +280,46 @@ export default async function AccountPage() {
           </Link>
         </Section>
       )}
+
+      {/* Home dashboard: welcome banner + KPI cards */}
+      <Section compact>
+        <WelcomeBanner firstName={firstName} message={bannerMessage} />
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            label="Active Certifications"
+            value={String(activeCerts.length)}
+            sub={
+              activeCerts.length > 0
+                ? activeCerts.map((c) => c.cert_type).filter(Boolean).join(", ") || "Active"
+                : "No active certifications"
+            }
+          />
+          <KpiCard
+            label="CEUs Completed"
+            value={`${ceuCompliance.totalApproved} / ${ceuCompliance.requiredTotal}`}
+            sub={`${ceuCompliance.remaining} hour${ceuCompliance.remaining !== 1 ? "s" : ""} remaining`}
+            progress={ceuCompliance.percent}
+          />
+          <KpiCard
+            label="Next Renewal"
+            value={
+              primaryDue
+                ? new Date(primaryDue.date).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                : "—"
+            }
+            sub={
+              primaryDue
+                ? primaryDue.days !== null && primaryDue.days > 0
+                  ? `${primaryDue.days} days remaining`
+                  : "Past due"
+                : activeCerts.length > 0
+                  ? "No expiration set"
+                  : "Apply for certification first"
+            }
+          />
+          <KpiCard label="IC&RC Status" value={statusKpi.value} sub={statusKpi.sub} />
+        </div>
+      </Section>
 
       {/* Action items */}
       {hasActionItems && (
@@ -282,25 +422,13 @@ export default async function AccountPage() {
       )}
 
       {/* Quick actions */}
-      <Section compact>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Link href="/account/applications" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
-            <h3 className="text-base">Application Status</h3>
-            <p className="mt-1 text-sm text-muted">Track where your applications stand.</p>
-          </Link>
-          <Link href="/account/apply" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
-            <h3 className="text-base">Apply for Certification</h3>
-            <p className="mt-1 text-sm text-muted">Submit a new application + documents.</p>
-          </Link>
-          <Link href="/account/renew" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
-            <h3 className="text-base">Submit Recertification</h3>
-            <p className="mt-1 text-sm text-muted">Report CEUs and renew your credential.</p>
-          </Link>
-          <Link href="/account/documents" className="rounded-xl border border-line bg-surface p-5 transition-colors hover:border-brand">
-            <h3 className="text-base">Documents</h3>
-            <p className="mt-1 text-sm text-muted">Upload and track your paperwork.</p>
-          </Link>
-        </div>
+      <Section title="Quick Actions" compact>
+        <QuickActions actions={quickActions} />
+      </Section>
+
+      {/* Recent activity */}
+      <Section title="Recent Activity" compact>
+        <ActivityTimeline events={activityEvents} />
       </Section>
 
       {/* Credentials */}
