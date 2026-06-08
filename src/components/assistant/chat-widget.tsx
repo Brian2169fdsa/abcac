@@ -298,7 +298,7 @@ export function ChatWidget({ surface }: { surface: Surface }) {
         </div>
         <div className="mt-2 flex items-center justify-between px-0.5 text-[10px] text-muted">
           <span className="font-medium">
-            Powered by <span className="font-semibold text-ink">Manage AI</span>
+            Powered by <span className="font-semibold text-ink">Phoenix Creative Works</span>
           </span>
           <span>{FOOTER_NOTE[surface]}</span>
         </div>
