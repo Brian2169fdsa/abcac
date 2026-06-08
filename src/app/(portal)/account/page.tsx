@@ -7,6 +7,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/activity-timeline";
 import { NextSteps } from "@/components/dashboard/next-steps";
+import { MemberTasksCard, type MemberTask } from "@/components/dashboard/member-tasks-card";
 import { buildMemberPlan, type AccountStatus } from "@/lib/member-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
@@ -89,6 +90,7 @@ export default async function AccountPage() {
   let ceuRecords: CeuRecord[] = [];
   let applications: Application[] = [];
   let schedules: CertSchedule[] = [];
+  let memberTasks: MemberTask[] = [];
   let unreadMessages = 0;
   let openDocRequests = 0;
   let backendReady = true;
@@ -135,6 +137,20 @@ export default async function AccountPage() {
         schedules = (scheds as CertSchedule[]) ?? [];
       } catch {
         schedules = [];
+      }
+      // Admin-assigned tasks surfaced to the member. RLS already restricts this
+      // to the member's own rows where visible_to_member = true, so a plain
+      // select returns exactly the tasks meant for them. Best-effort: any error
+      // leaves an empty list rather than breaking the dashboard. Read-only.
+      try {
+        const { data: tasks } = await supabase
+          .from("member_tasks")
+          .select("id, title, detail, status, priority, due_date")
+          .eq("member_id", user.id)
+          .order("due_date", { ascending: true, nullsFirst: false });
+        memberTasks = (tasks as MemberTask[]) ?? [];
+      } catch {
+        memberTasks = [];
       }
       unreadMessages = msgCount ?? 0;
       openDocRequests = docCount ?? 0;
@@ -351,6 +367,11 @@ export default async function AccountPage() {
       {/* Your Next Steps — guided plan toward certification / renewal */}
       <Section title="Your Next Steps" compact>
         <NextSteps steps={planSteps} />
+      </Section>
+
+      {/* Tasks assigned to you by ABCAC (read-only) */}
+      <Section title="Tasks for You" compact>
+        <MemberTasksCard tasks={memberTasks} />
       </Section>
 
       {/* Action items */}
