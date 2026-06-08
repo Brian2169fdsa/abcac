@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
+import { isAdminRole } from "@/lib/auth/roles";
 
 type SendResult = { ok: true } | { ok: false; error: string };
 
@@ -29,7 +30,7 @@ export async function sendApprovalCredentialsEmail(memberId: string): Promise<Se
     .select("portal_role")
     .eq("id", user.id)
     .maybeSingle();
-  if (caller?.portal_role !== "admin") return { ok: false, error: "forbidden" };
+  if (!isAdminRole(caller?.portal_role)) return { ok: false, error: "forbidden" };
 
   // 2. Fetch the member's email server-side (service role — the username we
   //    email is authoritative, not supplied by the client).

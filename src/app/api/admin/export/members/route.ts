@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export async function GET() {
     .select("portal_role")
     .eq("id", user.id)
     .maybeSingle();
-  if (!profile || profile.portal_role !== "admin") {
+  if (!profile || !isAdminRole(profile.portal_role)) {
     return new Response("Forbidden", { status: 403 });
   }
 

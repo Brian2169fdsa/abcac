@@ -5,6 +5,8 @@ import {
   isAtLeast,
   isSuperadmin,
   isAdmin,
+  isAdminRole,
+  isSuperadminRole,
   type PortalRole,
 } from "@/lib/auth/roles";
 
@@ -65,5 +67,29 @@ describe("isAdmin", () => {
 
   it("is false for member", () => {
     expect(isAdmin("member")).toBe(false);
+  });
+});
+
+describe("isAdminRole (null-safe raw DB predicate)", () => {
+  it("is true for admin and superadmin", () => {
+    expect(isAdminRole("admin")).toBe(true);
+    expect(isAdminRole("superadmin")).toBe(true);
+  });
+
+  it("is false for member, unknown, null, and undefined", () => {
+    expect(isAdminRole("member")).toBe(false);
+    expect(isAdminRole("staff")).toBe(false);
+    expect(isAdminRole(null)).toBe(false);
+    expect(isAdminRole(undefined)).toBe(false);
+  });
+});
+
+describe("isSuperadminRole (null-safe raw DB predicate)", () => {
+  it("is true only for superadmin", () => {
+    expect(isSuperadminRole("superadmin")).toBe(true);
+    expect(isSuperadminRole("admin")).toBe(false);
+    expect(isSuperadminRole("member")).toBe(false);
+    expect(isSuperadminRole(null)).toBe(false);
+    expect(isSuperadminRole(undefined)).toBe(false);
   });
 });

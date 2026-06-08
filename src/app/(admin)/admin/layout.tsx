@@ -3,6 +3,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import type { AdminCounts } from "@/components/admin/admin-nav";
 import { ChatWidget } from "@/components/assistant/chat-widget";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export const metadata = { title: "ABCAC Admin Console" };
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from("profiles").select("portal_role,first_name,last_name").eq("id", user!.id).maybeSingle();
 
-  if (!profile || profile.portal_role !== "admin") {
+  if (!profile || !isAdminRole(profile.portal_role)) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
         <h1>Not authorized</h1>

@@ -46,6 +46,20 @@ export function isAdmin(role: PortalRole): boolean {
 }
 
 /**
+ * Null-safe predicate for RAW database values (`portal_role` is `string | null`).
+ * True for "admin" OR "superadmin" so superadmins are never accidentally
+ * excluded by an exact `=== "admin"` comparison. Use this at every admin gate.
+ */
+export function isAdminRole(role: string | null | undefined): boolean {
+  return role === "admin" || role === "superadmin";
+}
+
+/** Null-safe predicate for raw DB values: true only for the superadmin tier. */
+export function isSuperadminRole(role: string | null | undefined): boolean {
+  return role === "superadmin";
+}
+
+/**
  * Thin server helper: reads the signed-in user's portal_role.
  * Returns "member" when there is no session or no profile row, so callers can
  * treat the result as least-privilege by default. All decision logic lives in

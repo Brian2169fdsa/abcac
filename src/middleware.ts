@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { isAdminRole } from "@/lib/auth/roles";
 
 // Refreshes the Supabase session cookie and gates the member portal.
 export async function middleware(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function middleware(request: NextRequest) {
   // Gate the admin area to admins (defense-in-depth; the layout also checks).
   if (user && path.startsWith("/admin")) {
     const { data: profile } = await supabase.from("profiles").select("portal_role").eq("id", user.id).maybeSingle();
-    if (!profile || profile.portal_role !== "admin") {
+    if (!profile || !isAdminRole(profile.portal_role)) {
       const redirect = request.nextUrl.clone();
       redirect.pathname = "/account";
       redirect.search = "";

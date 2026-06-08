@@ -9,6 +9,7 @@ import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/act
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
@@ -144,7 +145,7 @@ export default async function AccountPage() {
     [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user?.email || "Member";
   const syncOn = certifications.some((c) => c.sync_enabled);
   const profilePct = completeness(profile);
-  const isAdmin = (profile as { portal_role?: string | null } | null)?.portal_role === "admin";
+  const isAdmin = isAdminRole((profile as { portal_role?: string | null } | null)?.portal_role);
 
   // Action items
   // CEU compliance is shown against the soonest-expiring active credential's

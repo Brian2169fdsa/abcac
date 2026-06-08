@@ -10,6 +10,7 @@ import { runAssistant, type AssistantTool, type ToolExecutor } from "@/lib/assis
 import { getMemberTools, getMemberExecutors } from "@/lib/assistant/member-tools";
 import { getAdminTools, getAdminExecutors } from "@/lib/assistant/admin-tools";
 import { getWebsiteTools, getWebsiteExecutors } from "@/lib/assistant/website-tools";
+import { isAdminRole } from "@/lib/auth/roles";
 import {
   WEBSITE_SYSTEM_DEFAULT,
   MEMBER_SYSTEM_DEFAULT,
@@ -150,7 +151,7 @@ export async function POST(req: Request): Promise<Response> {
     .select("portal_role,first_name,last_name,cert_status,account_status")
     .eq("id", user.id)
     .maybeSingle();
-  const isAdmin = profile?.portal_role === "admin";
+  const isAdmin = isAdminRole(profile?.portal_role);
   const useAdmin = isAdmin && requested === "admin";
 
   let system: string;
