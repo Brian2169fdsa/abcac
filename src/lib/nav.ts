@@ -92,10 +92,11 @@ export const NAV: NavItem[] = [
   { label: "Contact Us", href: "/contact" },
 ];
 
-// Primary entry to the member portal. Points to the original static member
-// portal at /portal (the one the owner built and uses). Plain link — no
-// dropdown/submenu.
+// Primary entry to the member portal. Points to the unified Next.js member
+// portal at /account (brand-matched chrome, server-rendered, AI-interlaced).
+// The original static /portal is kept in place as a fallback until cutover is
+// confirmed. Plain link — no dropdown/submenu.
 export const MEMBER_PORTAL = {
   label: "Member Portal",
-  href: "/portal",
+  href: "/account",
 };
