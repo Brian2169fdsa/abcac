@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssistantTool, ToolExecutor } from "./run";
 import { decideVerification } from "@/app/(admin)/admin/requests/decide-verification";
+import { getPlanningTools, getPlanningExecutors } from "./planning-tools";
 
 /**
  * ADMIN tool definitions + executors for ABCAC staff.
@@ -29,6 +30,8 @@ const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"];
 
 export function getAdminTools(): AssistantTool[] {
   return [
+    // Read-only / draft-only PLANNING tools (help PLAN & DRAFT, never write).
+    ...getPlanningTools(),
     {
       name: "get_dashboard_counts",
       description:
@@ -209,7 +212,13 @@ export function getAdminExecutors(ctx: AdminToolContext): Record<string, ToolExe
     }
   }
 
+  // Read-only / draft-only planning executors share the same RLS-scoped read
+  // client + service client; they never write, so they need no admin re-check.
+  const planning = getPlanningExecutors({ sb, admin });
+
   return {
+    ...planning,
+
     async get_dashboard_counts() {
       const now = new Date();
       const in90 = new Date(now.getTime() + 90 * 86_400_000);
