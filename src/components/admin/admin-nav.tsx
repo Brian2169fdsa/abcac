@@ -18,6 +18,7 @@ const TABS = [
   { label: "Members", href: "/admin/members" },
   { label: "Search", href: "/admin/search" },
   { label: "Send Message", href: "/admin/messaging" },
+  { label: "Announcements", href: "/admin/announcements" },
   { label: "Create Invoice", href: "/admin/invoices" },
   { label: "Audit Log", href: "/admin/audit" },
 ];

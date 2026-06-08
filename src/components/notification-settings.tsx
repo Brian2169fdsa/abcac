@@ -16,34 +16,31 @@ const TOGGLES: {
   key: keyof AlertPrefs;
   label: string;
   help: string;
-  gated: boolean;
-  comingSoon?: boolean;
+  badge?: string;
 }[] = [
   {
     key: "renewal_reminders",
     label: "Renewal reminders",
     help: "Email alerts at 90, 60 and 30 days before your certification expires.",
-    gated: true,
+    badge: "gates email reminders",
   },
   {
     key: "ceu_deadline_alerts",
     label: "CEU deadline alerts",
     help: "Email alerts when you are behind on CEU hours within 60 days of renewal.",
-    gated: true,
+    badge: "gates email reminders",
   },
   {
     key: "abcac_announcements",
     label: "ABCAC announcements",
-    help: "General announcements and news from ABCAC staff. This channel isn't sending yet — your preference is saved and will take effect once announcements launch.",
-    gated: false,
-    comingSoon: true,
+    help: "Receive general announcements and news that ABCAC staff broadcast to members. Turn this off to stop receiving these broadcasts (in your Messages inbox and by email).",
+    badge: "gates broadcasts",
   },
   {
     key: "icrc_updates",
     label: "IC&RC updates",
-    help: "Updates relating to IC&RC reciprocity and credentialing. This channel isn't sending yet — your preference is saved and will take effect once IC&RC updates launch.",
-    gated: false,
-    comingSoon: true,
+    help: "Receive broadcasts about IC&RC reciprocity and credentialing. Turn this off to stop receiving these updates (in your Messages inbox and by email).",
+    badge: "gates broadcasts",
   },
 ];
 
@@ -127,22 +124,17 @@ export function NotificationSettings({
       <form onSubmit={savePrefs} className="rounded-xl border border-line bg-surface p-6">
         <h3 className="mb-1">Alerts &amp; notifications</h3>
         <p className="mb-2 text-sm text-muted">
-          Choose which alerts you receive. Toggles marked “gates email reminders” actively turn the matching
-          scheduled email on or off.
+          Choose which alerts you receive. Every toggle here actively controls what we send you — turning one
+          off stops the matching scheduled reminder or staff broadcast.
         </p>
         {TOGGLES.map((t) => (
           <div key={t.key} className={toggle}>
             <span className="flex-1">
               <span className="block text-sm font-semibold">
                 {t.label}
-                {t.gated && (
+                {t.badge && (
                   <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
-                    gates email reminders
-                  </span>
-                )}
-                {t.comingSoon && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                    coming soon
+                    {t.badge}
                   </span>
                 )}
               </span>
