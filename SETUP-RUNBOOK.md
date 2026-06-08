@@ -40,6 +40,29 @@ admin planning/drafting tools. Without it the widget returns `503`.
 
 ---
 
+## 1b. Automated reminders  →  `CRON_SECRET` (+ Resend for email)
+
+A daily Vercel Cron (`0 14 * * *` ≈ 7am MST, already in `vercel.json`) hits
+`/api/cron/reminders` and sends renewal (90/60/30-day), CEU-shortfall,
+document-request, and task-due reminders — each **once** (deduped) as an
+**in-portal message** and an **email**. Admins can also click **"Run reminders
+now"** on any member's detail page.
+
+| Variable | Notes |
+|---|---|
+| `CRON_SECRET` | Any long random string. The route **fails closed** (503) until this is set, and rejects anyone whose `Authorization` header isn't `Bearer $CRON_SECRET`. Vercel attaches it automatically to cron calls. |
+
+- In-portal messages send as soon as `CRON_SECRET` is set; **emails** also need
+  `RESEND_API_KEY` (section 3). Without Resend, reminders still appear in the
+  member portal.
+- There is also a legacy Supabase Edge Function reminder path (migration 003 +
+  `supabase/functions/scheduled-reminders`). **Use one or the other, not both.**
+  The Vercel cron above is the recommended path (no Supabase CLI/Edge deploy).
+  The Edge cron is currently dormant (its Vault secrets are unset), so there's no
+  conflict unless you deploy and configure it.
+
+---
+
 ## 2. Payments  →  Stripe (3 vars + a one-time seed)
 
 Without these, checkout/sync/invoice routes return `503`.
