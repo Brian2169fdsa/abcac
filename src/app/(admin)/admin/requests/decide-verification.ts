@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
+import { isAdminRole } from "@/lib/auth/roles";
 
 type DecisionResult = { ok: true } | { ok: false; error: string };
 
@@ -29,7 +30,7 @@ export async function decideVerification(
     .select("portal_role")
     .eq("id", user.id)
     .maybeSingle();
-  if (profile?.portal_role !== "admin") return { ok: false, error: "forbidden" };
+  if (!isAdminRole(profile?.portal_role)) return { ok: false, error: "forbidden" };
 
   // 2. Write the decision. Map onto the request status so existing queues stay
   //    consistent: verified -> completed, not_verified -> rejected.

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssistantTool, ToolExecutor } from "./run";
 import { decideVerification } from "@/app/(admin)/admin/requests/decide-verification";
 import { getPlanningTools, getPlanningExecutors } from "./planning-tools";
+import { isAdminRole } from "@/lib/auth/roles";
 
 /**
  * ADMIN tool definitions + executors for ABCAC staff.
@@ -195,7 +196,7 @@ export function getAdminExecutors(ctx: AdminToolContext): Record<string, ToolExe
       .select("portal_role")
       .eq("id", user.id)
       .maybeSingle();
-    if (profile?.portal_role !== "admin") throw new Error("Forbidden — admin role required.");
+    if (!isAdminRole(profile?.portal_role)) throw new Error("Forbidden — admin role required.");
   }
 
   async function audit(action: string, table: string, targetId: string | null, details?: unknown) {

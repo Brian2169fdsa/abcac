@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
+import { isAdminRole } from "@/lib/auth/roles";
 
 // Admin approve/deny decisions for the request tables that are NOT verification
 // (verification keeps its dedicated one-click decideVerification flow). This
@@ -42,7 +43,7 @@ export async function decideRequest(
     .select("portal_role")
     .eq("id", user.id)
     .maybeSingle();
-  if (profile?.portal_role !== "admin") return { ok: false, error: "forbidden" };
+  if (!isAdminRole(profile?.portal_role)) return { ok: false, error: "forbidden" };
 
   const admin = createSupabaseAdminClient();
 

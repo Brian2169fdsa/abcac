@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     .select("portal_role")
     .eq("id", user.id)
     .maybeSingle();
-  if (!profile || profile.portal_role !== "admin") {
+  if (!profile || !isAdminRole(profile.portal_role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
