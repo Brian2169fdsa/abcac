@@ -3,17 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --bg: #faf9f9;
-  --surface: #ffffff;
-  --ink: #1c2430;
-  --brand: #7b1a1a;        /* ABCAC maroon — primary */
-  --brand-600: #5e1414;    /* darker maroon — hover/active */
-  --accent: #c8a04a;       /* gold accent */
-  --accent-strong: #806014; /* AA-contrast gold for small text on light bg */
-  --info: #1f3a5f;         /* navy blue — secondary/blue accents */
-  --muted: #5b6573;
-  --line: #e7e5e3;
-  --success: #1f7a4d;
+  --bg: #F7F3EE;           /* warm neutral — page background */
+  --surface: #FFFFFF;
+  --ink: #0D223F;          /* navy — primary text */
+  --brand: #7B1F1F;        /* ABCAC burgundy — primary */
+  --brand-600: #5E1717;    /* darker burgundy — hover/active */
+  --navy: #0D223F;         /* navy — secondary / dark accents */
+  --accent: #0D223F;       /* navy (replaces former gold accent) */
+  --accent-strong: #0D223F; /* navy (replaces former gold accent) */
+  --info: #0D223F;         /* navy — secondary accents */
+  --muted: #5A6673;        /* slate gray — muted text */
+  --line: #F2F4F7;         /* light gray — borders/lines */
+  --success: #2E7D5A;      /* success green */
 }
 
 @layer base {
@@ -28,14 +29,15 @@
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 {
-    font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
     color: var(--ink);
     line-height: 1.15;
     text-wrap: balance;
+    font-weight: 600;
   }
   h1 {
     font-size: clamp(2.25rem, 4vw, 3.25rem);
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: -0.01em;
   }
   h2 {
