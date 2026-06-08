@@ -32,11 +32,11 @@ const ITEMS: { label: string; href: string; count?: CountKey }[] = [
   { label: "Audit Log", href: "/admin/audit" },
 ];
 
-/** Self-contained gold count badge; renders nothing when count <= 0. */
+/** Self-contained maroon count badge; renders nothing when count <= 0. */
 function CountBadge({ n }: { n: number }) {
   if (!n || n < 1) return null;
   return (
-    <span className="ml-2 min-w-[20px] rounded-full bg-accent px-2 py-0.5 text-center text-[11px] font-bold leading-none text-brand">
+    <span className="ml-2 min-w-[20px] rounded-full bg-brand px-2 py-0.5 text-center text-[11px] font-bold leading-none text-white">
       {n}
     </span>
   );
@@ -57,8 +57,8 @@ export function AdminNav({ counts, onNavigate }: { counts: AdminCounts; onNaviga
             className={cn(
               "flex items-center justify-between border-l-[3px] px-5 py-2.5 text-sm transition-colors",
               active
-                ? "border-accent bg-white/12 font-semibold text-white"
-                : "border-transparent text-white/85 hover:bg-white/10",
+                ? "border-accent bg-accent/10 font-semibold text-brand"
+                : "border-transparent text-ink/75 hover:bg-bg hover:text-brand",
             )}
           >
             <span>{t.label}</span>

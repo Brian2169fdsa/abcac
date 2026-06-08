@@ -5,9 +5,11 @@ import Link from "next/link";
 import { AdminNav, type AdminCounts } from "@/components/admin/admin-nav";
 
 /**
- * Maroon left sidebar shell for the admin console. Holds the brand mark, the
- * navigation (with per-queue count badges), the admin identity + sign out, and
- * a mobile menu toggle that collapses the sidebar off-canvas.
+ * Light left sidebar for the admin console — matches the member-portal sidebar
+ * (white surface, maroon brand, ink nav with a maroon active state) so moving
+ * between the two never feels like a different product. Holds the brand mark,
+ * the navigation (with per-queue count badges), the admin identity + the
+ * member-view / site / sign-out links, and a mobile off-canvas toggle.
  */
 export function AdminSidebar({ name, counts, children }: { name: string; counts: AdminCounts; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -25,31 +27,31 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-brand text-white transition-transform",
+          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-line bg-surface text-ink transition-transform",
           open ? "translate-x-0" : "-translate-x-full",
           "md:translate-x-0",
         ].join(" ")}
       >
-        <Link href="/admin" className="flex flex-col gap-0.5 border-b border-white/10 px-5 py-5 leading-none" onClick={() => setOpen(false)}>
-          <span className="font-display text-lg font-bold text-white">ABCAC</span>
-          <span className="text-[10px] uppercase tracking-wider text-accent">Admin Console</span>
+        <Link href="/admin" className="flex flex-col gap-0.5 border-b border-line px-5 py-5 leading-none" onClick={() => setOpen(false)}>
+          <span className="font-display text-lg font-bold text-brand">ABCAC</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted">Admin Console</span>
         </Link>
 
         <div className="flex-1 overflow-y-auto py-3">
           <AdminNav counts={counts} onNavigate={() => setOpen(false)} />
         </div>
 
-        <div className="border-t border-white/10 px-5 py-4">
-          <div className="truncate text-sm text-white/80">{name}</div>
-          <div className="text-[11px] uppercase tracking-wider text-accent">Admin</div>
+        <div className="border-t border-line px-5 py-4">
+          <div className="truncate text-sm font-medium text-ink">{name}</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted">Admin</div>
           <div className="mt-2 flex flex-col gap-1">
-            <Link href="/account" className="text-sm font-semibold text-white/80 hover:text-white" onClick={() => setOpen(false)}>
+            <Link href="/account" className="text-sm font-semibold text-ink/80 hover:text-brand" onClick={() => setOpen(false)}>
               ⇄ Switch to Member View
             </Link>
-            <Link href="/" className="text-sm font-semibold text-white/80 hover:text-white">
+            <Link href="/" className="text-sm font-semibold text-ink/80 hover:text-brand">
               ← Back to Site
             </Link>
-            <Link href="/logout" className="text-sm font-semibold text-accent hover:text-accent/80">
+            <Link href="/logout" className="text-sm font-semibold text-brand hover:text-brand-600">
               Sign out
             </Link>
           </div>
