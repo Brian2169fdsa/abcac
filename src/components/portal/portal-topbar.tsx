@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Menu, LogOut, ArrowLeft } from "lucide-react";
+import { Mail, Menu, LogOut, ArrowLeft, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function initials(name: string): string {
@@ -21,10 +21,12 @@ function initials(name: string): string {
 export function PortalTopbar({
   memberName,
   messageCount = 0,
+  isAdmin = false,
   onMenuToggle,
 }: {
   memberName: string;
   messageCount?: number;
+  isAdmin?: boolean;
   onMenuToggle: () => void;
 }) {
   return (
@@ -40,6 +42,18 @@ export function PortalTopbar({
         </Link>
 
         <div className="flex items-center gap-2">
+        {isAdmin && (
+          <>
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 rounded bg-white/15 px-2.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/25"
+            >
+              <Shield className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Admin Console</span>
+            </Link>
+            <div className="h-6 w-px bg-white/15" aria-hidden />
+          </>
+        )}
         <Link
           href="/account/messages"
           className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white"

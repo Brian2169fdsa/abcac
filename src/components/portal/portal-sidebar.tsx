@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Shield } from "lucide-react";
 import { PORTAL_NAV, type PortalNavItem } from "@/components/portal/portal-nav-config";
 import { cn } from "@/lib/utils";
 
@@ -63,10 +64,12 @@ function NavLink({
 export function PortalSidebar({
   open,
   onClose,
+  isAdmin = false,
   className,
 }: {
   open?: boolean;
   onClose?: () => void;
+  isAdmin?: boolean;
   className?: string;
 }) {
   const activeHref = useActiveHref();
@@ -82,6 +85,16 @@ export function PortalSidebar({
         className,
       )}
     >
+      {isAdmin && (
+        <Link
+          href="/admin"
+          onClick={onClose}
+          className="mx-4 mb-4 flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+        >
+          <Shield className="h-4 w-4" aria-hidden />
+          Admin Console
+        </Link>
+      )}
       {PORTAL_NAV.map((group, gi) => (
         <div key={gi} className={cn(group.divider && "mt-2 border-t border-line pt-2")}>
           {group.heading && (
