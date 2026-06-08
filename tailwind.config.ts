@@ -22,7 +22,7 @@ const config: Config = {
         success: "var(--success)",
       },
       fontFamily: {
-        display: ["var(--font-sora)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       maxWidth: {

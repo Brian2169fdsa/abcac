@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Sora, Source_Sans_3 } from "next/font/google";
+import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 
-const sora = Sora({
+const poppins = Poppins({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-sora",
-  weight: ["400", "600", "700"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
 });
 
-const sourceSans = Source_Sans_3({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-body",
-  weight: ["400", "600"],
+  weight: ["400", "500", "600"],
 });
 
 const defaultTitle = "ABCAC — Arizona Board for Certification of Addiction Counselors";
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sora.variable} ${sourceSans.variable}`}>
+    <html lang="en" className={`${poppins.variable} ${inter.variable}`}>
       <body>{children}</body>
     </html>
   );
