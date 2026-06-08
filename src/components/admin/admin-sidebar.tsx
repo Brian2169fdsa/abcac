@@ -43,6 +43,9 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
           <div className="truncate text-sm text-white/80">{name}</div>
           <div className="text-[11px] uppercase tracking-wider text-accent">Admin</div>
           <div className="mt-2 flex flex-col gap-1">
+            <Link href="/account" className="text-sm font-semibold text-white/80 hover:text-white" onClick={() => setOpen(false)}>
+              ⇄ Switch to Member View
+            </Link>
             <Link href="/" className="text-sm font-semibold text-white/80 hover:text-white">
               ← Back to Site
             </Link>

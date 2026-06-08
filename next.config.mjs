@@ -16,6 +16,10 @@ const nextConfig = {
       { source: "/initial-or-renewal-of-cert", destination: "/initial-or-renewal", permanent: true },
       { source: "/home", destination: "/", permanent: true },
       { source: "/product/:slug", destination: "/store/:slug", permanent: true },
+      // The admin console is a separate app at /admin (not nested under
+      // /account). Catch the intuitive-but-wrong /account/admin URL so it never
+      // 404s — the role gate still applies once you land on /admin.
+      { source: "/account/admin", destination: "/admin", permanent: false },
     ];
   },
 };
