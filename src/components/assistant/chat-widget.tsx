@@ -32,25 +32,25 @@ interface ChatMessage {
 
 const SUGGESTIONS: Record<Surface, string[]> = {
   website: [
-    "How do I get certified?",
-    "What are the CEU requirements?",
+    "How do I get certified as an addiction counselor?",
+    "How do I register for the IC&RC exam?",
+    "What are the CEU renewal requirements?",
     "How much does certification cost?",
-    "Register for the IC&RC exam",
-    "Transfer my credential to Arizona",
+    "Transfer my credential to Arizona (reciprocity)",
   ],
   member: [
     "How many CEU hours do I still need?",
     "When does my certification expire?",
-    "What documents are still required?",
-    "Start my renewal",
-    "What's my next step?",
+    "What documents do I still need to upload?",
+    "How do I register for my IC&RC exam?",
+    "What's my next step to get certified?",
   ],
   admin: [
-    "Show me pending CEUs",
+    "Show me pending CEU submissions",
     "Who's awaiting account approval?",
-    "Certifications expiring in 60 days",
-    "Summarize a member's status",
-    "Draft a renewal reminder",
+    "Which credentials expire in the next 60 days?",
+    "Summarize a member's certification status",
+    "Draft a renewal reminder for a member",
   ],
 };
 
