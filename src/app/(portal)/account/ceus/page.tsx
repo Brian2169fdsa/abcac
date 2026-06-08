@@ -43,29 +43,45 @@ export default async function CeusPage() {
   const total = approved.reduce((s, r) => s + Number(r.hours || 0), 0);
   const pct = Math.min(100, Math.round((total / REQUIRED) * 100));
   const byCat = (cat: string) => approved.filter((r) => r.category === cat).reduce((s, r) => s + Number(r.hours || 0), 0);
+  const ethics = byCat("Ethics");
+  const cultural = byCat("Cultural Diversity");
+  const ethicsPct = requirements.ethics > 0 ? Math.min(100, Math.round((ethics / requirements.ethics) * 100)) : 100;
+  const culturalPct = requirements.cultural > 0 ? Math.min(100, Math.round((cultural / requirements.cultural) * 100)) : 100;
   const compliance = computeCompliance(records, requirements);
 
   return (
     <>
-      <PageHero eyebrow="Member Portal" title="Continuing Education Tracker" intro={`Log your CEU hours and track progress toward your ${REQUIRED}-hour renewal requirement.`} />
+      <PageHero eyebrow="Member Portal" title="Continuing Education Unit Tracker" intro={`Log your CEU hours and track progress toward your ${REQUIRED}-hour renewal requirement.`} />
       <Section compact>
+        <div className="mb-6 flex items-start gap-4 rounded-xl border border-info/20 bg-info/5 px-5 py-4">
+          <span className="shrink-0 rounded bg-info px-3 py-1 text-xs font-semibold text-white">Note</span>
+          <p className="text-sm text-ink">
+            Recertification requires <strong>{REQUIRED} CEU hours</strong> per renewal cycle, including{" "}
+            <strong>{requirements.ethics} hrs Ethics</strong> and <strong>{requirements.cultural} hrs Cultural Diversity</strong>.
+            All training must be specifically related to substance abuse.
+          </p>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{total} / {REQUIRED}</div>
-            <div className="mt-1 text-sm text-muted">Approved hours</div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={total} aria-valuemin={0} aria-valuemax={REQUIRED} aria-label="Approved CEU hours toward renewal"><div className="h-full bg-brand" style={{ width: `${pct}%` }} /></div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Total Completed</div>
+            <div className="mt-1 font-display text-3xl font-bold text-brand">{total} / {REQUIRED}</div>
+            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={total} aria-valuemin={0} aria-valuemax={REQUIRED} aria-label="Approved CEU hours toward renewal"><div className="h-full bg-brand" style={{ width: `${pct}%` }} /></div>
+            <div className="mt-2 text-sm text-muted">{pct}%</div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{byCat("Ethics")} / {requirements.ethics}</div>
-            <div className="mt-1 text-sm text-muted">Ethics hours</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Ethics</div>
+            <div className="mt-1 font-display text-3xl font-bold text-brand">{ethics} / {requirements.ethics}</div>
+            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={ethics} aria-valuemin={0} aria-valuemax={requirements.ethics} aria-label="Ethics CEU hours"><div className="h-full bg-success" style={{ width: `${ethicsPct}%` }} /></div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{byCat("Cultural Diversity")} / {requirements.cultural}</div>
-            <div className="mt-1 text-sm text-muted">Cultural Diversity hours</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Cultural Diversity</div>
+            <div className="mt-1 font-display text-3xl font-bold text-brand">{cultural} / {requirements.cultural}</div>
+            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={cultural} aria-valuemin={0} aria-valuemax={requirements.cultural} aria-label="Cultural Diversity CEU hours"><div className="h-full bg-accent" style={{ width: `${culturalPct}%` }} /></div>
           </div>
           <div className="rounded-xl border border-line bg-surface p-6">
-            <div className="font-display text-3xl font-bold text-brand">{compliance.remaining}</div>
-            <div className="mt-1 text-sm text-muted">Hours remaining</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Hours Remaining</div>
+            <div className="mt-1 font-display text-3xl font-bold text-brand">{compliance.remaining}</div>
+            <div className="mt-2 text-sm text-muted">hours remaining</div>
           </div>
         </div>
         {/* Renewal Compliance Card */}
