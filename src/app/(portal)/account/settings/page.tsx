@@ -38,7 +38,7 @@ export default async function SettingsPage() {
       <PageHero
         eyebrow="Member Portal"
         title="Account Settings"
-        intro="Confirm your account email and control which alerts and reminders ABCAC sends you."
+        intro="Confirm your login email, control which alerts and reminders ABCAC sends you, and request account help."
       />
       <Section compact>
         <NotificationSettings email={email} prefs={prefsData} />

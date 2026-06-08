@@ -97,6 +97,8 @@ export function NotificationSettings({
   const field =
     "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
   const toggle = "flex items-start justify-between gap-4 border-b border-line py-4 last:border-0";
+  const dangerBtn =
+    "inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
   return (
     <div className="space-y-6">
@@ -107,15 +109,17 @@ export function NotificationSettings({
         <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{err}</div>
       )}
 
-      {/* Account email */}
+      {/* Login credentials */}
       <div className="rounded-xl border border-line bg-surface p-6">
-        <h3 className="mb-1">Account email</h3>
+        <h3 className="mb-1">Login credentials</h3>
         <p className="mb-4 text-sm text-muted">
-          Your login email. Email changes are managed by ABCAC sign-in (Supabase Auth) — to change it, contact
-          ABCAC staff or use the “Send a message” option on the Messages page.
+          Your login email is managed by ABCAC sign-in (Supabase Auth) and cannot be edited here — to change it,
+          contact ABCAC staff or use the “Send a message” option on the Messages page. To update your legal name,
+          use the <strong>Name Change Request</strong> flow on the Profile page (changes require review and supporting
+          documentation — names are not free-edited here).
         </p>
         <label className="block max-w-md">
-          <span className="mb-1.5 block text-sm font-semibold">Email address</span>
+          <span className="mb-1.5 block text-sm font-semibold">Email (login)</span>
           <input className={field} value={email ?? ""} disabled aria-readonly />
         </label>
       </div>
@@ -152,6 +156,30 @@ export function NotificationSettings({
           {savingPrefs ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save Preferences"}
         </Button>
       </form>
+
+      {/* Danger zone */}
+      <div className="rounded-xl border border-red-300 bg-red-50 p-6">
+        <h3 className="mb-1 text-red-700">Danger zone</h3>
+        <p className="mb-4 text-sm text-muted">
+          Deactivating your account will not cancel your certifications. For account issues, contact ABCAC at{" "}
+          <strong>abcac@abcac.org</strong> or <strong>480-980-1770</strong>. We will confirm the request before any
+          action is taken — accounts are never deleted automatically.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="mailto:abcac@abcac.org?subject=Account%20Deactivation%20Request"
+            className={`${dangerBtn} bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600`}
+          >
+            Request Account Deactivation
+          </a>
+          <a
+            href="mailto:abcac@abcac.org?subject=Member%20Portal%20Help%20Request"
+            className={`${dangerBtn} border border-red-300 bg-transparent text-red-700 hover:bg-red-100 focus-visible:ring-red-600`}
+          >
+            Contact ABCAC for Help
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
