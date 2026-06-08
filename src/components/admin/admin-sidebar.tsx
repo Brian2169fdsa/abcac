@@ -42,9 +42,14 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
         <div className="border-t border-white/10 px-5 py-4">
           <div className="truncate text-sm text-white/80">{name}</div>
           <div className="text-[11px] uppercase tracking-wider text-accent">Admin</div>
-          <Link href="/logout" className="mt-2 inline-block text-sm font-semibold text-accent hover:text-accent/80">
-            Sign out
-          </Link>
+          <div className="mt-2 flex flex-col gap-1">
+            <Link href="/" className="text-sm font-semibold text-white/80 hover:text-white">
+              ← Back to Site
+            </Link>
+            <Link href="/logout" className="text-sm font-semibold text-accent hover:text-accent/80">
+              Sign out
+            </Link>
+          </div>
         </div>
       </aside>
 
