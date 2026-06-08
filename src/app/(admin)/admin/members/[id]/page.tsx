@@ -17,6 +17,9 @@ import { MemberDetailSection, FieldGrid, DataTable } from "@/components/admin/me
 import { MemberDocsPanel } from "@/components/admin/member-docs-panel";
 import { MemberProgressPanel } from "@/components/admin/member-progress-panel";
 import { MemberDuePanel } from "@/components/admin/member-due-panel";
+import { CockpitQuickActions } from "@/components/admin/cockpit-quick-actions";
+import { RoleManager } from "@/components/admin/role-manager";
+import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +95,21 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     sb.from("profiles").select("*").eq("id", memberId).maybeSingle(),
   );
   if (!profile) notFound();
+
+  // Determine the signed-in admin's own role to gate role management. Only the
+  // superadmin "god account" may change portal roles; the server action
+  // re-checks this regardless, so this boolean is purely a UI gate.
+  const {
+    data: { user: viewer },
+  } = await sb.auth.getUser();
+  const viewerProfile = viewer
+    ? await safeOne<any>(sb.from("profiles").select("portal_role").eq("id", viewer.id).maybeSingle())
+    : null;
+  const canManageRoles = isSuperadminRole(viewerProfile?.portal_role);
+  const memberRole: PortalRole =
+    profile.portal_role === "admin" || profile.portal_role === "superadmin"
+      ? profile.portal_role
+      : "member";
 
   // Fetch every member surface defensively. Tables/columns from not-yet-applied
   // migrations degrade to empty rather than crashing the render.
@@ -227,6 +245,22 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         <div className="mt-6">
           <MemberDocsPanel documents={documents as any[]} />
         </div>
+
+        {/* Actionable cockpit row — message + document request without leaving the page. */}
+        <div className="mt-6">
+          <div className="mb-2 text-sm font-semibold text-ink">Quick actions</div>
+          <CockpitQuickActions memberId={memberId} />
+        </div>
+
+        {/* Superadmin-only role management. */}
+        {canManageRoles && (
+          <div className="mt-6">
+            <div className="mb-2 text-sm font-semibold text-ink">Role management</div>
+            <div className="max-w-md">
+              <RoleManager memberId={memberId} currentRole={memberRole} />
+            </div>
+          </div>
+        )}
       </MemberDetailSection>
 
       {/* 2. Personal Information + Employment */}
