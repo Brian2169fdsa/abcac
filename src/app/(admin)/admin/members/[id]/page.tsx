@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
-import { type CertSchedule, findScheduleFor } from "@/lib/schedules";
+import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
+import { buildMemberPlan, type AccountStatus } from "@/lib/member-plan";
 import { ViewFileButton } from "@/components/view-file-button";
 import { AccountApprovalActions } from "@/components/admin/account-approval-actions";
 import { MemberManage } from "@/components/admin/member-manage";
@@ -19,6 +20,9 @@ import { MemberProgressPanel } from "@/components/admin/member-progress-panel";
 import { MemberDuePanel } from "@/components/admin/member-due-panel";
 import { CockpitQuickActions } from "@/components/admin/cockpit-quick-actions";
 import { MemberTasksPanel, type MemberTask } from "@/components/admin/member-tasks-panel";
+import { MemberInvoicesPanel } from "@/components/admin/member-invoices-panel";
+import { MemberMessagesThread } from "@/components/admin/member-messages-thread";
+import { MemberPlanPanel } from "@/components/admin/member-plan-panel";
 import { RoleManager } from "@/components/admin/role-manager";
 import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
 
@@ -193,6 +197,45 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
     requirements,
   );
 
+  // ── Member's guided "Next Steps" plan ──────────────────────────────────────
+  // Assemble the SAME input the member dashboard feeds buildMemberPlan() so the
+  // admin sees exactly the plan the client is shown (read-only). Mirrors
+  // src/app/(portal)/account/page.tsx.
+  const profileFields = [
+    profile.first_name,
+    profile.last_name,
+    profile.phone,
+    profile.address_line1,
+    profile.city,
+    profile.state,
+    profile.zip_code,
+  ];
+  const profileCompleteness = Math.round(
+    (profileFields.filter((f) => f && String(f).trim()).length / profileFields.length) * 100,
+  );
+  const openDocRequests = (docRequests as any[]).filter((r) => r.status === "open").length;
+  const activeCerts = (certs as any[]).filter((c) => c.status === "active");
+  const latestApp = (applications as any[])[0];
+  // For active certs, pass the schedule-aware next-due date (same date the
+  // member's renewal step uses) so the plan lines up with their dashboard.
+  const planCerts = (certs as any[]).map((c) => {
+    const sched = findScheduleFor(schedules as CertSchedule[], c.cert_type);
+    const nextDue =
+      sched && c.expiration_date
+        ? computeDueFromExpiration(sched, c.expiration_date).nextDueDate
+        : c.expiration_date ?? null;
+    return { cert_type: c.cert_type, status: c.status, expiration_date: nextDue };
+  });
+  const planAccountStatus: AccountStatus =
+    activeCerts.length > 0 ? "active" : ((latestApp?.status as AccountStatus | undefined) ?? "none");
+  const planSteps = buildMemberPlan({
+    profileCompleteness,
+    accountStatus: planAccountStatus,
+    certifications: planCerts,
+    ceuCompliance: compliance,
+    missingDocuments: openDocRequests,
+  });
+
   const fullName = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ") || "—";
 
   // A single-member option for the preselected scoped forms.
@@ -279,6 +322,15 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             </div>
           </div>
         )}
+      </MemberDetailSection>
+
+      {/* 1.6 Client-view mirrors — what the member sees: their guided plan,
+          invoices/payments, and message thread, all read-only. */}
+      <MemberDetailSection
+        title="Member's Next Steps"
+        description="The guided plan this member is shown on their dashboard — exactly as the client sees it (read-only)."
+      >
+        <MemberPlanPanel steps={planSteps} />
       </MemberDetailSection>
 
       {/* 2. Personal Information + Employment */}
@@ -562,6 +614,24 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           ])}
           empty="No reciprocity requests."
         />
+      </MemberDetailSection>
+
+      {/* 9.5 Client-view mirror — the member's message thread exactly as they
+          read it on /account/messages (read-only). */}
+      <MemberDetailSection
+        title="Messages (member's view)"
+        description="The conversation as the member sees it on their Messages page — chronological, read-only."
+      >
+        <MemberMessagesThread messages={messages as any[]} />
+      </MemberDetailSection>
+
+      {/* 9.6 Client-view mirror — the member's invoices & payments exactly as
+          they see them on /account/invoices (read-only). */}
+      <MemberDetailSection
+        title="Invoices (member's view)"
+        description="Invoices and payments as the member sees them on their Invoices page — read-only."
+      >
+        <MemberInvoicesPanel invoices={invoices as any[]} payments={payments as any[]} />
       </MemberDetailSection>
 
       {/* 10. Messages thread + send box scoped to this member */}
