@@ -21,7 +21,7 @@ export function WelcomeBanner({
       <h2 className="relative z-10 font-display text-2xl font-semibold text-white">
         Welcome back, <span className="underline decoration-white/40 underline-offset-4">{firstName}</span>
       </h2>
-      <p className="relative z-10 mt-2 max-w-xl text-sm text-white/70">{message}</p>
+      <p className="relative z-10 mt-2 max-w-xl text-sm text-white/85">{message}</p>
     </div>
   );
 }

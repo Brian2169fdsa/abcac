@@ -184,7 +184,7 @@ export default async function AdminDashboard() {
 
   return (
     <>
-      <h1 className="page-heading text-2xl font-bold">Command center</h1>
+      <h1 className="text-2xl font-bold">Command center</h1>
       <p className="mb-6 text-muted">At a glance — what needs attention across all members.</p>
 
       <AdminOverview stats={stats} />
