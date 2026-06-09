@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     );
     const { data: profile } = await admin
       .from("profiles").select("portal_role").eq("id", user.id).single();
-    if (!profile || profile.portal_role !== "admin") {
+    if (!["admin", "superadmin"].includes(profile?.portal_role)) {
       return json({ error: "forbidden" }, 403);
     }
 
