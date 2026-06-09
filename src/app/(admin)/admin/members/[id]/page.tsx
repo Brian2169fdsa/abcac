@@ -25,6 +25,15 @@ import { MemberInvoicesPanel } from "@/components/admin/member-invoices-panel";
 import { MemberMessagesThread } from "@/components/admin/member-messages-thread";
 import { MemberPlanPanel } from "@/components/admin/member-plan-panel";
 import { RoleManager } from "@/components/admin/role-manager";
+import { MemberProfileEdit } from "@/components/admin/member-profile-edit";
+import { MemberNotifyPrefs } from "@/components/admin/member-notify-prefs";
+import { MemberEmploymentManage } from "@/components/admin/member-employment-manage";
+import { MemberOtherCertManage } from "@/components/admin/member-othercert-manage";
+import { MemberCertManage } from "@/components/admin/member-cert-manage";
+import { MemberApplicationReview } from "@/components/admin/member-application-review";
+import { MemberInvoiceManage } from "@/components/admin/member-invoice-manage";
+import { MemberSupervisionManage } from "@/components/admin/member-supervision-manage";
+import { MemberAuthorizationManage } from "@/components/admin/member-authorization-manage";
 import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
@@ -202,6 +211,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
   // Assemble the SAME input the member dashboard feeds buildMemberPlan() so the
   // admin sees exactly the plan the client is shown (read-only). Mirrors
   // src/app/(portal)/account/page.tsx.
+  // Member's notification preferences (admin can view + override). null = no row.
+  const notifyPrefs = await safeOne<any>(
+    sb.from("notification_preferences").select("*").eq("member_id", memberId).maybeSingle(),
+  );
+
   const profileFields = [
     profile.first_name,
     profile.last_name,
@@ -355,6 +369,13 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             { label: "Stripe customer", value: profile.stripe_customer_id ?? "—" },
           ]}
         />
+        <div className="mt-4">
+          <MemberProfileEdit memberId={memberId} profile={profile} />
+        </div>
+      </MemberDetailSection>
+
+      <MemberDetailSection title="Notification Preferences" description="What this member is opted in to. These gate the automated reminder emails.">
+        <MemberNotifyPrefs memberId={memberId} prefs={notifyPrefs} />
       </MemberDetailSection>
 
       <MemberDetailSection title="Employment">
@@ -369,6 +390,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           ])}
           empty="No employment records."
         />
+        <div className="mt-4">
+          <MemberEmploymentManage memberId={memberId} rows={employment as any[]} />
+        </div>
       </MemberDetailSection>
 
       {/* 3. Certifications + Other Certifications + Issue cert */}
@@ -390,6 +414,10 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           <div className="mb-2 text-sm font-semibold">Issue a certification to this member</div>
           <IssueCertForm members={memberOption} defaultMemberId={memberId} />
         </div>
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Manage existing certifications</div>
+          <MemberCertManage memberId={memberId} certs={certs as any[]} />
+        </div>
       </MemberDetailSection>
 
       <MemberDetailSection title="Other Certifications">
@@ -405,6 +433,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           ])}
           empty="No other certifications recorded."
         />
+        <div className="mt-4">
+          <MemberOtherCertManage memberId={memberId} rows={otherCerts as any[]} />
+        </div>
       </MemberDetailSection>
 
       {/* 4. CEU records + compliance KPIs + per-record review */}
@@ -502,6 +533,10 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           ])}
           empty="No applications submitted."
         />
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Set reviewer notes &amp; estimated completion</div>
+          <MemberApplicationReview memberId={memberId} applications={applications as any[]} />
+        </div>
       </MemberDetailSection>
 
       {/* 7. Renewals — active certs + days-left, mirroring the member renewals page */}
@@ -555,21 +590,14 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           })}
           empty="Not recorded as a supervisee."
         />
-        {supervisionAuthorizations.length > 0 && (
-          <div className="mt-6">
-            <div className="mb-2 text-sm font-semibold">Authorizations</div>
-            <DataTable
-              head={["Detail", "Start", "End", "Status"]}
-              rows={(supervisionAuthorizations as any[]).map((s) => [
-                s.detail ?? s.note ?? s.supervisor_name ?? "—",
-                fmt(s.start_date ?? s.created_at),
-                fmt(s.end_date),
-                <StatusBadge key="s" status={s.status} />,
-              ])}
-              empty="No supervision authorizations."
-            />
-          </div>
-        )}
+        <div className="mt-6">
+          <div className="mb-2 text-sm font-semibold">Manage supervision (as supervisor) &amp; link supervisees</div>
+          <MemberSupervisionManage memberId={memberId} records={supervisionAsSupervisor as any[]} />
+        </div>
+        <div className="mt-6">
+          <div className="mb-2 text-sm font-semibold">Authorizations</div>
+          <MemberAuthorizationManage memberId={memberId} authorizations={supervisionAuthorizations as any[]} />
+        </div>
       </MemberDetailSection>
 
       {/* 9. Requests: name change, verification, reciprocity */}
@@ -674,6 +702,10 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         <div className="mt-4">
           <div className="mb-2 text-sm font-semibold">Create an invoice for this member</div>
           <CreateInvoiceForm members={memberOption} defaultMemberId={memberId} />
+        </div>
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Manage existing invoices</div>
+          <MemberInvoiceManage memberId={memberId} invoices={invoices as any[]} />
         </div>
       </MemberDetailSection>
 
