@@ -40,7 +40,7 @@ export default function TestingPage() {
           ))}
         </div>
         <p className="mt-6 max-w-3xl text-sm text-muted">Not sure which to choose? See the differences between remote-proctored and in-person testing.</p>
-        <CtaButton href="/remote-or-inperson" variant="outline" className="mt-3">Remote vs In-Person</CtaButton>
+        <CtaButton href="/remote-or-inperson" variant="outline" className="mt-3 w-full sm:w-auto">Remote vs In-Person</CtaButton>
       </Section>
 
       <Section surface title="AZBBHE + ABCAC certification">
@@ -53,7 +53,7 @@ export default function TestingPage() {
           exam and ABCAC certification:
         </p>
         <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-bg">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[34rem] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-3">Arizona License</th>

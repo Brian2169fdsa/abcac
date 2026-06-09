@@ -30,13 +30,13 @@ export default function CertificationRenewalPage() {
               All ABCAC credentials renew every two years. This path walks you through your CEU documentation,
               recertification packet, uploads, and payment — simple, fast, and fully digital.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {renewal && (
-                <CtaButton href={`/store/${renewal.slug}`} size="lg">
+                <CtaButton href={`/store/${renewal.slug}`} size="lg" className="w-full sm:w-auto">
                   Pay Renewal Fee — <PriceTag product={renewal} className="ml-1 text-white" />
                 </CtaButton>
               )}
-              <CtaButton href="/ceu" variant="outline" size="lg">CEU Requirements</CtaButton>
+              <CtaButton href="/ceu" variant="outline" size="lg" className="w-full sm:w-auto">CEU Requirements</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
@@ -85,17 +85,17 @@ export default function CertificationRenewalPage() {
           <strong className="text-ink">Note:</strong> HIV/AIDS education is only required for your initial
           certification — it is not needed for recertification.
         </div>
-        <div className="mt-8 flex flex-wrap items-center gap-4">
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
           {renewal && (
-            <CtaButton href={`/store/${renewal.slug}`} size="lg">
+            <CtaButton href={`/store/${renewal.slug}`} size="lg" className="w-full sm:w-auto">
               Pay Renewal Fee — <PriceTag product={renewal} className="ml-1 text-white" />
             </CtaButton>
           )}
-          <CtaButton href="/ceu" variant="outline">Continuing Education Info</CtaButton>
+          <CtaButton href="/ceu" variant="outline" className="w-full sm:w-auto">Continuing Education Info</CtaButton>
         </div>
         <div className="mt-8 rounded-xl border border-line bg-bg p-5">
           <p className="text-muted">Paid your renewal fee? Submit your recertification and CE certificates online.</p>
-          <CtaButton href="/account/renew" variant="outline" className="mt-3">Submit Recertification</CtaButton>
+          <CtaButton href="/account/renew" variant="outline" className="mt-3 w-full sm:w-auto">Submit Recertification</CtaButton>
         </div>
       </Section>
 
@@ -116,9 +116,9 @@ export default function CertificationRenewalPage() {
           Align the renewal dates of your CADAC, CCJP, AADC, or other ABCAC certifications into one unified cycle with
           Certification Sync. Eliminate staggered renewals and manage everything together.
         </p>
-        <div className="mt-6 flex flex-wrap items-center gap-4">
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
           {sync && (
-            <CtaButton href={`/store/${sync.slug}`} variant="accent">
+            <CtaButton href={`/store/${sync.slug}`} variant="accent" className="w-full sm:w-auto">
               Sync Your Certs — <PriceTag product={sync} className="ml-1" />
             </CtaButton>
           )}

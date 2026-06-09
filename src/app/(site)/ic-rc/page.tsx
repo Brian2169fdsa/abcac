@@ -55,7 +55,7 @@ export default function IcRcPage() {
           IC&RC provides official candidate guides, recommended study materials, and online practice exams. ABCAC does
           not sell or distribute these materials — all resources are hosted by IC&RC and subject to their terms.
         </p>
-        <CtaButton href="/testing" className="mt-6">Register for Testing</CtaButton>
+        <CtaButton href="/testing" className="mt-6 w-full sm:w-auto">Register for Testing</CtaButton>
       </Section>
 
       <Section title="Request an IC&RC International Certificate">
@@ -69,7 +69,7 @@ export default function IcRcPage() {
             <li key={c} className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm text-muted">{c}</li>
           ))}
         </ul>
-        <CtaButton href="/contact" variant="outline" className="mt-6">Confirm Eligibility with ABCAC</CtaButton>
+        <CtaButton href="/contact" variant="outline" className="mt-6 w-full sm:w-auto">Confirm Eligibility with ABCAC</CtaButton>
       </Section>
     </>
   );

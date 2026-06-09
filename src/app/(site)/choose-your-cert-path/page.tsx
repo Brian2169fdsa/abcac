@@ -43,9 +43,9 @@ export default function ChooseCertPathPage() {
               or renewing your certification, ABCAC is here to support your success. Choose the path that best fits
               where you are today.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <CtaButton href="/initial-certification" size="lg">Start My Certification</CtaButton>
-              <CtaButton href="/certification-renewal" variant="outline" size="lg">Renew My Certification</CtaButton>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <CtaButton href="/initial-certification" size="lg" className="w-full sm:w-auto">Start My Certification</CtaButton>
+              <CtaButton href="/certification-renewal" variant="outline" size="lg" className="w-full sm:w-auto">Renew My Certification</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
@@ -90,7 +90,7 @@ export default function ChooseCertPathPage() {
                 ))}
               </ul>
               <p className="mt-4 flex-1 text-sm text-muted">{p.note}</p>
-              <CtaButton href={p.cta.href} className="mt-6 self-start">{p.cta.label}</CtaButton>
+              <CtaButton href={p.cta.href} className="mt-6 w-full sm:w-auto sm:self-start">{p.cta.label}</CtaButton>
             </div>
           ))}
         </div>
@@ -100,7 +100,7 @@ export default function ChooseCertPathPage() {
           If you possess expertise in behavioral or mental health, we extend a warm invitation for you to join our board
           of directors. Your insights are invaluable. Please contact us to request the application form.
         </p>
-        <CtaButton href="/contact" variant="outline" className="mt-6">Contact ABCAC</CtaButton>
+        <CtaButton href="/contact" variant="outline" className="mt-6 w-full sm:w-auto">Contact ABCAC</CtaButton>
       </Section>
     </>
   );
