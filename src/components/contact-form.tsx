@@ -70,7 +70,7 @@ export function ContactForm() {
       {status === "error" && (
         <p className="text-sm text-red-600">Oops, there was an error sending your message. Please try again later.</p>
       )}
-      <Button type="submit" disabled={status === "sending"} size="lg">
+      <Button type="submit" disabled={status === "sending"} size="lg" className="w-full sm:w-auto">
         {status === "sending" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Send Message"}
       </Button>
     </form>

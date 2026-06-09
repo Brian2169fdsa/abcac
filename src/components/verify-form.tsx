@@ -123,7 +123,7 @@ export function VerifyForm() {
 
       {status === "error" && <p className="text-sm text-red-600">{errMsg}</p>}
 
-      <Button type="submit" disabled={status === "sending"} size="lg">
+      <Button type="submit" disabled={status === "sending"} size="lg" className="w-full sm:w-auto">
         {status === "sending" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Submit Request"}
       </Button>
     </form>

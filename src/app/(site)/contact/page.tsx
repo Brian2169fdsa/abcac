@@ -17,7 +17,7 @@ export default function ContactPage() {
       <PageHero eyebrow="Get in touch" title="Contact Us" intro="Contact us any time. We will get back to you as soon as possible." />
       <Section>
         <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr]">
-          <div className="rounded-xl border border-line bg-surface p-7">
+          <div className="rounded-xl border border-line bg-surface p-5 sm:p-7">
             <ContactForm />
           </div>
           <div className="space-y-5">
