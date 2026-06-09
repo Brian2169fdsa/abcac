@@ -18,8 +18,8 @@ export function WelcomeBanner({
         aria-hidden
         className="pointer-events-none absolute -right-12 -top-24 h-80 w-80 rounded-full bg-white/10 blur-2xl"
       />
-      <h2 className="relative z-10 font-display text-2xl font-semibold">
-        Welcome back, <span className="text-white underline decoration-white/40 underline-offset-4">{firstName}</span>
+      <h2 className="relative z-10 font-display text-2xl font-semibold text-white">
+        Welcome back, <span className="underline decoration-white/40 underline-offset-4">{firstName}</span>
       </h2>
       <p className="relative z-10 mt-2 max-w-xl text-sm text-white/70">{message}</p>
     </div>
