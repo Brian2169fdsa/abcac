@@ -53,7 +53,7 @@ export function CheckoutForm({ slug, category, examMode }: CheckoutFormProps) {
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-6">
+    <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
       {needsCredential && (
         <div className="mb-4">
           <label htmlFor="credentialLevel" className="mb-1.5 block text-sm font-semibold">
@@ -63,7 +63,7 @@ export function CheckoutForm({ slug, category, examMode }: CheckoutFormProps) {
             id="credentialLevel"
             value={credentialLevel}
             onChange={(e) => setCredentialLevel(e.target.value)}
-            className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm"
           >
             <option value="">— Select —</option>
             {CREDENTIAL_LEVELS.map((c) => (
