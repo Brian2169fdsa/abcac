@@ -96,7 +96,7 @@ function PriorityChip({ priority }: { priority: string }) {
       ? "bg-brand text-white"
       : priority === "low"
         ? "border border-line text-muted"
-        : "bg-accent text-ink";
+        : "bg-accent text-white";
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${tone}`}>
       {priority || "normal"}
@@ -245,7 +245,7 @@ function TaskRow({ task }: { task: MemberTask }) {
               {STATUS_LABEL[task.status] ?? task.status}
             </span>
             {task.visible_to_member ? (
-              <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-ink">
+              <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
                 Visible to member
               </span>
             ) : (
