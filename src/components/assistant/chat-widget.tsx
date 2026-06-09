@@ -1,16 +1,20 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MessageCircle, X, Loader2, Send, Sparkles } from "lucide-react";
+import { MessageCircle, X, Loader2, Send, Sparkles, Paperclip, Mail } from "lucide-react";
 import { Markdown } from "@/components/assistant/markdown";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
  * Floating conversational-assistant widget. The launcher (bottom-right) opens a
  * rich panel: markdown-rendered replies (tables, headings, lists), inline
  * tool-call chips for actions the assistant took, contextual suggested prompts,
  * and a polished composer. It posts the running message history to
- * /api/assistant with the surface ("member" | "admin" | "website"); the server
- * decides the real toolset from the session role.
+ * /api/assistant with the surface ("member" | "admin" | "website").
+ *
+ * Work-partner extras:
+ *  - member surface: attach a file → uploads to the member's documents.
+ *  - website surface: "Email me this conversation" → sends the Q&A transcript.
  *
  * Graceful degradation: 503 { error: "assistant_not_configured" } renders a
  * friendly "not enabled yet" notice instead of an error.
@@ -41,9 +45,9 @@ const SUGGESTIONS: Record<Surface, string[]> = {
   member: [
     "How many CEU hours do I still need?",
     "When does my certification expire?",
+    "Build my plan to get certified",
+    "Update my phone number",
     "What documents do I still need to upload?",
-    "How do I register for my IC&RC exam?",
-    "What's my next step to get certified?",
   ],
   admin: [
     "Show me pending CEU submissions",
@@ -56,7 +60,7 @@ const SUGGESTIONS: Record<Surface, string[]> = {
 
 const PLACEHOLDER: Record<Surface, string> = {
   website: "Ask about certification, exams, CEUs, fees…",
-  member: "Ask about your certs, CEUs, renewals, documents…",
+  member: "Ask, plan, update info, or attach a document…",
   admin: "Ask about members, approvals, CEUs, invoices…",
 };
 
@@ -66,23 +70,32 @@ const FOOTER_NOTE: Record<Surface, string> = {
   admin: "Read-only context · actions audited",
 };
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
+
 export function ChatWidget({ surface }: { surface: Surface }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailValue, setEmailValue] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = surface === "admin";
   const isWebsite = surface === "website";
+  const isMember = surface === "member";
   const title = isAdmin ? "ABCAC Admin Assistant" : isWebsite ? "ABCAC Website Guide" : "ABCAC Assistant";
   const subtitle = isWebsite ? "Questions about certification? Ask away." : "Ask, and I can take action for you.";
   const greeting = isAdmin
     ? "Hi! I can look up members and take admin actions — approvals, CEUs, verifications, invoices — and help you plan. Try a prompt below."
     : isWebsite
       ? "Hi! I'm the ABCAC Website Guide. Ask me about certification paths, fees, exams, IC&RC, reciprocity, or CEUs."
-      : "Hi! I can help with your certifications, CEUs, renewals, documents, and requests — and guide your next step.";
+      : "Hi! I can answer questions, build your plan to certification, update your info, and even file a document for you. What would you like to do?";
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -139,6 +152,96 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       setNotice("Couldn't reach the assistant. Check your connection and try again.");
     } finally {
       setBusy(false);
+      scrollToBottom();
+    }
+  }
+
+  /** Member surface: upload a document straight from the chat. */
+  async function uploadFile(file: File) {
+    setNotice(null);
+    const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setNotice("That file is over 10MB — please attach a smaller one.");
+      return;
+    }
+    if (!ALLOWED_EXT.includes(ext)) {
+      setNotice("Please attach a PDF, JPG, or PNG.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setNotice("Your session expired — please sign in again.");
+        return;
+      }
+      const path = `${user.id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("member-documents").upload(path, file);
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabase.from("documents").insert({
+        member_id: user.id,
+        document_type: "Uploaded via assistant",
+        file_name: file.name,
+        file_path: path,
+        file_size_kb: Math.round(file.size / 1024),
+        status: "pending",
+      });
+      if (insErr) throw insErr;
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: `📎 Attached a document: ${file.name}` },
+        {
+          role: "assistant",
+          content: `Got it — I've filed **${file.name}** to your documents. It's marked *pending* for our team to review. You can ask me about your documents anytime.`,
+        },
+      ]);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Upload failed — please try again.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+      scrollToBottom();
+    }
+  }
+
+  /** Website surface: email the conversation transcript to the visitor. */
+  async function exportTranscript() {
+    const email = emailValue.trim();
+    if (!email || emailBusy || messages.length === 0) return;
+    setNotice(null);
+    setEmailBusy(true);
+    try {
+      const res = await fetch("/api/assistant/export-transcript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, messages: messages.map(({ role, content }) => ({ role, content })) }),
+      });
+      if (res.status === 503) {
+        setNotice("Emailing the transcript isn't set up yet — please copy the conversation for now.");
+        return;
+      }
+      if (res.status === 429) {
+        setNotice("Too many requests — please wait a moment and try again.");
+        return;
+      }
+      if (res.status === 400) {
+        setNotice("Please enter a valid email address.");
+        return;
+      }
+      if (!res.ok) {
+        setNotice("Couldn't send the email. Please try again.");
+        return;
+      }
+      setNotice(`Sent! Your conversation is on its way to ${email}.`);
+      setEmailOpen(false);
+      setEmailValue("");
+    } catch {
+      setNotice("Couldn't send the email. Check your connection and try again.");
+    } finally {
+      setEmailBusy(false);
       scrollToBottom();
     }
   }
@@ -247,9 +350,9 @@ export function ChatWidget({ surface }: { surface: Surface }) {
           ),
         )}
 
-        {busy && (
+        {(busy || uploading) && (
           <div className="mr-auto flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 text-sm text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Thinking…
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {uploading ? "Uploading…" : "Thinking…"}
           </div>
         )}
 
@@ -258,8 +361,51 @@ export function ChatWidget({ surface }: { surface: Surface }) {
         )}
       </div>
 
+      {/* Website: email-this-conversation bar */}
+      {isWebsite && messages.length > 0 && (
+        <div className="border-t border-line bg-surface px-3 py-2">
+          {emailOpen ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                value={emailValue}
+                onChange={(e) => setEmailValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && exportTranscript()}
+                placeholder="you@email.com"
+                className="h-9 flex-1 rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              />
+              <button
+                type="button"
+                onClick={exportTranscript}
+                disabled={emailBusy || !emailValue.trim()}
+                className="h-9 rounded-lg bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+              >
+                {emailBusy ? "Sending…" : "Send"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmailOpen(false)}
+                aria-label="Cancel"
+                className="rounded-lg p-1.5 text-muted hover:text-ink"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEmailOpen(true)}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-brand hover:text-brand-600"
+            >
+              <Mail className="h-4 w-4" aria-hidden />
+              Email me this conversation
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Persistent suggestion chips (once the conversation has started) */}
-      {messages.length > 0 && (
+      {messages.length > 0 && !emailOpen && (
         <div className="flex gap-2 overflow-x-auto border-t border-line px-3 py-2">
           {suggestions.map((s) => (
             <button
@@ -278,6 +424,30 @@ export function ChatWidget({ surface }: { surface: Surface }) {
       {/* Composer */}
       <div className="border-t border-line bg-surface p-3">
         <div className="flex items-end gap-2">
+          {isMember && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadFile(f);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || busy}
+                aria-label="Attach a document"
+                title="Attach a document (PDF, JPG, PNG)"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Paperclip className="h-4 w-4" aria-hidden />}
+              </button>
+            </>
+          )}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
