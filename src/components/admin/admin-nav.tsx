@@ -16,6 +16,7 @@ type CountKey = keyof AdminCounts;
 const ITEMS: { label: string; href: string; count?: CountKey }[] = [
   { label: "Dashboard", href: "/admin" },
   { label: "Inbox", href: "/admin/inbox" },
+  { label: "Automation", href: "/admin/automation" },
   { label: "Account Approvals", href: "/admin/approvals", count: "approvals" },
   { label: "Documents", href: "/admin/documents", count: "documents" },
   { label: "CEU Review", href: "/admin/ceus", count: "ceus" },
