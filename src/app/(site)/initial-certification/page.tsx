@@ -51,9 +51,9 @@ export default function InitialCertificationPage() {
               accessible. Each credential includes clear requirements, step-by-step application guidance, and access
               to study materials and exam registration.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <CtaButton href="/choose-your-cert-path" size="lg">Choose Your Cert Path</CtaButton>
-              <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full sm:w-auto">Choose Your Cert Path</CtaButton>
+              <CtaButton href="/store" variant="outline" size="lg" className="w-full sm:w-auto">Visit the Store</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
@@ -94,9 +94,9 @@ export default function InitialCertificationPage() {
             </li>
           ))}
         </ol>
-        <div className="mt-8 flex flex-wrap gap-3">
-          {full && <CtaButton href={`/store/${full.slug}`}>Full Application & Exam — <PriceTag product={full} className="ml-1 text-white" /></CtaButton>}
-          {remote && <CtaButton href={`/store/${remote.slug}`} variant="outline">Remote Proctored Option</CtaButton>}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {full && <CtaButton href={`/store/${full.slug}`} className="w-full sm:w-auto">Full Application &amp; Exam — <PriceTag product={full} className="ml-1 text-white" /></CtaButton>}
+          {remote && <CtaButton href={`/store/${remote.slug}`} variant="outline" className="w-full sm:w-auto">Remote Proctored Option</CtaButton>}
         </div>
         <p className="mt-4 text-sm text-muted">
           Already passed the IC&RC exam?{" "}
@@ -106,7 +106,7 @@ export default function InitialCertificationPage() {
         </p>
         <div className="mt-8 rounded-xl border border-line bg-bg p-5">
           <p className="text-muted">Already paid? Submit your application and documents online.</p>
-          <CtaButton href="/account/apply" variant="outline" className="mt-3">Begin Your Application</CtaButton>
+          <CtaButton href="/account/apply" variant="outline" className="mt-3 w-full sm:w-auto">Begin Your Application</CtaButton>
         </div>
       </Section>
 

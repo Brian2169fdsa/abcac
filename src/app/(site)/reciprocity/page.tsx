@@ -40,7 +40,7 @@ export default function ReciprocityPage() {
         <p className="mt-4 text-muted"><strong className="text-ink">Fee:</strong> $150, due upon approval.</p>
         <div className="mt-6">
           {certOnly && (
-            <CtaButton href={`/store/${certOnly.slug}`}>
+            <CtaButton href={`/store/${certOnly.slug}`} className="w-full sm:w-auto">
               Pay Certification Fee — <PriceTag product={certOnly} className="ml-1 text-white" />
             </CtaButton>
           )}
@@ -59,7 +59,7 @@ export default function ReciprocityPage() {
             <li key={c} className="rounded-lg border border-line bg-bg px-4 py-2.5 text-sm text-muted">{c}</li>
           ))}
         </ul>
-        <CtaButton href="/contact" variant="outline" className="mt-6">Request the Reciprocity Form</CtaButton>
+        <CtaButton href="/contact" variant="outline" className="mt-6 w-full sm:w-auto">Request the Reciprocity Form</CtaButton>
       </Section>
     </>
   );
