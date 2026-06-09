@@ -22,7 +22,7 @@ export default function VerifyPage() {
       />
       <Section>
         <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr]">
-          <div className="rounded-xl border border-line bg-surface p-7">
+          <div className="rounded-xl border border-line bg-surface p-5 sm:p-7">
             <VerifyForm />
           </div>
           <div className="space-y-6">

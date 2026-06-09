@@ -16,7 +16,7 @@ const CERTIFICATIONS = ["CADAC", "CCJP", "AADC", "CCS", "CPS", "CPRS"] as const;
 
 function Fieldset({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-xl border border-line bg-surface p-6">
+    <fieldset className="rounded-xl border border-line bg-surface p-4 sm:p-6">
       <legend className="px-2 font-display text-lg font-semibold text-ink">{title}</legend>
       <div className="mt-2 space-y-4">{children}</div>
     </fieldset>
@@ -166,10 +166,10 @@ export function BoardApplicationForm() {
       </Fieldset>
 
       <Fieldset title="Certifications (check all that apply)">
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-1 sm:grid-cols-3">
           {CERTIFICATIONS.map((c) => (
-            <label key={c} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="certifications" value={c} className="h-4 w-4 accent-brand" />
+            <label key={c} className="flex min-h-[44px] items-center gap-2 text-sm">
+              <input type="checkbox" name="certifications" value={c} className="h-5 w-5 accent-brand" />
               {c}
             </label>
           ))}
@@ -203,16 +203,16 @@ export function BoardApplicationForm() {
         <div>
           <p className={label}>Are you available to attend quarterly board meetings (in person or virtually)?</p>
           <div className="flex gap-6 text-sm">
-            <label className="flex items-center gap-2"><input type="radio" name="quarterlyMeetings" value="Yes" className="accent-brand" defaultChecked /> Yes</label>
-            <label className="flex items-center gap-2"><input type="radio" name="quarterlyMeetings" value="No" className="accent-brand" /> No</label>
+            <label className="flex min-h-[44px] items-center gap-2"><input type="radio" name="quarterlyMeetings" value="Yes" className="h-5 w-5 accent-brand" defaultChecked /> Yes</label>
+            <label className="flex min-h-[44px] items-center gap-2"><input type="radio" name="quarterlyMeetings" value="No" className="h-5 w-5 accent-brand" /> No</label>
           </div>
           <input name="quarterlyExplain" className={`${field} mt-2`} placeholder="If no, please explain" />
         </div>
         <div>
           <p className={label}>Are you willing to participate in board committees or special projects as needed?</p>
           <div className="flex gap-6 text-sm">
-            <label className="flex items-center gap-2"><input type="radio" name="committees" value="Yes" className="accent-brand" defaultChecked /> Yes</label>
-            <label className="flex items-center gap-2"><input type="radio" name="committees" value="No" className="accent-brand" /> No</label>
+            <label className="flex min-h-[44px] items-center gap-2"><input type="radio" name="committees" value="Yes" className="h-5 w-5 accent-brand" defaultChecked /> Yes</label>
+            <label className="flex min-h-[44px] items-center gap-2"><input type="radio" name="committees" value="No" className="h-5 w-5 accent-brand" /> No</label>
           </div>
           <input name="committeesExplain" className={`${field} mt-2`} placeholder="If no, please explain" />
         </div>
@@ -230,7 +230,7 @@ export function BoardApplicationForm() {
       </Fieldset>
 
       <label className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4 text-sm">
-        <input type="checkbox" name="acknowledge" value="yes" className="mt-0.5 h-4 w-4 accent-brand" required />
+        <input type="checkbox" name="acknowledge" value="yes" className="mt-0.5 h-5 w-5 shrink-0 accent-brand" required />
         <span>
           I confirm that the information provided in this application is accurate and complete. I understand that
           submitting this application does not guarantee selection and that board membership is subject to board
@@ -240,7 +240,7 @@ export function BoardApplicationForm() {
 
       {status === "error" && <p className="text-sm text-red-600">{errorMsg}</p>}
 
-      <Button type="submit" disabled={status === "sending"} size="lg">
+      <Button type="submit" disabled={status === "sending"} size="lg" className="w-full sm:w-auto">
         {status === "sending" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Submit Application"}
       </Button>
     </form>

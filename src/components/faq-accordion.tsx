@@ -19,16 +19,16 @@ export function FaqAccordion({ items }: { items: readonly Faq[] }) {
               type="button"
               aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : i)}
-              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+              className="flex w-full min-h-[44px] items-center justify-between gap-3 px-4 py-4 text-left sm:gap-4 sm:px-5"
             >
-              <span className="font-semibold text-brand">{f.q}</span>
+              <span className="break-words font-semibold text-brand">{f.q}</span>
               <ChevronDown
                 className={cn("h-5 w-5 shrink-0 text-brand transition-transform", isOpen && "rotate-180")}
                 aria-hidden
               />
             </button>
             {isOpen && (
-              <div className="px-5 pb-5">
+              <div className="px-4 pb-5 sm:px-5">
                 <p className="text-sm text-muted">{f.a}</p>
               </div>
             )}
