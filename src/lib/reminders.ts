@@ -111,7 +111,7 @@ export function computeReminders(ctx: ReminderContext): Reminder[] {
       out.push({
         type: `renewal_${tier}` as ReminderType,
         dedupeKey: `renewal:${cert.id}:${tier}`,
-        subject: `Your ${label} ${days < 0 ? "has expired" : `renews in ${days} days`}`,
+        subject: `Your ${label} ${when}`,
         body: `${hello}\n\nYour ${label} ${when}. Renew now in your ABCAC member portal to keep your credential active.`,
       });
     }
