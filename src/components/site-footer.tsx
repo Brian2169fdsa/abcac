@@ -13,7 +13,7 @@ export function SiteFooter() {
   const c = siteConfig.contact;
   return (
     <footer className="border-t border-line bg-surface">
-      <div className="mx-auto grid w-full max-w-content gap-10 px-5 py-14 md:grid-cols-3 md:px-8">
+      <div className="mx-auto grid w-full max-w-content grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 sm:gap-10 sm:px-5 md:grid-cols-3 md:px-8 md:py-14">
         <div>
           <div className="font-display text-lg font-bold text-brand">{siteConfig.shortName}</div>
           <address className="mt-3 not-italic text-sm text-muted">
@@ -31,10 +31,10 @@ export function SiteFooter() {
 
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wide text-ink">Quick Links</h4>
-          <ul className="mt-3 space-y-2 text-sm text-muted">
+          <ul className="mt-3 space-y-1 text-sm text-muted">
             {quickLinks.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="hover:text-brand">{l.label}</Link>
+                <Link href={l.href} className="inline-flex min-h-[44px] items-center hover:text-brand sm:min-h-0">{l.label}</Link>
               </li>
             ))}
           </ul>
@@ -52,7 +52,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-line">
-        <div className="mx-auto w-full max-w-content px-5 py-6 text-xs text-muted md:px-8">{siteConfig.legal}</div>
+        <div className="mx-auto w-full max-w-content px-4 py-6 text-xs text-muted sm:px-5 md:px-8">{siteConfig.legal}</div>
       </div>
     </footer>
   );

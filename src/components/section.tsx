@@ -15,9 +15,14 @@ interface SectionProps {
 export function Section({ children, eyebrow, title, intro, className, compact, surface }: SectionProps) {
   return (
     <section className={cn(surface && "bg-surface", className)}>
-      <div className={cn("mx-auto w-full max-w-content px-5 md:px-8", compact ? "py-10 md:py-14" : "py-16 md:py-24")}>
+      <div
+        className={cn(
+          "mx-auto w-full max-w-content px-4 sm:px-6 lg:px-8",
+          compact ? "py-10 sm:py-12 md:py-14" : "py-12 sm:py-16 lg:py-24",
+        )}
+      >
         {(eyebrow || title || intro) && (
-          <div className="mb-10 max-w-2xl">
+          <div className="mb-8 max-w-2xl sm:mb-10">
             {eyebrow && (
               <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-accent-strong">{eyebrow}</p>
             )}
