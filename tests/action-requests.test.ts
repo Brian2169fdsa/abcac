@@ -70,9 +70,14 @@ describe("decideRequest", () => {
     const res = await decideRequest("name_change_requests", "r1", "approve", "looks good");
     expect(res).toEqual({ ok: true });
 
-    // Row update sets status completed + reviewer + decided + admin_notes.
+    // Row update sets status completed + reviewed_at + admin_notes. The
+    // name_change_requests table has NO reviewed_by / decided_at columns
+    // (those exist only on reciprocity_requests), so they must NOT be written.
     const upd = adminRef.current!.callsFor("name_change_requests", "update")[0];
-    expect(upd.payload).toMatchObject({ status: "completed", reviewed_by: "admin1", admin_notes: "looks good" });
+    expect(upd.payload).toMatchObject({ status: "completed", admin_notes: "looks good" });
+    expect(upd.payload).toHaveProperty("reviewed_at");
+    expect(upd.payload).not.toHaveProperty("reviewed_by");
+    expect(upd.payload).not.toHaveProperty("decided_at");
     expect(upd.filters).toContainEqual({ col: "id", val: "r1" });
 
     // Canonical profile name written: "Jane Q Doe" -> first "Jane", last "Q Doe".
@@ -112,7 +117,11 @@ describe("decideRequest", () => {
     const res = await decideRequest("name_change_requests", "r1", "reopen");
     expect(res).toEqual({ ok: true });
     const upd = adminRef.current!.callsFor("name_change_requests", "update")[0];
-    expect(upd.payload).toMatchObject({ status: "pending", reviewed_at: null, reviewed_by: null, decided_at: null });
+    // name_change_requests lacks reviewed_by / decided_at, so reopen must only
+    // null the reviewed_at column it actually has.
+    expect(upd.payload).toMatchObject({ status: "pending", reviewed_at: null });
+    expect(upd.payload).not.toHaveProperty("reviewed_by");
+    expect(upd.payload).not.toHaveProperty("decided_at");
   });
 
   it("surfaces an update error", async () => {
@@ -129,6 +138,35 @@ describe("decideRequest", () => {
       table === "reciprocity_requests" && op === "update" ? { data: { member_id: null } } : { data: null };
     setup({ user: { id: "s1" }, callerRole: "superadmin", adminResult });
     expect(await decideRequest("reciprocity_requests", "r1", "approve")).toEqual({ ok: true });
+  });
+
+  it("approve reciprocity: writes reviewed_by + decided_at (columns exist on this table)", async () => {
+    const adminResult: ResultFor = (table, op) =>
+      table === "reciprocity_requests" && op === "update" ? { data: { member_id: null } } : { data: null };
+    setup({ user: { id: "admin1" }, callerRole: "admin", adminResult });
+    expect(await decideRequest("reciprocity_requests", "r1", "approve", "ok")).toEqual({ ok: true });
+    const upd = adminRef.current!.callsFor("reciprocity_requests", "update")[0];
+    expect(upd.payload).toMatchObject({
+      status: "completed",
+      reviewed_by: "admin1",
+      admin_notes: "ok",
+    });
+    expect(upd.payload).toHaveProperty("reviewed_at");
+    expect(upd.payload).toHaveProperty("decided_at");
+  });
+
+  it("reopen reciprocity: nulls reviewed_by + decided_at", async () => {
+    const adminResult: ResultFor = (table, op) =>
+      table === "reciprocity_requests" && op === "update" ? { data: { member_id: null } } : { data: null };
+    setup({ user: { id: "admin1" }, callerRole: "admin", adminResult });
+    expect(await decideRequest("reciprocity_requests", "r1", "reopen")).toEqual({ ok: true });
+    const upd = adminRef.current!.callsFor("reciprocity_requests", "update")[0];
+    expect(upd.payload).toMatchObject({
+      status: "pending",
+      reviewed_at: null,
+      reviewed_by: null,
+      decided_at: null,
+    });
   });
 });
 

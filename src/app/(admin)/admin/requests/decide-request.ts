@@ -51,15 +51,25 @@ export async function decideRequest(
   //    status vocabulary so existing queues/badges stay consistent.
   const status = decision === "approve" ? "completed" : decision === "deny" ? "rejected" : "pending";
   const now = new Date().toISOString();
+
+  // reviewed_by / decided_at exist ONLY on reciprocity_requests (migration 017).
+  // name_change_requests (migration 001) has only status/admin_notes/
+  // submitted_at/reviewed_at, so writing those columns to it errors
+  // ("column does not exist") and the decision never persists.
+  const hasReviewerCols = table === "reciprocity_requests";
   const patch: Record<string, unknown> = { status };
   if (decision === "reopen") {
     patch.reviewed_at = null;
-    patch.reviewed_by = null;
-    patch.decided_at = null;
+    if (hasReviewerCols) {
+      patch.reviewed_by = null;
+      patch.decided_at = null;
+    }
   } else {
     patch.reviewed_at = now;
-    patch.reviewed_by = user.id;
-    patch.decided_at = now;
+    if (hasReviewerCols) {
+      patch.reviewed_by = user.id;
+      patch.decided_at = now;
+    }
     if (note) patch.admin_notes = note;
   }
 
