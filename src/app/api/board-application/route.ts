@@ -78,9 +78,28 @@ export async function POST(req: Request) {
     ? attachments.filter((a: Attachment) => a && a.filename && a.content)
     : [];
 
-  const resendKey = process.env.RESEND_API_KEY;
+  // Source of truth: ALWAYS persist the text summary to contact_messages so the
+  // admin Inbox has a record, regardless of the (best-effort) email outcome.
+  // NOTE: attachments (resume/references) are sent only in the email below — the
+  // persisted summary records their filenames but not their content.
+  const message = `BOARD MEMBER APPLICATION\n\n${summaryRows.map(([k, v]) => `${k}: ${v ?? "—"}`).join("\n")}${
+    validAttachments.length ? `\n\nAttachments submitted: ${validAttachments.map((a) => a.filename).join(", ")}` : ""
+  }`;
+  let persisted = false;
+  try {
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin
+      .from("contact_messages")
+      .insert({ name: fullName, email, phone: phone ?? null, message });
+    if (error) throw error;
+    persisted = true;
+  } catch {
+    // Persistence failed — fall through; we may still notify via email below.
+  }
 
-  // Preferred path: email the office via Resend (with resume/reference attachments).
+  // Best-effort notification: email the office via Resend (with attachments).
+  let emailed = false;
+  const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -95,26 +114,16 @@ export async function POST(req: Request) {
           attachments: validAttachments.map((a) => ({ filename: a.filename, content: a.content })),
         }),
       });
-      if (res.ok) return NextResponse.json({ ok: true });
+      emailed = res.ok;
     } catch {
-      // fall through to Supabase
+      // Ignore — persistence above is the durable record.
     }
   }
 
-  // Fallback: persist the text summary to contact_messages if present (attachments dropped).
-  try {
-    const admin = createSupabaseAdminClient();
-    const message = `BOARD MEMBER APPLICATION\n\n${summaryRows.map(([k, v]) => `${k}: ${v ?? "—"}`).join("\n")}${
-      validAttachments.length ? `\n\nAttachments submitted: ${validAttachments.map((a) => a.filename).join(", ")}` : ""
-    }`;
-    const { error } = await admin
-      .from("contact_messages")
-      .insert({ name: fullName, email, phone: phone ?? null, message });
-    if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "delivery_unavailable" }, { status: 502 });
-  }
+  // Success if we either persisted the record or delivered the email.
+  if (persisted || emailed) return NextResponse.json({ ok: true });
+
+  return NextResponse.json({ error: "delivery_unavailable" }, { status: 502 });
 }
 
 function escapeHtml(s: string) {
