@@ -26,10 +26,10 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         <ArrowLeft className="h-4 w-4" aria-hidden /> Back to store
       </Link>
 
-      <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:gap-10">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">{product.category}</p>
-          <h1 className="mt-2">{product.name}</h1>
+          <h1 className="mt-2 break-words">{product.name}</h1>
           <div className="mt-4">
             <PriceTag product={product} className="text-3xl" />
           </div>

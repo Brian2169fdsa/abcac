@@ -25,7 +25,7 @@ export default function StorePage() {
       />
       {categories.map((category) => (
         <Section key={category} title={category} compact>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
             {products
               .filter((p) => p.category === category)
               .map((p) => (
