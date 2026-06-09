@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp } from "@/lib/public-rate-limit";
 import { siteConfig } from "@/lib/site-config";
 
 export const runtime = "nodejs";
@@ -10,6 +11,16 @@ interface Attachment {
 }
 
 export async function POST(req: Request) {
+  // Per-IP abuse protection, matching the other public form endpoints.
+  const ip = getClientIp(req);
+  const rl = checkRateLimit("board-application", ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let body: Awaited<ReturnType<Request["json"]>>;
   try {
     body = await req.json();
