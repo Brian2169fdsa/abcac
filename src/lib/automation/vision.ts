@@ -279,8 +279,7 @@ export async function parseDocument(
       messages: [
         {
           role: "user",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          content: [fileBlock as any, { type: "text", text: prompt }],
+          content: [fileBlock as never, { type: "text", text: prompt }],
         },
       ],
     });
