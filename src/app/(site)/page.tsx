@@ -50,21 +50,21 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-[1fr_1.35fr] md:px-10 md:py-24 lg:px-16">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[1fr_1.35fr] md:gap-12 md:px-10 md:py-24 lg:px-16">
           {/* Left: copy */}
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
               Certification &amp; Testing Support
             </p>
             <h1>{siteConfig.tagline}</h1>
-            <p className="mt-5 max-w-xl text-lg text-muted">
+            <p className="mt-5 max-w-xl text-base text-muted sm:text-lg">
               Apply for initial certification, renew your credentials, register for IC&amp;RC exams, earn
               CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <CtaButton href="/choose-your-cert-path" size="lg">Choose Your Cert Path</CtaButton>
-              <CtaButton href="/store" variant="outline" size="lg">Visit the Store</CtaButton>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center sm:w-auto">Choose Your Cert Path</CtaButton>
+              <CtaButton href="/store" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Visit the Store</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
@@ -108,7 +108,7 @@ export default function HomePage() {
 
       {/* Services */}
       <Section eyebrow="What we do" title="Certification services for every stage of your career" surface>
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((s) => (
             <ServiceCard key={s.title} {...s} linkLabel="Learn more" />
           ))}
@@ -116,14 +116,14 @@ export default function HomePage() {
       </Section>
 
       {/* Why it matters */}
-      <section className="bg-info text-white">
-        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-12 px-6 py-16 md:grid-cols-2 md:px-10 md:py-24 lg:px-16">
+      <section className="overflow-hidden bg-info text-white">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12 md:px-10 md:py-24 lg:px-16">
           {/* Left: copy */}
           <div>
             <div className="mb-4 h-1 w-10 rounded bg-brand" aria-hidden />
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">Why It Matters</p>
             <h2 className="text-white">Why Addiction Counselors Matter</h2>
-            <p className="mt-5 max-w-xl text-lg text-white/75">
+            <p className="mt-5 max-w-xl text-base text-white/75 sm:text-lg">
               Addictions counselors help people reclaim their lives from substance use disorders. They provide
               support, education, and treatment planning to individuals, families, and communities. Whether working
               in hospitals, recovery centers, or private practice, these professionals guide clients through one of
@@ -272,7 +272,7 @@ export default function HomePage() {
 
       {/* Become a Board Member */}
       <Section>
-        <div className="rounded-2xl border border-line bg-bg p-8 md:p-12">
+        <div className="rounded-2xl border border-line bg-bg p-6 sm:p-8 md:p-12">
           <div className="grid items-center gap-10 md:grid-cols-2">
             {/* Left: text + button */}
             <div>
