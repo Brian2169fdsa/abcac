@@ -10,6 +10,12 @@ import {
   computeDueFromExpiration,
   type CertSchedule,
 } from "@/lib/schedules";
+import {
+  buildMemberPlan,
+  type AccountStatus,
+  type PlanStep,
+  type MemberPlanInput,
+} from "@/lib/member-plan";
 
 /**
  * MEMBER tool definitions + executors.
@@ -36,6 +42,52 @@ export interface MemberToolContext {
 
 const ALLOWED_PROFILE_FIELDS = ["name", "phone", "address", "city", "state", "zip"] as const;
 const CEU_CATEGORIES = ["General", "Ethics", "Cultural Diversity", "HIV/AIDS"];
+
+/** Profile fields the dashboard counts toward completeness (mirror account page). */
+const PROFILE_COMPLETENESS_FIELDS = [
+  "first_name",
+  "last_name",
+  "phone",
+  "address_line1",
+  "city",
+  "state",
+  "zip_code",
+] as const;
+
+/** Profile completeness 0–100, mirroring the dashboard's `completeness()`. */
+function profileCompleteness(
+  profile: Record<string, unknown> | null | undefined,
+): number {
+  if (!profile) return 0;
+  const filled = PROFILE_COMPLETENESS_FIELDS.filter((f) => {
+    const v = profile[f];
+    return v != null && String(v).trim() !== "";
+  }).length;
+  return Math.round((filled / PROFILE_COMPLETENESS_FIELDS.length) * 100);
+}
+
+const PLAN_STATUS_LABEL: Record<PlanStep["status"], string> = {
+  done: "Done",
+  in_progress: "In progress",
+  todo: "To do",
+};
+
+/**
+ * Render the ordered plan steps as a clear numbered text summary for the model:
+ * title, what to do, due date (when the step has one), and status.
+ */
+export function formatPlanSteps(steps: PlanStep[]): string {
+  if (steps.length === 0) {
+    return "You're all caught up — there are no outstanding steps on your certification plan right now.";
+  }
+  const lines = steps.map((s, i) => {
+    const parts = [`${i + 1}. ${s.title} — ${s.detail}`];
+    if (s.dueDate) parts.push(`Due: ${s.dueDate}.`);
+    parts.push(`Status: ${PLAN_STATUS_LABEL[s.status]}.`);
+    return parts.join(" ");
+  });
+  return `Your personalized certification plan:\n${lines.join("\n")}`;
+}
 
 export function getMemberTools(): AssistantTool[] {
   return [
@@ -76,6 +128,12 @@ export function getMemberTools(): AssistantTool[] {
       name: "get_my_requests",
       description:
         "List the member's submitted requests across name-change, verification, and reciprocity, with their statuses.",
+      input_schema: { type: "object", properties: {} },
+    },
+    {
+      name: "create_my_plan",
+      description:
+        "Read-only. Build the member a personalized, ordered, step-by-step plan toward certification / renewal from their OWN data (profile completeness, account/application stage, requested documents, CEU shortfall, credential expiration). Returns a numbered checklist with what to do, due dates where they apply, and each step's status. Does NOT write or submit anything.",
       input_schema: { type: "object", properties: {} },
     },
     {
@@ -346,6 +404,92 @@ export function getMemberExecutors(ctx: MemberToolContext): Record<string, ToolE
         verification_requests: verifications ?? [],
         reciprocity_requests: reciprocity ?? [],
       });
+    },
+
+    async create_my_plan() {
+      // Read the member's OWN rows only — RLS scopes every select to auth.uid().
+      const [
+        { data: profile },
+        { data: certs },
+        { data: ceus },
+        { data: apps },
+        { count: openDocCount },
+        schedules,
+      ] = await Promise.all([
+        sb
+          .from("profiles")
+          .select(
+            "first_name,last_name,phone,address_line1,city,state,zip_code",
+          )
+          .eq("id", uid)
+          .maybeSingle(),
+        sb
+          .from("certifications")
+          .select("cert_type,status,expiration_date")
+          .eq("member_id", uid),
+        sb.from("ceu_records").select("hours,category,status").eq("member_id", uid),
+        sb
+          .from("applications")
+          .select("status,submitted_at")
+          .eq("member_id", uid)
+          .order("submitted_at", { ascending: false }),
+        sb
+          .from("document_requests")
+          .select("*", { count: "exact", head: true })
+          .eq("member_id", uid)
+          .eq("status", "open"),
+        fetchSchedules(),
+      ]);
+
+      const certifications = (certs ?? []) as Array<{
+        cert_type: string | null;
+        status: string | null;
+        expiration_date: string | null;
+      }>;
+      const records = (ceus as CeuLike[]) ?? [];
+      const applications = (apps ?? []) as Array<{ status: string | null }>;
+
+      const activeCerts = certifications.filter((c) => c.status === "active");
+      // CEU compliance against the soonest-expiring active credential's schedule
+      // (same primary-cert logic the dashboard uses), else the 40/3/3 default.
+      const primaryCert = activeCerts
+        .slice()
+        .sort((a, b) => {
+          const aD = a.expiration_date ? new Date(a.expiration_date).getTime() : Infinity;
+          const bD = b.expiration_date ? new Date(b.expiration_date).getTime() : Infinity;
+          return aD - bD;
+        })[0];
+      const primarySchedule = findScheduleFor(schedules, primaryCert?.cert_type);
+      const ceuCompliance = computeCompliance(
+        records,
+        requirementsFromSchedule(primarySchedule),
+      );
+
+      // Schedule-aware next-due date per cert (mirrors the dashboard's planCerts).
+      const planCerts = certifications.map((c) => {
+        const sched = findScheduleFor(schedules, c.cert_type);
+        const nextDue =
+          sched && c.expiration_date
+            ? computeDueFromExpiration(sched, c.expiration_date).nextDueDate
+            : c.expiration_date ?? null;
+        return { cert_type: c.cert_type, status: c.status, expiration_date: nextDue };
+      });
+
+      const latestApp = applications[0];
+      const accountStatus: AccountStatus =
+        activeCerts.length > 0
+          ? "active"
+          : ((latestApp?.status as AccountStatus | undefined) ?? "none");
+
+      const input: MemberPlanInput = {
+        profileCompleteness: profileCompleteness(profile),
+        accountStatus,
+        certifications: planCerts,
+        ceuCompliance,
+        missingDocuments: openDocCount ?? 0,
+      };
+
+      return formatPlanSteps(buildMemberPlan(input));
     },
 
     async log_ceu(input) {
