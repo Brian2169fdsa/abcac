@@ -44,9 +44,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "too_long" }, { status: 400 });
   }
 
-  const resendKey = process.env.RESEND_API_KEY;
+  // Source of truth: ALWAYS persist the message so the admin Inbox has a record,
+  // regardless of whether the (best-effort) email notification succeeds.
+  let persisted = false;
+  try {
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin
+      .from("contact_messages")
+      .insert({ name, email, phone: phone ?? null, message });
+    if (error) throw error;
+    persisted = true;
+  } catch {
+    // Persistence failed — fall through; we may still notify via email below.
+  }
 
-  // Preferred path: email ABCAC via Resend.
+  // Best-effort notification: email ABCAC via Resend.
+  let emailed = false;
+  const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -63,22 +77,17 @@ export async function POST(req: Request) {
                  <p><strong>Message:</strong></p><p>${escapeHtml(message)}</p>`,
         }),
       });
-      if (res.ok) return NextResponse.json({ ok: true });
+      emailed = res.ok;
     } catch {
-      // fall through to Supabase
+      // Ignore — persistence above is the durable record.
     }
   }
 
-  // Fallback: persist to an existing contact_messages table if present.
-  try {
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin.from("contact_messages").insert({ name, email, phone: phone ?? null, message });
-    if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch {
-    // Neither path available — surface an error so the form shows the retry message.
-    return NextResponse.json({ error: "delivery_unavailable" }, { status: 502 });
-  }
+  // Success if we either persisted the record or delivered the email.
+  if (persisted || emailed) return NextResponse.json({ ok: true });
+
+  // Neither path worked — surface an error so the form shows the retry message.
+  return NextResponse.json({ error: "delivery_unavailable" }, { status: 502 });
 }
 
 function escapeHtml(s: string) {

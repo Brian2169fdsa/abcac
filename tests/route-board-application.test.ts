@@ -62,7 +62,7 @@ describe("POST /api/board-application", () => {
     expect(insertMock).not.toHaveBeenCalled();
   });
 
-  it("success (email unset): falls back to supabase insert with a text summary", async () => {
+  it("success (email unset): persists a text summary to supabase", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(200);
@@ -93,7 +93,7 @@ describe("POST /api/board-application", () => {
     expect(row.message).toContain("Attachments submitted: resume.pdf");
   });
 
-  it("email best-effort: returns ok via email path when Resend succeeds (no insert)", async () => {
+  it("always persists AND emails when Resend succeeds", async () => {
     process.env.RESEND_API_KEY = "re_test";
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
@@ -102,10 +102,10 @@ describe("POST /api/board-application", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(insertMock).not.toHaveBeenCalled();
+    expect(insertMock).toHaveBeenCalledTimes(1); // persisted regardless of email
   });
 
-  it("falls back to supabase when the email send throws", async () => {
+  it("still returns ok (persisted) when the email send throws", async () => {
     process.env.RESEND_API_KEY = "re_test";
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
     const res = await POST(makeReq(valid));
@@ -114,7 +114,7 @@ describe("POST /api/board-application", () => {
     expect(insertMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 502 delivery_unavailable when neither email nor insert works", async () => {
+  it("returns 502 delivery_unavailable when neither insert nor email works", async () => {
     insertMock.mockResolvedValue({ data: null, error: { message: "no table" } });
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(502);

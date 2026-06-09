@@ -87,7 +87,7 @@ describe("POST /api/contact", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("success (email unset): falls back to supabase insert with the right shape", async () => {
+  it("success (email unset): persists to supabase with the right shape", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(200);
@@ -109,18 +109,19 @@ describe("POST /api/contact", () => {
     );
   });
 
-  it("email best-effort: returns ok via email path when Resend succeeds (no insert)", async () => {
+  it("always persists AND emails when Resend succeeds", async () => {
     process.env.RESEND_API_KEY = "re_test";
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, { status: 200 }),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
-    expect(insertMock).not.toHaveBeenCalled();
+    expect(insertMock).toHaveBeenCalledTimes(1); // persisted regardless of email
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to supabase when the email send throws", async () => {
+  it("still returns ok (persisted) when the email send throws", async () => {
     process.env.RESEND_API_KEY = "re_test";
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
     const res = await POST(makeReq(valid));
@@ -129,7 +130,16 @@ describe("POST /api/contact", () => {
     expect(insertMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 502 delivery_unavailable when neither email nor insert works", async () => {
+  it("still returns ok (emailed) when persistence fails but email succeeds", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    insertMock.mockResolvedValue({ data: null, error: { message: "no table" } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+    const res = await POST(makeReq(valid));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("returns 502 delivery_unavailable when neither insert nor email works", async () => {
     insertMock.mockResolvedValue({ data: null, error: { message: "no table" } });
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(502);
