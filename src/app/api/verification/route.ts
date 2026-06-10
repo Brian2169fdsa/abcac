@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
 import { checkRateLimit, getClientIp } from "@/lib/public-rate-limit";
+import { dispatch } from "@/lib/automation/dispatch";
 
 export const runtime = "nodejs";
 
@@ -72,29 +73,51 @@ export async function POST(req: Request) {
   }
 
   // Insert via the service-role client (bypasses RLS; anon has no INSERT policy).
+  let verificationId: string | null = null;
   try {
     const admin = createSupabaseAdminClient();
     const purpose = reason;
-    const { error } = await admin.from("verification_requests").insert({
-      member_id: null,
-      source: "public",
-      requester_name: requesterName,
-      requester_email: requesterEmail,
-      organization: organization || null,
-      subject_name: subjectName || null,
-      subject_cert_number: subjectCertNumber || null,
-      // Map onto the existing NOT NULL portal columns so legacy admin views and
-      // triggers keep working: recipient_* = the requester, purpose = reason.
-      recipient_name: requesterName,
-      recipient_email: requesterEmail,
-      purpose,
-      notes: reason,
-      status: "pending",
-    });
+    const { data: inserted, error } = await admin
+      .from("verification_requests")
+      .insert({
+        member_id: null,
+        source: "public",
+        requester_name: requesterName,
+        requester_email: requesterEmail,
+        organization: organization || null,
+        subject_name: subjectName || null,
+        subject_cert_number: subjectCertNumber || null,
+        // Map onto the existing NOT NULL portal columns so legacy admin views and
+        // triggers keep working: recipient_* = the requester, purpose = reason.
+        recipient_name: requesterName,
+        recipient_email: requesterEmail,
+        purpose,
+        notes: reason,
+        status: "pending",
+      })
+      .select("id")
+      .maybeSingle();
     if (error) throw error;
+    verificationId = (inserted as { id?: string } | null)?.id ?? null;
   } catch (err) {
     console.error("verification insert failed:", err);
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
+  }
+
+  // Hand the new request to the automation engine. Inert unless the
+  // `credential_verification` workflow is enabled in the Automation console; when
+  // on, a clean cert-number match auto-confirms (everything else escalates).
+  // Best-effort: a dispatch failure must never break the public submission.
+  if (verificationId) {
+    try {
+      await dispatch({
+        workflow: "credential_verification",
+        entityType: "verification_request",
+        entityId: verificationId,
+      });
+    } catch (err) {
+      console.error("verification dispatch failed:", err);
+    }
   }
 
   // Best-effort confirmation email to the requester (inline Resend, graceful).

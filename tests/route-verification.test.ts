@@ -1,13 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // --- Mocks -----------------------------------------------------------------
-// Chainable fake supabase admin client. `insert` is a spy returning {error}.
-const insertMock = vi.fn(async () => ({ data: null, error: null as unknown }));
+// Chainable fake supabase admin client. `insert(...).select(...).maybeSingle()`
+// resolves to `insertResult`; the spy records the inserted payload.
+let insertResult: { data: unknown; error: unknown } = { data: { id: "ver-1" }, error: null };
+const maybeSingleMock = vi.fn(async () => insertResult);
+const selectMock = vi.fn(() => ({ maybeSingle: maybeSingleMock }));
+const insertMock = vi.fn(() => ({ select: selectMock }));
 const fromMock = vi.fn(() => ({ insert: insertMock }));
 const createSupabaseAdminClient = vi.fn(() => ({ from: fromMock }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient: () => createSupabaseAdminClient(),
+}));
+
+// The automation engine is covered by its own suite; stub dispatch so this route
+// test stays focused on validation + persistence + email behavior.
+vi.mock("@/lib/automation/dispatch", () => ({
+  dispatch: vi.fn(async () => ({ status: "skipped_disabled" })),
 }));
 
 const checkRateLimit = vi.fn(() => ({ ok: true, retryAfter: 0 }));
@@ -38,7 +48,9 @@ const valid = {
 
 beforeEach(() => {
   insertMock.mockClear();
-  insertMock.mockResolvedValue({ data: null, error: null });
+  selectMock.mockClear();
+  maybeSingleMock.mockClear();
+  insertResult = { data: { id: "ver-1" }, error: null };
   fromMock.mockClear();
   createSupabaseAdminClient.mockClear();
   checkRateLimit.mockReset();
@@ -137,7 +149,7 @@ describe("POST /api/verification", () => {
   });
 
   it("returns 502 unavailable when the insert errors", async () => {
-    insertMock.mockResolvedValue({ data: null, error: { message: "db down" } });
+    insertResult = { data: null, error: { message: "db down" } };
     const res = await POST(makeReq(valid));
     expect(res.status).toBe(502);
     await expect(res.json()).resolves.toEqual({ error: "unavailable" });

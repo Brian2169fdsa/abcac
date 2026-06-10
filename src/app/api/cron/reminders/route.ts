@@ -11,6 +11,7 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { runRemindersForAll } from "@/lib/reminders-runner";
+import { runAutomationSweep } from "@/lib/automation/sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,15 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const admin = createSupabaseAdminClient();
     const summary = await runRemindersForAll(admin);
-    return Response.json({ ok: true, ...summary });
+    // Also run the automation scan-sweep here so it shares this daily schedule
+    // (no extra Vercel cron entry). Best-effort: never fail reminders over it.
+    let sweep: Record<string, unknown> | { error: string };
+    try {
+      sweep = await runAutomationSweep();
+    } catch (err) {
+      sweep = { error: err instanceof Error ? err.message : "sweep_failed" };
+    }
+    return Response.json({ ok: true, ...summary, sweep });
   } catch (err) {
     return Response.json(
       { ok: false, error: err instanceof Error ? err.message : "reminder_run_failed" },

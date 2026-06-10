@@ -15,6 +15,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient: () => createSupabaseAdminClient(),
 }));
 
+// The route also runs the automation sweep on this schedule; mock it so this
+// test stays focused on the reminders auth + response shaping.
+const runAutomationSweep = vi.fn(async () => ({ ceu_review: { skipped: "disabled" } }));
+vi.mock("@/lib/automation/sweep", () => ({
+  runAutomationSweep: () => runAutomationSweep(),
+}));
+
 import { GET } from "@/app/api/cron/reminders/route";
 
 function req(headers: Record<string, string> = {}): Request {
@@ -76,7 +83,13 @@ describe("cron reminders route — authorized run", () => {
     const res = await GET(req({ authorization: "Bearer s3cret" }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, membersProcessed: 3, remindersSent: 5, emailsSent: 2 });
+    expect(await res.json()).toEqual({
+      ok: true,
+      membersProcessed: 3,
+      remindersSent: 5,
+      emailsSent: 2,
+      sweep: { ceu_review: { skipped: "disabled" } },
+    });
     // Runs against the admin client it constructed.
     expect(createSupabaseAdminClient).toHaveBeenCalledTimes(1);
     expect(runRemindersForAll).toHaveBeenCalledTimes(1);

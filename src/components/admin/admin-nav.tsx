@@ -14,6 +14,7 @@ export type AdminCounts = {
 type CountKey = keyof AdminCounts;
 
 const ITEMS: { label: string; href: string; count?: CountKey }[] = [
+  { label: "AI Agent", href: "/admin/agent" },
   { label: "Dashboard", href: "/admin" },
   { label: "Inbox", href: "/admin/inbox" },
   { label: "Automation", href: "/admin/automation" },
