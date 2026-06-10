@@ -155,6 +155,39 @@ export const REGISTRY: Record<string, Executor> = {
     if (error) return { ok: false, error: error.message };
     return { ok: true, before, after: { id, status } };
   },
+
+  // Create an unpaid invoice (invoice_generation: renewal billing). Mirrors the
+  // admin "new invoice" write. Idempotent — if an unpaid invoice with the same
+  // description already exists for the member, no-op rather than double-billing.
+  create_invoice: async (admin, args) => {
+    const memberId = str(args.memberId);
+    const description = str(args.description);
+    const amount = typeof args.amountCents === "number" ? args.amountCents : Number(args.amountCents);
+    if (!memberId || !description || !Number.isFinite(amount) || amount <= 0) {
+      return { ok: false, error: "bad_args" };
+    }
+    const cents = Math.round(amount);
+    const { data: existing } = await admin
+      .from("invoices")
+      .select("id")
+      .eq("member_id", memberId)
+      .eq("description", description)
+      .eq("status", "unpaid")
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      return { ok: true, before: existing, after: { id: (existing as { id?: string }).id, deduped: true } };
+    }
+    const invoiceNumber =
+      "INV-AUTO-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const { data, error } = await admin
+      .from("invoices")
+      .insert({ member_id: memberId, invoice_number: invoiceNumber, description, amount_cents: cents, status: "unpaid" })
+      .select("id")
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, after: { id: (data as { id?: string } | null)?.id, invoiceNumber, amountCents: cents } };
+  },
 };
 
 export function isWhitelisted(handler: string): boolean {

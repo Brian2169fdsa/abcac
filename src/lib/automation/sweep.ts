@@ -12,6 +12,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getWorkflowConfig, isGloballyPaused } from "./config";
 import { dispatch } from "./dispatch";
+import { DUNNING_AGE_DAYS } from "./workflows/dunning";
+import { RENEWAL_WINDOW_DAYS } from "./workflows/invoice-generation";
+import { REQUIRED_DOC_BY_APP_TYPE, docAlreadyCovered } from "./workflows/doc-request";
+
+const DAY_MS = 86_400_000;
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 /** True when an automation_runs row already exists for (workflow, entityId). */
 export async function hasExistingRun(
@@ -56,6 +62,75 @@ export async function sweepCeuReview(admin: SupabaseClient, limit = 100): Promis
   return { scanned: rows.length, dispatched };
 }
 
+/** Dispatch every unpaid invoice that's past the dunning grace window. */
+export async function sweepDunning(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const cutoff = new Date(Date.now() - DUNNING_AGE_DAYS * DAY_MS).toISOString();
+  const { data } = await admin
+    .from("invoices")
+    .select("id, member_id, status, created_at")
+    .eq("status", "unpaid")
+    .lt("created_at", cutoff)
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (await hasExistingRun(admin, "dunning", r.id)) continue;
+    await dispatch({ workflow: "dunning", entityType: "invoice", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+/** Dispatch every active cert expiring within the renewal window (to bill it). */
+export async function sweepInvoiceGeneration(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + RENEWAL_WINDOW_DAYS * DAY_MS);
+  const { data } = await admin
+    .from("certifications")
+    .select("id, member_id, status, expiration_date")
+    .eq("status", "active")
+    .gte("expiration_date", isoDate(now))
+    .lte("expiration_date", isoDate(windowEnd))
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (await hasExistingRun(admin, "invoice_generation", r.id)) continue;
+    await dispatch({ workflow: "invoice_generation", entityType: "certification", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+/** Dispatch every in-review application still missing its required document. */
+export async function sweepDocRequest(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const appTypes = Object.keys(REQUIRED_DOC_BY_APP_TYPE);
+  const { data } = await admin
+    .from("applications")
+    .select("id, member_id, app_type, status")
+    .in("status", ["submitted", "under_review"])
+    .in("app_type", appTypes)
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null; app_type: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    const need = r.app_type ? REQUIRED_DOC_BY_APP_TYPE[r.app_type] : undefined;
+    if (!need || !r.member_id) continue;
+    if (await docAlreadyCovered(admin, r.member_id, need)) continue;
+    if (await hasExistingRun(admin, "doc_request", r.id)) continue;
+    await dispatch({ workflow: "doc_request", entityType: "application", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
+  { workflow: "ceu_review", run: sweepCeuReview },
+  { workflow: "dunning", run: sweepDunning },
+  { workflow: "invoice_generation", run: sweepInvoiceGeneration },
+  { workflow: "doc_request", run: sweepDocRequest },
+];
+
 /**
  * Run all scan-based deterministic workflows. Each scan only runs when its
  * workflow is enabled (so a disabled workflow costs nothing). Honors the global
@@ -66,17 +141,17 @@ export async function runAutomationSweep(): Promise<Record<string, unknown>> {
   if (await isGloballyPaused(admin)) return { paused: true };
 
   const out: Record<string, unknown> = {};
-
-  const ceuCfg = await getWorkflowConfig(admin, "ceu_review");
-  if (ceuCfg?.enabled) {
-    try {
-      out.ceu_review = await sweepCeuReview(admin);
-    } catch (err) {
-      out.ceu_review = { error: err instanceof Error ? err.message : "sweep_failed" };
+  for (const { workflow, run } of SCANS) {
+    const cfg = await getWorkflowConfig(admin, workflow);
+    if (!cfg?.enabled) {
+      out[workflow] = { skipped: "disabled" };
+      continue;
     }
-  } else {
-    out.ceu_review = { skipped: "disabled" };
+    try {
+      out[workflow] = await run(admin);
+    } catch (err) {
+      out[workflow] = { error: err instanceof Error ? err.message : "sweep_failed" };
+    }
   }
-
   return out;
 }

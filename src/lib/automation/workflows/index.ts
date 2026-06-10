@@ -9,6 +9,9 @@
 import { registerRule } from "../registrar";
 import { credentialVerificationRule } from "./credential-verification";
 import { ceuReviewRule } from "./ceu-review";
+import { dunningRule } from "./dunning";
+import { invoiceGenerationRule } from "./invoice-generation";
+import { docRequestRule } from "./doc-request";
 
 let registered = false;
 
@@ -20,4 +23,7 @@ export function registerWorkflows(): void {
   // in the Automation console once verified).
   registerRule("credential_verification", credentialVerificationRule);
   registerRule("ceu_review", ceuReviewRule);
+  registerRule("dunning", dunningRule);
+  registerRule("invoice_generation", invoiceGenerationRule);
+  registerRule("doc_request", docRequestRule);
 }

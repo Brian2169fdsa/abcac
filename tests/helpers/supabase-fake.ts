@@ -75,10 +75,18 @@ export function makeClient(
     builder.insert = vi.fn((payload: unknown) => startOp("insert", payload));
     builder.update = vi.fn((payload: unknown) => startOp("update", payload));
     builder.delete = vi.fn(() => startOp("delete"));
-    builder.eq = vi.fn((col: string, val: unknown) => {
+    const addFilter = (col: string, val: unknown) => {
       record.filters.push({ col, val });
       return builder;
-    });
+    };
+    builder.eq = vi.fn(addFilter);
+    builder.neq = vi.fn(addFilter);
+    builder.lt = vi.fn(addFilter);
+    builder.lte = vi.fn(addFilter);
+    builder.gt = vi.fn(addFilter);
+    builder.gte = vi.fn(addFilter);
+    builder.in = vi.fn(addFilter);
+    builder.is = vi.fn(addFilter);
     builder.maybeSingle = vi.fn(() => Promise.resolve(resolve()));
     builder.single = vi.fn(() => Promise.resolve(resolve()));
     builder.order = vi.fn(() => builder);
