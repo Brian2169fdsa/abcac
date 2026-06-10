@@ -8,6 +8,7 @@
 
 import { registerRule } from "../registrar";
 import { credentialVerificationRule } from "./credential-verification";
+import { ceuReviewRule } from "./ceu-review";
 
 let registered = false;
 
@@ -18,4 +19,5 @@ export function registerWorkflows(): void {
   // Phase 1 — deterministic, zero-model wins (ship disabled; enable per-workflow
   // in the Automation console once verified).
   registerRule("credential_verification", credentialVerificationRule);
+  registerRule("ceu_review", ceuReviewRule);
 }
