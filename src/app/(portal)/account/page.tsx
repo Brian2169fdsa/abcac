@@ -8,6 +8,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/activity-timeline";
 import { NextSteps } from "@/components/dashboard/next-steps";
 import { MemberTasksCard, type MemberTask } from "@/components/dashboard/member-tasks-card";
+import { MemberAgentPanel } from "@/components/agent/member-agent-panel";
 import { buildMemberPlan, type AccountStatus } from "@/lib/member-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
@@ -367,6 +368,11 @@ export default async function AccountPage() {
       {/* Your Next Steps — guided plan toward certification / renewal */}
       <Section title="Your Next Steps" compact>
         <NextSteps steps={planSteps} />
+      </Section>
+
+      {/* Certification Insights — CEU analytics + recommended actions */}
+      <Section title="Your Certification Insights" compact>
+        <MemberAgentPanel />
       </Section>
 
       {/* Tasks assigned to you by ABCAC (read-only) */}
