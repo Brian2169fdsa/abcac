@@ -24,3 +24,24 @@ export async function getWorkflowConfig(
   const row = data as { enabled: boolean; auto_threshold: number | null; propose_threshold: number | null };
   return { enabled: row.enabled, auto: row.auto_threshold, propose: row.propose_threshold };
 }
+
+export type RunnableReason = "paused" | "disabled" | "unknown_workflow";
+export type RunnableCheck = { ok: true } | { ok: false; reason: RunnableReason };
+
+/**
+ * Shared gate: a workflow may only execute when automation is NOT globally
+ * paused AND the workflow is enabled. Used by both `dispatch()` (before an
+ * auto-execute) and `executeApprovedRun()` (before firing an already-staged
+ * proposal) so the kill switch covers the approve path too — a proposal staged
+ * before a pause/disable can never fire afterward.
+ */
+export async function assertRunnable(
+  admin: SupabaseClient,
+  workflow: string,
+): Promise<RunnableCheck> {
+  if (await isGloballyPaused(admin)) return { ok: false, reason: "paused" };
+  const cfg = await getWorkflowConfig(admin, workflow);
+  if (!cfg) return { ok: false, reason: "unknown_workflow" };
+  if (!cfg.enabled) return { ok: false, reason: "disabled" };
+  return { ok: true };
+}

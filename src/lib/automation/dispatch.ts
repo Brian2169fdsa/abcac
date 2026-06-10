@@ -13,9 +13,9 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isGloballyPaused, getWorkflowConfig } from "./config";
+import { isGloballyPaused, getWorkflowConfig, assertRunnable } from "./config";
 import { tierFor } from "./tier";
-import { REGISTRY, isWhitelisted, type ExecResult } from "./registry";
+import { REGISTRY, isWhitelisted, crossCheckArgs, type ExecResult, type RunContext } from "./registry";
 import type {
   AgentEval,
   DispatchInput,
@@ -85,8 +85,17 @@ async function audit(
   }
 }
 
-async function runAction(admin: SupabaseClient, action: StagedAction): Promise<ExecResult> {
+async function runAction(
+  admin: SupabaseClient,
+  action: StagedAction,
+  ctx?: RunContext,
+): Promise<ExecResult> {
   if (!isWhitelisted(action.handler)) return { ok: false, error: `handler_not_whitelisted:${action.handler}` };
+  // H3 — a whitelisted write must target the SAME member/entity the run is about.
+  if (ctx) {
+    const mismatch = crossCheckArgs(action.args, ctx);
+    if (mismatch) return { ok: false, error: `arg_mismatch:${mismatch}` };
+  }
   return REGISTRY[action.handler](admin, action.args);
 }
 
@@ -112,7 +121,10 @@ export async function dispatch(input: DispatchInput): Promise<DispatchOutcome> {
         status: "auto_executed",
         resolved_at: new Date().toISOString(),
       });
-      const result = await runAction(admin, rule.action);
+      const result = await runAction(admin, rule.action, {
+        memberId: input.memberId,
+        entityId: input.entityId,
+      });
       await audit(admin, { id: runId, input }, "system", rule.action, result, {
         ruleVersion: rule.ruleVersion,
         tier: "auto",
@@ -156,7 +168,10 @@ export async function dispatch(input: DispatchInput): Promise<DispatchOutcome> {
       status: "auto_executed",
       resolved_at: new Date().toISOString(),
     });
-    const result = await runAction(admin, ev.action);
+    const result = await runAction(admin, ev.action, {
+      memberId: input.memberId,
+      entityId: input.entityId,
+    });
     await audit(admin, { id: runId, input }, "agent", ev.action, result, {
       confidence: ev.confidence,
       modelVersion: ev.modelVersion,
@@ -206,11 +221,40 @@ export async function executeApprovedRun(
     .eq("id", runId)
     .maybeSingle();
   if (!run) return { ok: false, error: "not_found" };
-  const r = run as { status: string; staged_action: StagedAction | null; workflow: string; entity_type: string; entity_id: string | null };
+  const r = run as {
+    status: string;
+    staged_action: StagedAction | null;
+    workflow: string;
+    entity_type: string;
+    entity_id: string | null;
+    member_id: string | null;
+  };
   if (r.status !== "pending_approval") return { ok: false, error: "not_pending" };
   if (!r.staged_action) return { ok: false, error: "no_staged_action" };
 
-  const result = await runAction(admin, r.staged_action);
+  // H2 — the kill switch covers the approve path: a proposal staged before a
+  // global pause or before its workflow was disabled must NOT fire on approval.
+  const runnable = await assertRunnable(admin, r.workflow);
+  if (!runnable.ok) return { ok: false, error: runnable.reason };
+
+  // H1 — atomically CLAIM the row before doing any work. The update only
+  // affects a row still in `pending_approval`, so two concurrent approvals
+  // (double-click, two admins) cannot both pass and double-execute the staged
+  // write. If the claim affects no row, someone else already took it.
+  const { data: claimed } = await admin
+    .from("automation_runs")
+    .update({ status: "approving", resolved_by: approverId })
+    .eq("id", runId)
+    .eq("status", "pending_approval")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return { ok: false, error: "already_claimed" };
+
+  // H3 — the staged write must target the run's own member/entity.
+  const result = await runAction(admin, r.staged_action, {
+    memberId: r.member_id,
+    entityId: r.entity_id,
+  });
   await admin
     .from("automation_runs")
     .update({ status: result.ok ? "approved" : "failed", resolved_at: new Date().toISOString(), resolved_by: approverId })
