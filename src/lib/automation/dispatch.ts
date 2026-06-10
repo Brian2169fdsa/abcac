@@ -16,26 +16,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isGloballyPaused, getWorkflowConfig, assertRunnable } from "./config";
 import { tierFor } from "./tier";
 import { REGISTRY, isWhitelisted, crossCheckArgs, type ExecResult, type RunContext } from "./registry";
-import type {
-  AgentEval,
-  DispatchInput,
-  DispatchOutcome,
-  RuleResult,
-  StagedAction,
-} from "./types";
+import { getRule, getAgent, registerRule, registerAgent, type RuleFn, type AgentFn } from "./registrar";
+import { registerWorkflows } from "./workflows";
+import type { DispatchInput, DispatchOutcome, StagedAction } from "./types";
 
-export type RuleFn = (admin: SupabaseClient, input: DispatchInput) => Promise<RuleResult | null>;
-export type AgentFn = (admin: SupabaseClient, input: DispatchInput) => Promise<AgentEval | null>;
-
-const RULES: Record<string, RuleFn> = {};
-const AGENTS: Record<string, AgentFn> = {};
-
-export function registerRule(workflow: string, fn: RuleFn): void {
-  RULES[workflow] = fn;
-}
-export function registerAgent(workflow: string, fn: AgentFn): void {
-  AGENTS[workflow] = fn;
-}
+// Re-export the registrar surface so existing importers keep working.
+export { registerRule, registerAgent };
+export type { RuleFn, AgentFn };
 
 async function insertRun(
   admin: SupabaseClient,
@@ -101,6 +88,7 @@ async function runAction(
 
 /** Evaluate one entity and auto-execute / stage / escalate per its workflow config. */
 export async function dispatch(input: DispatchInput): Promise<DispatchOutcome> {
+  registerWorkflows();
   const admin = createSupabaseAdminClient();
 
   if (await isGloballyPaused(admin)) return { status: "skipped_paused" };
@@ -108,7 +96,8 @@ export async function dispatch(input: DispatchInput): Promise<DispatchOutcome> {
   if (!cfg || !cfg.enabled) return { status: "skipped_disabled" };
 
   // 1. Deterministic rule pass.
-  const rule = RULES[input.workflow] ? await RULES[input.workflow](admin, input) : null;
+  const ruleFn = getRule(input.workflow);
+  const rule = ruleFn ? await ruleFn(admin, input) : null;
   if (rule?.decisive) {
     const tier = rule.tier ?? "auto";
     if (tier === "auto" && rule.action) {
@@ -145,7 +134,8 @@ export async function dispatch(input: DispatchInput): Promise<DispatchOutcome> {
   }
 
   // 2. Agent evaluation (parse / read / match).
-  const ev = AGENTS[input.workflow] ? await AGENTS[input.workflow](admin, input) : null;
+  const agentFn = getAgent(input.workflow);
+  const ev = agentFn ? await agentFn(admin, input) : null;
   if (!ev) {
     const runId = await insertRun(admin, input, {
       tier: "escalate",
@@ -214,6 +204,7 @@ export async function executeApprovedRun(
   runId: string,
   approverId: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  registerWorkflows();
   const admin = createSupabaseAdminClient();
   const { data: run } = await admin
     .from("automation_runs")
