@@ -1,11 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   clampDays,
-  workflowLabel,
-  workflowCategory,
-  formatUsd,
-  formatPercent,
-  formatDuration,
   coerceLens,
   shortDateLabel,
   lensSeries,
@@ -14,6 +9,8 @@ import {
   LENSES,
   type DailyPoint,
 } from "@/app/(admin)/admin/automation/analytics/analytics-dashboard";
+import { workflowLabel, workflowMeta } from "@/lib/automation/catalog";
+import { formatUsd, formatPercent, formatDuration } from "@/lib/format";
 
 describe("clampDays", () => {
   it("passes through each allowed value", () => {
@@ -37,38 +34,36 @@ describe("clampDays", () => {
   });
 });
 
-describe("workflowLabel", () => {
+describe("catalog labels/categories (shared)", () => {
   it("maps known workflows to friendly labels", () => {
-    expect(workflowLabel("ceu_review")).toBe("CEU review");
-    expect(workflowLabel("invoice_generation")).toBe("Invoice generation");
+    expect(workflowLabel("ceu_review")).toBe("CEU Review");
+    expect(workflowLabel("invoice_generation")).toBe("Invoice Generation");
   });
 
   it("title-cases an unknown slug as a fallback", () => {
     expect(workflowLabel("some_new_flow")).toBe("Some New Flow");
   });
-});
 
-describe("workflowCategory", () => {
-  it("maps known workflows to a category and unknowns to Other", () => {
-    expect(workflowCategory("ceu_review")).toBe("Compliance");
-    expect(workflowCategory("dunning")).toBe("Billing");
-    expect(workflowCategory("doc_request")).toBe("Documents");
-    expect(workflowCategory("mystery")).toBe("Other");
+  it("exposes a category per known workflow and undefined for unknowns", () => {
+    expect(workflowMeta("ceu_review")?.category).toBe("deterministic");
+    expect(workflowMeta("account_approval")?.category).toBe("agent");
+    expect(workflowMeta("reciprocity")?.category).toBe("human_gate");
+    expect(workflowMeta("mystery")).toBeUndefined();
   });
 });
 
-describe("formatters", () => {
+describe("shared formatters", () => {
   it("formatUsd renders whole-dollar currency and guards non-finite", () => {
     expect(formatUsd(1234)).toBe("$1,234");
     expect(formatUsd(0)).toBe("$0");
     expect(formatUsd(Number.NaN)).toBe("$0");
   });
 
-  it("formatPercent shows a fraction as a percent", () => {
+  it("formatPercent shows a fraction as a whole percent", () => {
     expect(formatPercent(0)).toBe("0%");
     expect(formatPercent(1)).toBe("100%");
     expect(formatPercent(0.5)).toBe("50%");
-    expect(formatPercent(0.073)).toBe("7.3%");
+    expect(formatPercent(0.073)).toBe("7%");
   });
 
   it("formatDuration renders minutes / hours+minutes", () => {

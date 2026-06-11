@@ -24,9 +24,9 @@ export function formatCents(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US")}`;
 }
 
-/** Whole-dollar amount → "$1,234" (en-US grouping, rounded). */
+/** Whole-dollar amount → "$1,234" (en-US grouping, rounded; non-finite → "$0"). */
 export function formatUsd(amount: number): string {
-  return `$${Math.round(amount).toLocaleString("en-US")}`;
+  return `$${Math.round(Number.isFinite(amount) ? amount : 0).toLocaleString("en-US")}`;
 }
 
 /** 0..1 ratio → "85%" (rounded whole percent). */

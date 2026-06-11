@@ -3,101 +3,35 @@
 // Aggregates public.automation_runs over a 7/30/90-day window into impact KPIs,
 // a daily runs-over-time series (rendered client-side with a lens toggle), a
 // per-workflow breakdown, tier distribution, and the top escalation/anomaly
-// reasons. Reads via the cookie-bound server client — admins can read the full
-// automation_runs table under RLS (policy: admin_all_automation_runs USING
-// is_admin()), exactly like the Automation console page; no service role needed.
-// The admin layout already enforces the admin role, so there is no per-page auth.
+// reasons. Reads via the cookie-bound server client — admins read the full
+// automation_runs table under RLS (policy admin_all_automation_runs), like the
+// Automation console page; the admin layout already enforces the admin role.
+// All aggregation + tunables come from src/lib/automation/{analytics,catalog}.
 
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  StatCard,
-  StatCardRow,
-  DonutChart,
-  formatCompact,
-} from "@/components/agent/charts";
-import {
-  AnalyticsDashboard,
-  ALLOWED_DAYS,
-  clampDays,
-  workflowLabel,
-  workflowCategory,
-  anomalyLabel,
-  formatUsd,
-  formatPercent,
-  formatDuration,
-  type AllowedDays,
-  type DailyPoint,
-  type WorkflowCategory,
-} from "./analytics-dashboard";
+import { getAutomationAnalytics } from "@/lib/automation/analytics";
+import { workflowLabel, workflowMeta, type WorkflowCategory } from "@/lib/automation/catalog";
+import { formatUsd, formatPercent, formatDuration } from "@/lib/format";
+import { StatCard, StatCardRow, DonutChart, formatCompact } from "@/components/agent/charts";
+import { AutomationTabs } from "../automation-tabs";
+import { AnalyticsDashboard, ALLOWED_DAYS, clampDays } from "./analytics-dashboard";
 
 export const dynamic = "force-dynamic";
 
 const CATEGORY_TONE: Record<WorkflowCategory, string> = {
-  Compliance: "bg-[#1F5FA8]/10 text-[#1F5FA8]",
-  Billing: "bg-[#3E8E41]/10 text-[#3E8E41]",
-  Documents: "bg-[#C8741F]/10 text-[#C8741F]",
-  Other: "bg-muted/15 text-muted",
+  deterministic: "bg-[#1F5FA8]/10 text-[#1F5FA8]",
+  agent: "bg-[#6D28D9]/10 text-[#6D28D9]",
+  human_gate: "bg-[#C0432F]/10 text-[#C0432F]",
+  observational: "bg-muted/15 text-muted",
 };
 
-// ── Analytics computation ────────────────────────────────────────────────────
-
-const AUTOMATED_STATUSES = new Set(["auto_executed", "approved"]);
-
-/** Per-workflow minutes saved when the engine handled a decision (estimate). */
-const MINUTES_PER_AUTOMATED_DECISION = 8;
-/** Loaded staff cost per minute (estimate) used for "cost saved". */
-const COST_PER_MINUTE = 0.85;
-
-interface RunRow {
-  created_at: string | null;
-  workflow: string;
-  tier: string | null;
-  anomaly_flags: string[] | null;
-  status: string;
-}
-
-interface WorkflowStat {
-  workflow: string;
-  runs: number;
-  automated: number;
-  escalated: number;
-  failed: number;
-  automationRate: number;
-  minutesSaved: number;
-}
-
-interface ImpactSummary {
-  automatedCount: number;
-  minutesSaved: number;
-  costSaved: number;
-  automationRate: number;
-}
-
-interface AnomalyCount {
-  reason: string;
-  count: number;
-}
-
-interface TierCount {
-  tier: string;
-  count: number;
-}
-
-interface AutomationAnalytics {
-  days: AllowedDays;
-  totalRuns: number;
-  impact: ImpactSummary;
-  workflowStats: WorkflowStat[];
-  daily: DailyPoint[];
-  anomalies: AnomalyCount[];
-  tiers: TierCount[];
-}
-
-/** ISO date key ("YYYY-MM-DD", UTC) for a timestamp. */
-function dayKey(iso: string): string {
-  return iso.slice(0, 10);
-}
+const CATEGORY_LABEL: Record<WorkflowCategory, string> = {
+  deterministic: "Deterministic",
+  agent: "Agent",
+  human_gate: "Human gate",
+  observational: "Observational",
+};
 
 const TIER_LABEL: Record<string, string> = {
   auto: "Auto-executed",
@@ -105,138 +39,23 @@ const TIER_LABEL: Record<string, string> = {
   escalate: "Escalated",
 };
 
-/** Build the full analytics view from raw rows + the requested window. */
-function buildAnalytics(rows: RunRow[], days: AllowedDays): AutomationAnalytics {
-  // Pre-seed one DailyPoint per day in the window so the chart has a continuous
-  // axis even on quiet days.
-  const dailyMap = new Map<string, DailyPoint>();
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    dailyMap.set(key, { date: key, total: 0, automated: 0, escalated: 0, failed: 0 });
-  }
-
-  const wf = new Map<string, WorkflowStat>();
-  const tierMap = new Map<string, number>();
-  const anomalyMap = new Map<string, number>();
-  let automatedCount = 0;
-
-  for (const r of rows) {
-    const isAutomated = AUTOMATED_STATUSES.has(r.status);
-    const isEscalated = r.status === "escalated";
-    const isFailed = r.status === "failed";
-
-    if (isAutomated) automatedCount++;
-
-    // Daily series
-    if (r.created_at) {
-      const point = dailyMap.get(dayKey(r.created_at));
-      if (point) {
-        point.total++;
-        if (isAutomated) point.automated++;
-        if (isEscalated) point.escalated++;
-        if (isFailed) point.failed++;
-      }
-    }
-
-    // Per-workflow
-    let stat = wf.get(r.workflow);
-    if (!stat) {
-      stat = {
-        workflow: r.workflow,
-        runs: 0,
-        automated: 0,
-        escalated: 0,
-        failed: 0,
-        automationRate: 0,
-        minutesSaved: 0,
-      };
-      wf.set(r.workflow, stat);
-    }
-    stat.runs++;
-    if (isAutomated) stat.automated++;
-    if (isEscalated) stat.escalated++;
-    if (isFailed) stat.failed++;
-
-    // Tiers
-    if (r.tier) tierMap.set(r.tier, (tierMap.get(r.tier) ?? 0) + 1);
-
-    // Anomalies
-    for (const flag of r.anomaly_flags ?? []) {
-      anomalyMap.set(flag, (anomalyMap.get(flag) ?? 0) + 1);
-    }
-  }
-
-  const workflowStats = Array.from(wf.values())
-    .map((s) => ({
-      ...s,
-      automationRate: s.runs > 0 ? s.automated / s.runs : 0,
-      minutesSaved: s.automated * MINUTES_PER_AUTOMATED_DECISION,
-    }))
-    .sort((a, b) => b.runs - a.runs);
-
-  const totalRuns = rows.length;
-  const minutesSaved = automatedCount * MINUTES_PER_AUTOMATED_DECISION;
-
-  const tiers: TierCount[] = Array.from(tierMap.entries())
-    .map(([tier, count]) => ({ tier, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const anomalies: AnomalyCount[] = Array.from(anomalyMap.entries())
-    .map(([reason, count]) => ({ reason, count }))
-    .sort((a, b) => b.count - a.count);
-
-  return {
-    days,
-    totalRuns,
-    impact: {
-      automatedCount,
-      minutesSaved,
-      costSaved: Math.round(minutesSaved * COST_PER_MINUTE),
-      automationRate: totalRuns > 0 ? automatedCount / totalRuns : 0,
-    },
-    workflowStats,
-    daily: Array.from(dailyMap.values()),
-    anomalies,
-    tiers,
-  };
+/** Humanize an anomaly flag ("ambiguous_match" → "Ambiguous match"). */
+function anomalyLabel(flag: string): string {
+  return flag
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
 }
 
-// ── Local tabs bar (admin automation sub-nav) ────────────────────────────────
-
-const TABS = [
-  { href: "/admin/automation", label: "Console" },
-  { href: "/admin/automation/analytics", label: "Analytics" },
-  { href: "/admin/automation/config", label: "Configuration" },
-] as const;
-
-function AutomationTabs({ active }: { active: string }) {
+function categoryChip(workflow: string) {
+  const cat = workflowMeta(workflow)?.category ?? "deterministic";
   return (
-    <nav className="mb-6 flex flex-wrap gap-1 border-b border-line">
-      {TABS.map((t) => {
-        const isActive = t.href === active;
-        return (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={
-              isActive
-                ? "border-b-2 border-brand px-4 py-2 text-sm font-semibold text-brand"
-                : "border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted hover:text-ink"
-            }
-          >
-            {t.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_TONE[cat]}`}>
+      {CATEGORY_LABEL[cat]}
+    </span>
   );
 }
-
-// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AutomationAnalyticsPage({
   searchParams,
@@ -244,20 +63,8 @@ export default async function AutomationAnalyticsPage({
   searchParams: { days?: string | string[] };
 }) {
   const days = clampDays(searchParams.days);
-
   const sb = createSupabaseServerClient();
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - (days - 1));
-  since.setUTCHours(0, 0, 0, 0);
-
-  const { data } = await sb
-    .from("automation_runs")
-    .select("created_at, workflow, tier, anomaly_flags, status")
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: false });
-
-  const rows = (data as RunRow[] | null) ?? [];
-  const analytics = buildAnalytics(rows, days);
+  const analytics = await getAutomationAnalytics(sb, { days });
   const { impact, workflowStats, daily, tiers, anomalies, totalRuns } = analytics;
 
   const tierDonut = tiers.map((t) => ({ label: TIER_LABEL[t.tier] ?? t.tier, value: t.count }));
@@ -265,7 +72,7 @@ export default async function AutomationAnalyticsPage({
 
   return (
     <>
-      <AutomationTabs active="/admin/automation/analytics" />
+      <AutomationTabs />
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -296,7 +103,7 @@ export default async function AutomationAnalyticsPage({
       <div className="mb-8">
         <StatCardRow>
           <StatCard label="Decisions automated" value={formatCompact(impact.automatedCount)} />
-          <StatCard label="Time saved" value={formatDuration(impact.minutesSaved)} />
+          <StatCard label="Staff time saved" value={formatDuration(impact.minutesSaved)} />
           <StatCard label="Est. cost saved" value={formatUsd(impact.costSaved)} />
           <StatCard label="Automation rate" value={formatPercent(impact.automationRate)} />
         </StatCardRow>
@@ -350,14 +157,10 @@ export default async function AutomationAnalyticsPage({
                       >
                         {workflowLabel(s.workflow)}
                       </Link>
-                      <span
-                        className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_TONE[workflowCategory(s.workflow)]}`}
-                      >
-                        {workflowCategory(s.workflow)}
-                      </span>
+                      {categoryChip(s.workflow)}
                     </td>
-                    <td className="px-5 py-3 text-right tabular-nums">{s.runs.toLocaleString("en-US")}</td>
-                    <td className="px-5 py-3 text-right tabular-nums">{s.automated.toLocaleString("en-US")}</td>
+                    <td className="px-5 py-3 text-right tabular-nums">{s.total.toLocaleString("en-US")}</td>
+                    <td className="px-5 py-3 text-right tabular-nums">{s.automatedCount.toLocaleString("en-US")}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{s.escalated.toLocaleString("en-US")}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{s.failed.toLocaleString("en-US")}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{formatPercent(s.automationRate)}</td>
@@ -379,12 +182,7 @@ export default async function AutomationAnalyticsPage({
               No tiered runs yet.
             </div>
           ) : (
-            <DonutChart
-              data={tierDonut}
-              centerLabel={formatCompact(totalRuns)}
-              centerSub="runs"
-              format={formatCompact}
-            />
+            <DonutChart data={tierDonut} centerLabel={formatCompact(totalRuns)} centerSub="runs" format={formatCompact} />
           )}
         </section>
 
@@ -397,9 +195,9 @@ export default async function AutomationAnalyticsPage({
           ) : (
             <ul className="space-y-3">
               {anomalies.slice(0, 8).map((a) => (
-                <li key={a.reason}>
+                <li key={a.flag}>
                   <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium text-ink">{anomalyLabel(a.reason)}</span>
+                    <span className="font-medium text-ink">{anomalyLabel(a.flag)}</span>
                     <span className="tabular-nums text-muted">{a.count.toLocaleString("en-US")}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-bg">
