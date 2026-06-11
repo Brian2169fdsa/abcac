@@ -17,6 +17,7 @@ import { RENEWAL_WINDOW_DAYS } from "./workflows/invoice-generation";
 import { REQUIRED_DOC_BY_APP_TYPE, docAlreadyCovered } from "./workflows/doc-request";
 import { PAID_PAYMENT_STATUSES } from "./workflows/payment-reconciliation";
 import { ISSUANCE_APP_TYPES } from "./workflows/certificate-issuance";
+import { INBOX_RECENT_DAYS, profileIdForEmail } from "./workflows/inbox-member";
 
 const DAY_MS = 86_400_000;
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -227,6 +228,86 @@ export async function sweepNameChange(admin: SupabaseClient, limit = 200): Promi
   return { scanned: rows.length, dispatched };
 }
 
+/**
+ * Dispatch recent inbound MEMBER messages for triage: portal composes
+ * (`messages` rows with sender_role='member' not yet read by an admin) and
+ * contact-form rows whose sender email matches a member profile.
+ *
+ * PRECEDENCE with sweepInboxFaq: the two sweeps partition contact_messages by
+ * profile-email match — member match wins and is dispatched HERE; sweepInboxFaq
+ * skips those rows. A message is therefore only ever processed by one workflow.
+ */
+export async function sweepInboxMember(admin: SupabaseClient, limit = 100): Promise<SweepResult> {
+  const cutoff = new Date(Date.now() - INBOX_RECENT_DAYS * DAY_MS).toISOString();
+  let scanned = 0;
+  let dispatched = 0;
+
+  // 1) Portal messages composed by members and still unread by admins.
+  const { data: portal } = await admin
+    .from("messages")
+    .select("id, member_id, sender_role, is_read, created_at")
+    .eq("sender_role", "member")
+    .eq("is_read", false)
+    .gte("created_at", cutoff)
+    .limit(limit);
+  const portalRows = (portal as { id: string; member_id: string | null }[] | null) ?? [];
+  scanned += portalRows.length;
+  for (const r of portalRows) {
+    if (!r.member_id) continue;
+    if (await hasExistingRun(admin, "inbox_member", r.id)) continue;
+    await dispatch({ workflow: "inbox_member", entityType: "message", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+
+  // 2) Contact-form submissions from a KNOWN member email (member match wins).
+  const { data: contact } = await admin
+    .from("contact_messages")
+    .select("id, email, created_at")
+    .gte("created_at", cutoff)
+    .limit(limit);
+  const contactRows = (contact as { id: string; email: string | null }[] | null) ?? [];
+  scanned += contactRows.length;
+  for (const r of contactRows) {
+    const memberId = await profileIdForEmail(admin, r.email);
+    if (!memberId) continue; // public sender — inbox_faq territory
+    if (await hasExistingRun(admin, "inbox_member", r.id)) continue;
+    await dispatch({ workflow: "inbox_member", entityType: "contact_message", entityId: r.id, memberId });
+    dispatched++;
+  }
+
+  return { scanned, dispatched };
+}
+
+/**
+ * Dispatch recent PUBLIC contact-form submissions for FAQ auto-answer.
+ * Skips any row whose sender email matches a member profile — those belong to
+ * sweepInboxMember (precedence: member match wins), even when inbox_member is
+ * currently disabled (the row stays visible to humans in /admin/inbox either
+ * way; it must never get a generic public FAQ auto-reply).
+ *
+ * IDEMPOTENCY: contact_messages has no status/reply column, so the engine's
+ * one-run-per-entity dedup (hasExistingRun) is the only thing preventing a
+ * second reply email — never remove it.
+ */
+export async function sweepInboxFaq(admin: SupabaseClient, limit = 100): Promise<SweepResult> {
+  const cutoff = new Date(Date.now() - INBOX_RECENT_DAYS * DAY_MS).toISOString();
+  const { data } = await admin
+    .from("contact_messages")
+    .select("id, email, created_at")
+    .gte("created_at", cutoff)
+    .limit(limit);
+  const rows = (data as { id: string; email: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (await profileIdForEmail(admin, r.email)) continue; // member match wins → inbox_member
+    if (await hasExistingRun(admin, "inbox_faq", r.id)) continue;
+    // contact_messages has no member_id — public senders dispatch with memberId null.
+    await dispatch({ workflow: "inbox_faq", entityType: "contact_message", entityId: r.id, memberId: null });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
@@ -237,6 +318,11 @@ const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepRe
   { workflow: "reciprocity", run: sweepReciprocity },
   { workflow: "account_approval", run: sweepAccountApproval },
   { workflow: "name_change", run: sweepNameChange },
+  // inbox_member is listed before inbox_faq to make the routing precedence
+  // visible, though correctness doesn't depend on order: both sweeps partition
+  // contact_messages by profile-email match (member match → inbox_member only).
+  { workflow: "inbox_member", run: sweepInboxMember },
+  { workflow: "inbox_faq", run: sweepInboxFaq },
   // refund_void has NO sweep — it is dispatched ad hoc on refund intent, and its
   // rule always escalates (registered in workflows/index.ts, never automated).
 ];

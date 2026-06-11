@@ -55,7 +55,9 @@ Safety invariants (enforced in code, not convention):
 | `refund_void` | escalate-only | permanent human gate — never automated | **built** |
 | `account_approval` | agent (Claude) | approve clean member accounts; never auto-rejects | **built** |
 | `name_change` | agent (Claude) | apply simple name changes (propose-capped) | **built** |
-| `cert_sync`, `print_request`, `reminders`, `inbox_faq`, `inbox_member` | — | — | not yet built |
+| `inbox_faq` | agent (Claude) | email FAQ answers to public contact-form messages (auto ≥ 0.90; rest escalate) | **built** |
+| `inbox_member` | escalate-only triage | triage member messages (portal + contact form) with member context; member match always wins over `inbox_faq` | **built** |
+| `cert_sync`, `print_request`, `reminders` | — | — | not yet built |
 
 Everything ships **disabled** (`automation_config.enabled = false`). A workflow
 with no evaluator that gets dispatched simply escalates (`no_evaluator`).

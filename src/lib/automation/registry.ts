@@ -300,6 +300,64 @@ export const REGISTRY: Record<string, Executor> = {
     return { ok: true, before, after: { id, account_status: "approved" } };
   },
 
+  // Email a reply to a public contact-form submission (inbox_faq).
+  //
+  // PROMPT-INJECTION HARDENING: the recipient is ALWAYS the email on the
+  // contact_messages row, re-read here by id (which H3 cross-checks against the
+  // run's entity) — never anything in the staged args, so model output can
+  // never redirect a reply. IDEMPOTENCY: contact_messages has no status/reply
+  // column to flip, so the one-run-per-entity dedup in sweepInboxFaq
+  // (hasExistingRun) is the idempotency boundary — this executor performs NO
+  // database writes. Unlike best-effort notification emails, the reply IS this
+  // workflow's whole effect: without RESEND_API_KEY it fails loudly
+  // (email_not_configured) so the run is marked failed rather than silently
+  // pretending the visitor was answered.
+  send_contact_reply: async (admin, args) => {
+    const id = str(args.id ?? args.contactMessageId);
+    const subject = str(args.subject);
+    const body = str(args.body);
+    if (!id || !subject || !body) return { ok: false, error: "bad_args" };
+    const { data } = await admin
+      .from("contact_messages")
+      .select("id,name,email")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return { ok: false, error: "not_found" };
+    const row = data as { id: string; name: string | null; email: string | null };
+    const to = (row.email ?? "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "invalid_recipient" };
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return { ok: false, error: "email_not_configured" };
+    const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+  <h2 style="color:#1a3c5e">${esc(siteConfig.shortName)}</h2>
+  <p>Hi ${esc(row.name || "there")},</p>
+  <p style="white-space:pre-wrap">${esc(body)}</p>
+  <p style="color:#6b7280;font-size:14px">If this doesn't answer your question, just reply to this
+     email or contact us at <a href="${esc(siteConfig.contact.emailHref)}">${esc(siteConfig.contact.email)}</a>
+     or ${esc(siteConfig.contact.phone)}.</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">${esc(siteConfig.shortName)} &mdash; ${esc(siteConfig.name)}<br/>
+     ${esc(siteConfig.contact.addressLine)}, ${esc(siteConfig.contact.cityStateZip)}</p>
+</div>`.trim();
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL ?? "ABCAC <noreply@abcac.org>",
+          to,
+          reply_to: siteConfig.contact.email,
+          subject,
+          html,
+        }),
+      });
+      if (!res.ok) return { ok: false, error: `resend_error_${res.status}` };
+    } catch {
+      return { ok: false, error: "resend_unreachable" };
+    }
+    return { ok: true, before: { id: row.id }, after: { id: row.id, to, subject } };
+  },
+
   // Apply a name change request (name_change). Mirrors the admin decideRequest
   // approve path: mark the request 'completed' + reviewed_at, then write the
   // parsed new name back to the member's canonical profile. The new name is
