@@ -49,12 +49,12 @@ Safety invariants (enforced in code, not convention):
 | `dunning` | deterministic | payment reminder for invoices unpaid > 14 days | **built** |
 | `invoice_generation` | deterministic | renewal invoice for certs expiring ≤ 60 days | **built** |
 | `doc_request` | deterministic | request the missing required doc on in-review applications | **built** |
-| `payment_reconciliation` | deterministic | match completed payments → mark invoice paid | **in progress** |
-| `certificate_issuance` | deterministic + paid-guard | extend renewed certs 2 yrs; initial issuance escalates | **in progress** |
-| `reciprocity` | escalate-only | permanent human gate — never automated | **in progress** |
-| `refund_void` | escalate-only | permanent human gate — never automated | **in progress** |
-| `account_approval` | agent (Claude) | approve clean member accounts; never auto-rejects | **in progress** |
-| `name_change` | agent (Claude) | apply simple name changes (propose-capped) | **in progress** |
+| `payment_reconciliation` | deterministic | match completed payments → mark invoice paid | **built** |
+| `certificate_issuance` | deterministic + paid-guard | extend renewed certs 2 yrs; initial issuance escalates | **built** |
+| `reciprocity` | escalate-only | permanent human gate — never automated | **built** |
+| `refund_void` | escalate-only | permanent human gate — never automated | **built** |
+| `account_approval` | agent (Claude) | approve clean member accounts; never auto-rejects | **built** |
+| `name_change` | agent (Claude) | apply simple name changes (propose-capped) | **built** |
 | `cert_sync`, `print_request`, `reminders`, `inbox_faq`, `inbox_member` | — | — | not yet built |
 
 Everything ships **disabled** (`automation_config.enabled = false`). A workflow
