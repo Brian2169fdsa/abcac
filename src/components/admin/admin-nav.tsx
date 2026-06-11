@@ -31,6 +31,7 @@ const ITEMS: { label: string; href: string; count?: CountKey }[] = [
   { label: "Search", href: "/admin/search" },
   { label: "Reports", href: "/admin/reports" },
   { label: "Finance", href: "/admin/finance" },
+  { label: "Renewals", href: "/admin/renewals" },
   { label: "Compliance", href: "/admin/compliance" },
   { label: "Audit Log", href: "/admin/audit" },
 ];

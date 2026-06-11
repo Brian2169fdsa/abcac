@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { fulfillMatchingDocumentRequests } from "@/lib/document-fulfillment";
 import { Button } from "@/components/ui/button";
 
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
@@ -21,16 +22,33 @@ const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"];
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED = ["pdf", "jpg", "jpeg", "png"];
 
-export function DocumentUpload() {
+export interface OpenRequestOption {
+  id: string;
+  document_type: string;
+}
+
+export function DocumentUpload({ openRequestTypes = [], preselectType }: { openRequestTypes?: OpenRequestOption[]; preselectType?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Controlled type select so a requested document can pre-select it.
+  const [type, setType] = useState("");
+
+  // When the member clicks "Upload this" on an open request, pre-select its type.
+  useEffect(() => {
+    if (preselectType) setType(preselectType);
+  }, [preselectType]);
+
+  // Requested document_types that aren't already one of the standard options —
+  // surfaced as extra select entries so a member can fulfill them exactly.
+  const requestedExtras = openRequestTypes
+    .map((r) => r.document_type)
+    .filter((t, i, arr) => t && !TYPES.includes(t) && arr.indexOf(t) === i);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const form = e.currentTarget;
-    const type = (form.elements.namedItem("type") as HTMLSelectElement).value;
     const relatedCert = (form.elements.namedItem("related_cert") as HTMLSelectElement).value || null;
     const file = (form.elements.namedItem("file") as HTMLInputElement).files?.[0];
     if (!type || !file) return setError("Choose a document type and file.");
@@ -50,7 +68,11 @@ export function DocumentUpload() {
         file_size_kb: Math.round(file.size / 1024), status: "pending",
       });
       if (insErr) throw insErr;
+      // Best-effort: close any matching open document request. Never block the
+      // upload on this — a fulfillment failure leaves the upload intact.
+      await fulfillMatchingDocumentRequests(supabase, user.id, type);
       form.reset();
+      setType("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
@@ -64,9 +86,14 @@ export function DocumentUpload() {
       <h3 className="mb-4">Upload a document</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block sm:col-span-2"><span className="mb-1.5 block text-sm font-semibold">Document type</span>
-          <select name="type" className={field} defaultValue="" required>
+          <select name="type" className={field} value={type} onChange={(e) => setType(e.target.value)} required>
             <option value="" disabled>— Select —</option>
             {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {requestedExtras.length > 0 && (
+              <optgroup label="Requested by ABCAC">
+                {requestedExtras.map((t) => <option key={t} value={t}>{t}</option>)}
+              </optgroup>
+            )}
           </select>
         </label>
         <label className="block sm:col-span-2"><span className="mb-1.5 block text-sm font-semibold">Related certification (optional)</span>

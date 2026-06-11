@@ -1,7 +1,7 @@
-import { Check, AlertCircle, Bell } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
-import { DocumentUpload } from "@/components/document-upload";
+import { OpenRequestsUpload } from "@/components/account/open-requests-upload";
 import { SectionCard, EmptyState } from "@/components/account/section-card";
 import { DocumentRow } from "@/components/account/documents-list-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -68,27 +68,6 @@ export default async function DocumentsPage() {
     <>
       <PageHero eyebrow="Member Portal" title="Documents" intro="Upload supporting documents and track ABCAC's review. Files are stored privately and only visible to you and ABCAC staff." />
 
-      {/* Open document requests from ABCAC */}
-      {openRequests.length > 0 && (
-        <Section compact>
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <Bell className="h-5 w-5 flex-shrink-0 text-amber-600" aria-hidden />
-              <span className="font-semibold text-amber-800">ABCAC has requested the following document{openRequests.length > 1 ? "s" : ""}:</span>
-            </div>
-            <ul className="mb-4 space-y-2">
-              {openRequests.map((r) => (
-                <li key={r.id} className="rounded-lg border border-amber-200 bg-white px-4 py-3">
-                  <div className="font-semibold text-ink">{r.document_type}</div>
-                  {r.note && <div className="mt-0.5 text-sm text-muted">{r.note}</div>}
-                </li>
-              ))}
-            </ul>
-            <p className="text-sm text-amber-700">Please upload the requested document{openRequests.length > 1 ? "s" : ""} using the upload form below.</p>
-          </div>
-        </Section>
-      )}
-
       {/* Tracking checklist */}
       <Section compact title="Document checklist">
         <SectionCard
@@ -129,7 +108,7 @@ export default async function DocumentsPage() {
         </SectionCard>
       </Section>
 
-      <Section compact><DocumentUpload /></Section>
+      <OpenRequestsUpload openRequests={openRequests} />
     </>
   );
 }
