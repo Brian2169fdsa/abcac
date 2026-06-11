@@ -1,6 +1,7 @@
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { NotificationSettings, type AlertPrefs } from "@/components/notification-settings";
+import { DirectoryListingSettings } from "@/components/directory-listing-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Account Settings" };
@@ -18,11 +19,13 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const [{ data: profile }, { data: prefs }] = await Promise.all([
-    supabase.from("profiles").select("email").eq("id", user!.id).maybeSingle(),
+    supabase.from("profiles").select("email, directory_opt_out").eq("id", user!.id).maybeSingle(),
     supabase.from("notification_preferences").select("*").eq("member_id", user!.id).maybeSingle(),
   ]);
 
-  const email = (profile as { email?: string | null } | null)?.email ?? user?.email ?? null;
+  const profileRow = profile as { email?: string | null; directory_opt_out?: boolean | null } | null;
+  const email = profileRow?.email ?? user?.email ?? null;
+  const directoryOptOut = profileRow?.directory_opt_out ?? false;
 
   const prefsData: AlertPrefs = prefs
     ? {
@@ -41,7 +44,10 @@ export default async function SettingsPage() {
         intro="Confirm your login email, control which alerts and reminders ABCAC sends you, and request account help."
       />
       <Section compact>
-        <NotificationSettings email={email} prefs={prefsData} />
+        <div className="space-y-6">
+          <DirectoryListingSettings optOut={directoryOptOut} />
+          <NotificationSettings email={email} prefs={prefsData} />
+        </div>
       </Section>
     </>
   );
