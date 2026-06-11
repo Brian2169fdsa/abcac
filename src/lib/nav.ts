@@ -67,6 +67,7 @@ export const MENU: MegaGroup[] = [
       { label: "CEU Endorsement", href: "/ceu", desc: "Provider fees and workshop endorsement tiers." },
       { label: "Sync Your Certs", href: "/store/certification-sync", desc: "Align your renewal dates." },
       { label: "Store", href: "/store", desc: "All certification & exam payments." },
+      { label: "Counselor Directory", href: "/directory", desc: "Browse certified counselors in good standing." },
       { label: "FAQ", href: "/faq", desc: "Answers to common questions." },
     ],
   },

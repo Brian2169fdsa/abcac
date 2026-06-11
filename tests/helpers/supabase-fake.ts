@@ -92,6 +92,7 @@ export function makeClient(
     builder.single = vi.fn(() => Promise.resolve(resolve()));
     builder.order = vi.fn(() => builder);
     builder.limit = vi.fn(() => builder);
+    builder.range = vi.fn(() => builder);
     // Make the builder awaitable for chains that end without maybeSingle().
     builder.then = (onF: (v: QueryResult) => unknown, onR?: (e: unknown) => unknown) =>
       Promise.resolve(resolve()).then(onF, onR);
