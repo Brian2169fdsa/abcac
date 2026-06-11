@@ -57,7 +57,9 @@ Safety invariants (enforced in code, not convention):
 | `name_change` | agent (Claude) | apply simple name changes (propose-capped) | **built** |
 | `cert_sync` | deterministic | enable Certification Sync + approve clean cert-sync applications | **built** |
 | `reminders` | deterministic (audit wrapper) | mirror each legacy reminder send into run history (delivery stays with the legacy runner — never gated by this flag) | **built** |
-| `print_request`, `inbox_faq`, `inbox_member` | — | — | not yet built |
+| `inbox_faq` | agent (Claude) | email FAQ answers to public contact-form messages (auto ≥ 0.90; rest escalate) | **built** |
+| `inbox_member` | escalate-only triage | triage member messages (portal + contact form) with member context; member match always wins over `inbox_faq` | **built** |
+| `print_request` | — | — | not yet built (no print_requests table exists) |
 
 Everything ships **disabled** (`automation_config.enabled = false`). A workflow
 with no evaluator that gets dispatched simply escalates (`no_evaluator`).

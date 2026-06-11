@@ -19,6 +19,8 @@ import { refundVoidRule } from "./refund-void";
 import { accountApprovalRule, accountApprovalAgent } from "./account-approval";
 import { nameChangeRule, nameChangeAgent } from "./name-change";
 import { certSyncRule } from "./cert-sync";
+import { inboxFaqRule, inboxFaqAgent } from "./inbox-faq";
+import { inboxMemberRule } from "./inbox-member";
 
 let registered = false;
 
@@ -56,4 +58,15 @@ export function registerWorkflows(): void {
   // delivery engine, and its automation_config row only gates the run-history
   // mirroring in reminders-bridge.ts.
   registerRule("cert_sync", certSyncRule);
+
+  // INBOX workflows. inbox_faq: rule gates (bad address / member sender /
+  // sensitive content), then the agent matches the message against the built-in
+  // FAQ pack — only a >= 0.90 match auto-sends a reply (migration 031 seeds
+  // propose NULL, so anything less escalates). inbox_member: escalate-only
+  // triage (both thresholds NULL) — the rule is always decisive and carries a
+  // member-context summary; no agent registered (add one later by returning
+  // null from the rule for the cases the agent should weigh).
+  registerRule("inbox_faq", inboxFaqRule);
+  registerAgent("inbox_faq", inboxFaqAgent);
+  registerRule("inbox_member", inboxMemberRule);
 }

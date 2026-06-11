@@ -87,6 +87,7 @@ export function makeClient(
     builder.gte = vi.fn(addFilter);
     builder.in = vi.fn(addFilter);
     builder.is = vi.fn(addFilter);
+    builder.ilike = vi.fn(addFilter);
     builder.maybeSingle = vi.fn(() => Promise.resolve(resolve()));
     builder.single = vi.fn(() => Promise.resolve(resolve()));
     builder.order = vi.fn(() => builder);
