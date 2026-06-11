@@ -15,6 +15,8 @@ import { dispatch } from "./dispatch";
 import { DUNNING_AGE_DAYS } from "./workflows/dunning";
 import { RENEWAL_WINDOW_DAYS } from "./workflows/invoice-generation";
 import { REQUIRED_DOC_BY_APP_TYPE, docAlreadyCovered } from "./workflows/doc-request";
+import { PAID_PAYMENT_STATUSES } from "./workflows/payment-reconciliation";
+import { ISSUANCE_APP_TYPES } from "./workflows/certificate-issuance";
 
 const DAY_MS = 86_400_000;
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -124,11 +126,80 @@ export async function sweepDocRequest(admin: SupabaseClient, limit = 200): Promi
   return { scanned: rows.length, dispatched };
 }
 
+/** Dispatch every completed payment that still has a same-amount unpaid invoice. */
+export async function sweepPaymentReconciliation(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("payments")
+    .select("id, member_id, status, amount_cents")
+    .in("status", PAID_PAYMENT_STATUSES)
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null; amount_cents: number | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (!r.member_id || typeof r.amount_cents !== "number" || r.amount_cents <= 0) continue;
+    // Pre-filter: only dispatch when at least one unpaid invoice matches the amount.
+    const { data: inv } = await admin
+      .from("invoices")
+      .select("id")
+      .eq("member_id", r.member_id)
+      .eq("status", "unpaid")
+      .eq("amount_cents", r.amount_cents)
+      .limit(1)
+      .maybeSingle();
+    if (!inv) continue;
+    if (await hasExistingRun(admin, "payment_reconciliation", r.id)) continue;
+    await dispatch({ workflow: "payment_reconciliation", entityType: "payment", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+/** Dispatch every approved initial/renewal application (paid-guard is in the rule). */
+export async function sweepCertificateIssuance(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("applications")
+    .select("id, member_id, app_type, status")
+    .eq("status", "approved")
+    .in("app_type", ISSUANCE_APP_TYPES)
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (!r.member_id) continue;
+    if (await hasExistingRun(admin, "certificate_issuance", r.id)) continue;
+    await dispatch({ workflow: "certificate_issuance", entityType: "application", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+/** Dispatch every pending reciprocity request (rule always escalates to a human). */
+export async function sweepReciprocity(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("reciprocity_requests")
+    .select("id, member_id, status")
+    .eq("status", "pending")
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (await hasExistingRun(admin, "reciprocity", r.id)) continue;
+    await dispatch({ workflow: "reciprocity", entityType: "reciprocity_request", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
   { workflow: "invoice_generation", run: sweepInvoiceGeneration },
   { workflow: "doc_request", run: sweepDocRequest },
+  { workflow: "payment_reconciliation", run: sweepPaymentReconciliation },
+  { workflow: "certificate_issuance", run: sweepCertificateIssuance },
+  { workflow: "reciprocity", run: sweepReciprocity },
+  // refund_void has NO sweep — it is dispatched ad hoc on refund intent, and its
+  // rule always escalates (registered in workflows/index.ts, never automated).
 ];
 
 /**
