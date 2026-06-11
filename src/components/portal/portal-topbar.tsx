@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Menu, LogOut, ArrowLeft, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/portal/notification-bell";
+import type { Notification } from "@/lib/notifications";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -22,11 +24,15 @@ export function PortalTopbar({
   memberName,
   messageCount = 0,
   isAdmin = false,
+  notificationCount = 0,
+  notifications = [],
   onMenuToggle,
 }: {
   memberName: string;
   messageCount?: number;
   isAdmin?: boolean;
+  notificationCount?: number;
+  notifications?: Notification[];
   onMenuToggle: () => void;
 }) {
   return (
@@ -62,6 +68,8 @@ export function PortalTopbar({
           <span className="hidden sm:inline">Messages</span>
           {messageCount > 0 && <Badge className="bg-red-600">{messageCount}</Badge>}
         </Link>
+
+        <NotificationBell count={notificationCount} items={notifications} />
 
         <div className="h-6 w-px bg-white/15" aria-hidden />
 
