@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/auth/roles";
+import { broadcastToMembers } from "@/lib/notifications-broadcast";
 
 export const runtime = "nodejs";
 
@@ -83,6 +84,25 @@ export async function POST(req: Request) {
   const { error: insertErr } = await admin.from("messages").insert(rows);
   if (insertErr) {
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
+  }
+
+  // 4b. BEST-EFFORT: also fan a member-facing in-app notification out to the
+  // membership so the Notifications stream has an admin-driven producer (not
+  // just the DB triggers). Only the ABCAC-announcements audience is governed by
+  // the abcac_announcements preference the broadcast honors, so we scope the
+  // notification fan-out to that audience. A broadcast failure must NEVER fail
+  // the announcement send — swallow it.
+  if (audience === "abcac_announcements") {
+    try {
+      await broadcastToMembers(admin, {
+        title: subject,
+        body: message,
+        link: "/account",
+        category: "announcement",
+      });
+    } catch {
+      // best-effort: the inbox message already delivered; ignore notify errors.
+    }
   }
 
   // 5. Best-effort email each recipient via inline Resend (no-op without a key).
