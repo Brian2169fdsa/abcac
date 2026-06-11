@@ -124,11 +124,50 @@ export async function sweepDocRequest(admin: SupabaseClient, limit = 200): Promi
   return { scanned: rows.length, dispatched };
 }
 
+/** Dispatch every submitted-and-pending registration awaiting account review. */
+export async function sweepAccountApproval(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("profiles")
+    .select("id, account_status, account_submitted_at")
+    .eq("account_status", "pending")
+    .limit(limit);
+  const rows = (data as { id: string; account_submitted_at: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    // Signup creates the profile already in 'pending'; only ONBOARDED profiles
+    // (account_submitted_at stamped) are actually awaiting review.
+    if (!r.account_submitted_at) continue;
+    if (await hasExistingRun(admin, "account_approval", r.id)) continue;
+    await dispatch({ workflow: "account_approval", entityType: "profile", entityId: r.id, memberId: r.id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
+/** Dispatch every still-pending name change request. */
+export async function sweepNameChange(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("name_change_requests")
+    .select("id, member_id, status")
+    .eq("status", "pending")
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (await hasExistingRun(admin, "name_change", r.id)) continue;
+    await dispatch({ workflow: "name_change", entityType: "name_change_request", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
   { workflow: "invoice_generation", run: sweepInvoiceGeneration },
   { workflow: "doc_request", run: sweepDocRequest },
+  { workflow: "account_approval", run: sweepAccountApproval },
+  { workflow: "name_change", run: sweepNameChange },
 ];
 
 /**

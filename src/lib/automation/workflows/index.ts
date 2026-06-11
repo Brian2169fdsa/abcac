@@ -6,12 +6,14 @@
 // triggered it (API route, server action, cron). Idempotent — registration runs
 // at most once per process.
 
-import { registerRule } from "../registrar";
+import { registerRule, registerAgent } from "../registrar";
 import { credentialVerificationRule } from "./credential-verification";
 import { ceuReviewRule } from "./ceu-review";
 import { dunningRule } from "./dunning";
 import { invoiceGenerationRule } from "./invoice-generation";
 import { docRequestRule } from "./doc-request";
+import { accountApprovalRule, accountApprovalAgent } from "./account-approval";
+import { nameChangeRule, nameChangeAgent } from "./name-change";
 
 let registered = false;
 
@@ -26,4 +28,12 @@ export function registerWorkflows(): void {
   registerRule("dunning", dunningRule);
   registerRule("invoice_generation", invoiceGenerationRule);
   registerRule("doc_request", docRequestRule);
+
+  // Phase 2 — model-evaluated workflows: the rule gates the hard cases, the
+  // agent (Claude) weighs the rest. Without ANTHROPIC_API_KEY the agents return
+  // null and dispatch escalates with "no_evaluator". Still ship disabled.
+  registerRule("account_approval", accountApprovalRule);
+  registerAgent("account_approval", accountApprovalAgent);
+  registerRule("name_change", nameChangeRule);
+  registerAgent("name_change", nameChangeAgent);
 }

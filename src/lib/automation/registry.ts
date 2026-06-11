@@ -55,6 +55,22 @@ export function crossCheckArgs(args: Record<string, unknown>, ctx: RunContext): 
   return null;
 }
 
+/**
+ * Split a full-name string on its LAST space: everything before is given
+ * name(s), the final token is the surname. With 3+ parts the middle token(s)
+ * land in middle_name; with 2 parts middle_name is cleared.
+ */
+export function parseFullName(full: string): { first: string; middle: string | null; last: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: "", middle: null, last: "" };
+  if (parts.length === 1) return { first: parts[0], middle: null, last: "" };
+  return {
+    first: parts[0],
+    middle: parts.length > 2 ? parts.slice(1, -1).join(" ") : null,
+    last: parts[parts.length - 1],
+  };
+}
+
 async function setCeuStatus(admin: SupabaseClient, args: Record<string, unknown>, status: string): Promise<ExecResult> {
   const id = str(args.ceuId ?? args.id);
   if (!id) return { ok: false, error: "missing_ceu_id" };
@@ -187,6 +203,84 @@ export const REGISTRY: Record<string, Executor> = {
       .maybeSingle();
     if (error) return { ok: false, error: error.message };
     return { ok: true, after: { id: (data as { id?: string } | null)?.id, invoiceNumber, amountCents: cents } };
+  },
+
+  // Approve a pending member registration (account_approval). Mirrors the
+  // status flip of the admin Approve button on /admin/approvals. Idempotent —
+  // already-approved is an ok no-op. M1 — any OTHER status (e.g. a human
+  // rejected it after staging) is `state_moved`: never overwrite a human
+  // decision. Pending self-reported cert activation and the welcome/credentials
+  // emails deliberately stay with the human flow for now.
+  approve_account: async (admin, args) => {
+    const id = str(args.memberId ?? args.id);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: before } = await admin
+      .from("profiles")
+      .select("id,account_status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const cur = (before as { account_status?: string | null }).account_status ?? null;
+    if (cur === "approved") return { ok: true, before, after: { id, account_status: "approved" } };
+    if (cur !== "pending") return { ok: false, error: "state_moved", before };
+    const { error } = await admin
+      .from("profiles")
+      .update({ account_status: "approved", account_reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("account_status", "pending"); // guard: lose the race rather than re-decide
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, account_status: "approved" } };
+  },
+
+  // Apply a name change request (name_change). Mirrors the admin decideRequest
+  // approve path: mark the request 'completed' + reviewed_at, then write the
+  // parsed new name back to the member's canonical profile. The new name is
+  // re-read from the request row at execute time (never trusted from args).
+  // Idempotent — already-completed is an ok no-op; any other non-pending status
+  // (e.g. human-rejected) is `state_moved`.
+  apply_name_change: async (admin, args) => {
+    const id = str(args.id ?? args.requestId);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: reqData } = await admin
+      .from("name_change_requests")
+      .select("id,member_id,new_name,status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!reqData) return { ok: false, error: "not_found" };
+    const req = reqData as { id: string; member_id: string | null; new_name: string | null; status: string | null };
+    if (req.status === "completed") {
+      return { ok: true, before: { request: req }, after: { request: { id, status: "completed" } } };
+    }
+    if (req.status !== "pending") return { ok: false, error: "state_moved", before: { request: req } };
+    const fullName = (req.new_name ?? "").trim();
+    if (!fullName || !req.member_id) return { ok: false, error: "bad_state", before: { request: req } };
+
+    const { data: profileBefore } = await admin
+      .from("profiles")
+      .select("id,first_name,middle_name,last_name")
+      .eq("id", req.member_id)
+      .maybeSingle();
+
+    const { error: reqErr } = await admin
+      .from("name_change_requests")
+      .update({ status: "completed", reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "pending"); // guard: lose the race rather than re-decide
+    if (reqErr) return { ok: false, error: reqErr.message };
+
+    const name = parseFullName(fullName);
+    const namePatch = { first_name: name.first, middle_name: name.middle, last_name: name.last };
+    const { error: profErr } = await admin.from("profiles").update(namePatch).eq("id", req.member_id);
+    if (profErr) {
+      // The request was completed but the profile write failed — surface it so
+      // the run is marked failed and a human reconciles.
+      return { ok: false, error: `profile_update_failed:${profErr.message}`, before: { request: req, profile: profileBefore } };
+    }
+    return {
+      ok: true,
+      before: { request: req, profile: profileBefore },
+      after: { request: { id, status: "completed" }, profile: { id: req.member_id, ...namePatch } },
+    };
   },
 };
 
