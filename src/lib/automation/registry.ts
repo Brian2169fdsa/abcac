@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/lib/site-config";
+import { DAY_MS } from "./time";
 
 export interface ExecResult {
   ok: boolean;
@@ -53,6 +54,22 @@ export function crossCheckArgs(args: Record<string, unknown>, ctx: RunContext): 
     }
   }
   return null;
+}
+
+/**
+ * Split a full-name string on its LAST space: everything before is given
+ * name(s), the final token is the surname. With 3+ parts the middle token(s)
+ * land in middle_name; with 2 parts middle_name is cleared.
+ */
+export function parseFullName(full: string): { first: string; middle: string | null; last: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: "", middle: null, last: "" };
+  if (parts.length === 1) return { first: parts[0], middle: null, last: "" };
+  return {
+    first: parts[0],
+    middle: parts.length > 2 ? parts.slice(1, -1).join(" ") : null,
+    last: parts[parts.length - 1],
+  };
 }
 
 async function setCeuStatus(admin: SupabaseClient, args: Record<string, unknown>, status: string): Promise<ExecResult> {
@@ -187,6 +204,280 @@ export const REGISTRY: Record<string, Executor> = {
       .maybeSingle();
     if (error) return { ok: false, error: error.message };
     return { ok: true, after: { id: (data as { id?: string } | null)?.id, invoiceNumber, amountCents: cents } };
+  },
+
+  // Reconcile a completed payment to its invoice (payment_reconciliation).
+  // Mirrors the webhook's invoice mark-paid write. Idempotent — an already-paid
+  // invoice is an ok no-op; a refunded (or otherwise moved) invoice refuses with
+  // state_moved rather than resurrecting it. The Stripe session id is stamped
+  // into stripe_payment_intent only when that column is still empty.
+  mark_invoice_paid: async (admin, args) => {
+    const id = str(args.invoiceId ?? args.id);
+    if (!id) return { ok: false, error: "missing_invoice_id" };
+    const { data: before } = await admin
+      .from("invoices")
+      .select("id,status,paid_at,stripe_payment_intent")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const b = before as { status?: string | null; stripe_payment_intent?: string | null };
+    const current = b.status ?? null;
+    // M1 — re-validate at execute time: already paid is a success no-op.
+    if (current === "paid") return { ok: true, before, after: { id, status: "paid" } };
+    // Refunded (or any non-unpaid state) means a human moved it — never overwrite.
+    if (current !== "unpaid") return { ok: false, error: "state_moved", before };
+    const patch: Record<string, unknown> = { status: "paid", paid_at: new Date().toISOString() };
+    const session = str(args.stripeSessionId);
+    if (session && !str(b.stripe_payment_intent)) patch.stripe_payment_intent = session;
+    const { error } = await admin
+      .from("invoices")
+      .update(patch)
+      .eq("id", id)
+      .eq("status", "unpaid"); // guard: lose the race rather than double-mark
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, status: "paid", stripePaymentIntent: patch.stripe_payment_intent ?? b.stripe_payment_intent ?? null } };
+  },
+
+  // Extend an active certification to a rule-computed target expiration
+  // (certificate_issuance: paid renewal). The TARGET is staged by the rule
+  // (2 years from max(today, current expiration)), so a re-run is a no-op: an
+  // expiration already at/past the target never gets pushed out again. A cert
+  // that is no longer active means a human intervened — refuse (state_moved).
+  extend_certification: async (admin, args) => {
+    const id = str(args.certId ?? args.id);
+    const target = str(args.targetExpiration);
+    if (!id || !target || !/^\d{4}-\d{2}-\d{2}$/.test(target)) return { ok: false, error: "bad_args" };
+    const targetMs = Date.parse(target);
+    if (Number.isNaN(targetMs)) return { ok: false, error: "bad_args" };
+    // Sanity bound on a staged date: never set an expiration > 10 years out.
+    if (targetMs > Date.now() + 10 * 365.25 * DAY_MS) return { ok: false, error: "bad_args" };
+    const { data: before } = await admin
+      .from("certifications")
+      .select("id,status,expiration_date")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const b = before as { status?: string | null; expiration_date?: string | null };
+    // M1 — idempotent: already at/past the staged target is a success no-op.
+    const currentMs = b.expiration_date ? Date.parse(b.expiration_date) : NaN;
+    if (!Number.isNaN(currentMs) && currentMs >= targetMs) {
+      return { ok: true, before, after: { id, expirationDate: b.expiration_date } };
+    }
+    // Only extend a still-active cert; anything else moved under us.
+    if ((b.status ?? null) !== "active") return { ok: false, error: "state_moved", before };
+    const { error } = await admin
+      .from("certifications")
+      .update({ expiration_date: target, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "active"); // guard: lose the race rather than extend a moved cert
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, expirationDate: target } };
+  },
+
+  // Approve a pending member registration (account_approval). Mirrors the
+  // status flip of the admin Approve button on /admin/approvals. Idempotent —
+  // already-approved is an ok no-op. M1 — any OTHER status (e.g. a human
+  // rejected it after staging) is `state_moved`: never overwrite a human
+  // decision. Pending self-reported cert activation and the welcome/credentials
+  // emails deliberately stay with the human flow for now.
+  approve_account: async (admin, args) => {
+    const id = str(args.memberId ?? args.id);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: before } = await admin
+      .from("profiles")
+      .select("id,account_status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const cur = (before as { account_status?: string | null }).account_status ?? null;
+    if (cur === "approved") return { ok: true, before, after: { id, account_status: "approved" } };
+    if (cur !== "pending") return { ok: false, error: "state_moved", before };
+    const { error } = await admin
+      .from("profiles")
+      .update({ account_status: "approved", account_reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("account_status", "pending"); // guard: lose the race rather than re-decide
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, account_status: "approved" } };
+  },
+
+  // Email a reply to a public contact-form submission (inbox_faq).
+  //
+  // PROMPT-INJECTION HARDENING: the recipient is ALWAYS the email on the
+  // contact_messages row, re-read here by id (which H3 cross-checks against the
+  // run's entity) — never anything in the staged args, so model output can
+  // never redirect a reply. IDEMPOTENCY: contact_messages has no status/reply
+  // column to flip, so the one-run-per-entity dedup in sweepInboxFaq
+  // (hasExistingRun) is the idempotency boundary — this executor performs NO
+  // database writes. Unlike best-effort notification emails, the reply IS this
+  // workflow's whole effect: without RESEND_API_KEY it fails loudly
+  // (email_not_configured) so the run is marked failed rather than silently
+  // pretending the visitor was answered.
+  send_contact_reply: async (admin, args) => {
+    const id = str(args.id ?? args.contactMessageId);
+    const subject = str(args.subject);
+    const body = str(args.body);
+    if (!id || !subject || !body) return { ok: false, error: "bad_args" };
+    const { data } = await admin
+      .from("contact_messages")
+      .select("id,name,email")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return { ok: false, error: "not_found" };
+    const row = data as { id: string; name: string | null; email: string | null };
+    const to = (row.email ?? "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "invalid_recipient" };
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return { ok: false, error: "email_not_configured" };
+    const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+  <h2 style="color:#1a3c5e">${esc(siteConfig.shortName)}</h2>
+  <p>Hi ${esc(row.name || "there")},</p>
+  <p style="white-space:pre-wrap">${esc(body)}</p>
+  <p style="color:#6b7280;font-size:14px">If this doesn't answer your question, just reply to this
+     email or contact us at <a href="${esc(siteConfig.contact.emailHref)}">${esc(siteConfig.contact.email)}</a>
+     or ${esc(siteConfig.contact.phone)}.</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">${esc(siteConfig.shortName)} &mdash; ${esc(siteConfig.name)}<br/>
+     ${esc(siteConfig.contact.addressLine)}, ${esc(siteConfig.contact.cityStateZip)}</p>
+</div>`.trim();
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL ?? "ABCAC <noreply@abcac.org>",
+          to,
+          reply_to: siteConfig.contact.email,
+          subject,
+          html,
+        }),
+      });
+      if (!res.ok) return { ok: false, error: `resend_error_${res.status}` };
+    } catch {
+      return { ok: false, error: "resend_unreachable" };
+    }
+    return { ok: true, before: { id: row.id }, after: { id: row.id, to, subject } };
+  },
+
+  // Apply a name change request (name_change). Mirrors the admin decideRequest
+  // approve path: mark the request 'completed' + reviewed_at, then write the
+  // parsed new name back to the member's canonical profile. The new name is
+  // re-read from the request row at execute time (never trusted from args).
+  // Idempotent — already-completed is an ok no-op; any other non-pending status
+  // (e.g. human-rejected) is `state_moved`.
+  apply_name_change: async (admin, args) => {
+    const id = str(args.id ?? args.requestId);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: reqData } = await admin
+      .from("name_change_requests")
+      .select("id,member_id,new_name,status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!reqData) return { ok: false, error: "not_found" };
+    const req = reqData as { id: string; member_id: string | null; new_name: string | null; status: string | null };
+    if (req.status === "completed") {
+      return { ok: true, before: { request: req }, after: { request: { id, status: "completed" } } };
+    }
+    if (req.status !== "pending") return { ok: false, error: "state_moved", before: { request: req } };
+    const fullName = (req.new_name ?? "").trim();
+    if (!fullName || !req.member_id) return { ok: false, error: "bad_state", before: { request: req } };
+
+    const { data: profileBefore } = await admin
+      .from("profiles")
+      .select("id,first_name,middle_name,last_name")
+      .eq("id", req.member_id)
+      .maybeSingle();
+
+    // Profile write FIRST, request completion second: if the second write fails,
+    // the request stays pending and a retry re-applies the same parsed name
+    // idempotently then completes the request. (The reverse order would strand a
+    // 'completed' request with a stale profile that no retry could ever fix.)
+    const name = parseFullName(fullName);
+    const namePatch = { first_name: name.first, middle_name: name.middle, last_name: name.last };
+    const { error: profErr } = await admin.from("profiles").update(namePatch).eq("id", req.member_id);
+    if (profErr) {
+      return { ok: false, error: `profile_update_failed:${profErr.message}`, before: { request: req, profile: profileBefore } };
+    }
+
+    const { error: reqErr } = await admin
+      .from("name_change_requests")
+      .update({ status: "completed", reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "pending"); // guard: lose the race rather than re-decide
+    if (reqErr) return { ok: false, error: reqErr.message, before: { request: req, profile: profileBefore } };
+    return {
+      ok: true,
+      before: { request: req, profile: profileBefore },
+      after: { request: { id, status: "completed" }, profile: { id: req.member_id, ...namePatch } },
+    };
+  },
+
+  // Approve a cert_sync application (cert_sync). TWO-step, mirroring what a
+  // human does: (a) enable Certification Sync on the member's certifications —
+  // the same `sync_enabled = true` flip the Stripe webhook performs on a sync
+  // subscription, scoped to rows where it's still false so a re-run touches
+  // nothing — then (b) mark the application approved with the same write
+  // conventions as set_application_status. The member id is re-read from the
+  // application row at execute time (never trusted from args). Idempotent —
+  // already-approved is an ok no-op; M1 — any other non-pending status (e.g. a
+  // human rejected it after staging) is `state_moved`.
+  enable_cert_sync: async (admin, args) => {
+    const id = str(args.applicationId ?? args.id);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: appData } = await admin
+      .from("applications")
+      .select("id,member_id,app_type,status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!appData) return { ok: false, error: "not_found" };
+    const app = appData as { id: string; member_id: string | null; app_type: string | null; status: string | null };
+    if (app.app_type !== "cert_sync") return { ok: false, error: "bad_state", before: { application: app } };
+    // M1 — re-validate at execute time: already approved is a success no-op
+    // (sync was enabled when it was approved).
+    if (app.status === "approved") {
+      return { ok: true, before: { application: app }, after: { applicationId: id, status: "approved" } };
+    }
+    const expect = str(args.expectStatus ?? args.fromStatus);
+    if (expect && app.status !== expect) return { ok: false, error: "state_moved", before: { application: app } };
+    if (app.status !== "submitted" && app.status !== "under_review") {
+      return { ok: false, error: "state_moved", before: { application: app } };
+    }
+    if (!app.member_id) return { ok: false, error: "bad_state", before: { application: app } };
+
+    // (a) Enable sync on the member's certifications — re-read, and only flip
+    // rows where it's still off (idempotent; nothing to sync fails closed).
+    const { data: certData } = await admin
+      .from("certifications")
+      .select("id,sync_enabled")
+      .eq("member_id", app.member_id);
+    const certs = (certData as { id: string; sync_enabled: boolean | null }[] | null) ?? [];
+    if (certs.length === 0) return { ok: false, error: "no_certifications", before: { application: app } };
+    const toEnable = certs.filter((c) => !c.sync_enabled).map((c) => c.id);
+    if (toEnable.length > 0) {
+      const { error: syncErr } = await admin
+        .from("certifications")
+        .update({ sync_enabled: true })
+        .eq("member_id", app.member_id)
+        .eq("sync_enabled", false); // only rows still off — re-runs touch nothing
+      if (syncErr) return { ok: false, error: syncErr.message, before: { application: app, certifications: certs } };
+    }
+
+    // (b) Approve the application (same write as set_application_status).
+    const { error: appErr } = await admin
+      .from("applications")
+      .update({ status: "approved", reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", app.status); // guard: lose the race rather than re-decide
+    if (appErr) {
+      // Sync flags may already be flipped (idempotent) but the approval failed —
+      // surface it so the run is marked failed and a human reconciles.
+      return { ok: false, error: `application_update_failed:${appErr.message}`, before: { application: app, certifications: certs } };
+    }
+    return {
+      ok: true,
+      before: { application: app, certifications: certs },
+      after: { applicationId: id, status: "approved", syncEnabledCertIds: toEnable },
+    };
   },
 };
 
