@@ -12,6 +12,7 @@ import { sendEmail } from "@/lib/email";
 import { computeReminders, type ReminderContext, type ReminderCertInput } from "@/lib/reminders";
 import { computeCompliance, requirementsFromSchedule, type CeuLike } from "@/lib/ceu-compliance";
 import { findScheduleFor, type CertSchedule } from "@/lib/schedules";
+import { recordReminderRun } from "@/lib/automation/reminders-bridge";
 
 export interface ReminderRunSummary {
   membersProcessed: number;
@@ -146,6 +147,17 @@ export async function runRemindersForMembers(
         if (ok) emailsSent += 1;
       }
       remindersSent += 1;
+
+      // Automation-engine visibility (observational): when the `reminders`
+      // workflow is enabled in automation_config, mirror this send into
+      // automation_runs so it shows in the admin run history. No-op while
+      // disabled or globally paused; never throws (delivery already happened).
+      await recordReminderRun(admin, {
+        memberId,
+        type: reminder.type,
+        dedupeKey: reminder.dedupeKey,
+        subject: reminder.subject,
+      });
     }
   }
 

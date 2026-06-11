@@ -17,6 +17,7 @@ import { RENEWAL_WINDOW_DAYS } from "./workflows/invoice-generation";
 import { REQUIRED_DOC_BY_APP_TYPE, docAlreadyCovered } from "./workflows/doc-request";
 import { PAID_PAYMENT_STATUSES } from "./workflows/payment-reconciliation";
 import { ISSUANCE_APP_TYPES } from "./workflows/certificate-issuance";
+import { CERT_SYNC_APP_TYPE, CERT_SYNC_PENDING_STATUSES } from "./workflows/cert-sync";
 
 const DAY_MS = 86_400_000;
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -227,6 +228,25 @@ export async function sweepNameChange(admin: SupabaseClient, limit = 200): Promi
   return { scanned: rows.length, dispatched };
 }
 
+/** Dispatch every still-pending cert_sync application. */
+export async function sweepCertSync(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const { data } = await admin
+    .from("applications")
+    .select("id, member_id, app_type, status")
+    .in("status", CERT_SYNC_PENDING_STATUSES)
+    .eq("app_type", CERT_SYNC_APP_TYPE)
+    .limit(limit);
+  const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (!r.member_id) continue;
+    if (await hasExistingRun(admin, "cert_sync", r.id)) continue;
+    await dispatch({ workflow: "cert_sync", entityType: "application", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
@@ -237,8 +257,12 @@ const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepRe
   { workflow: "reciprocity", run: sweepReciprocity },
   { workflow: "account_approval", run: sweepAccountApproval },
   { workflow: "name_change", run: sweepNameChange },
+  { workflow: "cert_sync", run: sweepCertSync },
   // refund_void has NO sweep — it is dispatched ad hoc on refund intent, and its
   // rule always escalates (registered in workflows/index.ts, never automated).
+  // reminders has NO sweep either — the legacy reminder runner stays the engine;
+  // the automation workflow only mirrors its sends into run history
+  // (reminders-bridge.ts), so there is nothing for dispatch() to evaluate.
 ];
 
 /**

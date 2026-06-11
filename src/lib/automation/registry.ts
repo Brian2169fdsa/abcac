@@ -352,6 +352,74 @@ export const REGISTRY: Record<string, Executor> = {
       after: { request: { id, status: "completed" }, profile: { id: req.member_id, ...namePatch } },
     };
   },
+
+  // Approve a cert_sync application (cert_sync). TWO-step, mirroring what a
+  // human does: (a) enable Certification Sync on the member's certifications —
+  // the same `sync_enabled = true` flip the Stripe webhook performs on a sync
+  // subscription, scoped to rows where it's still false so a re-run touches
+  // nothing — then (b) mark the application approved with the same write
+  // conventions as set_application_status. The member id is re-read from the
+  // application row at execute time (never trusted from args). Idempotent —
+  // already-approved is an ok no-op; M1 — any other non-pending status (e.g. a
+  // human rejected it after staging) is `state_moved`.
+  enable_cert_sync: async (admin, args) => {
+    const id = str(args.applicationId ?? args.id);
+    if (!id) return { ok: false, error: "bad_args" };
+    const { data: appData } = await admin
+      .from("applications")
+      .select("id,member_id,app_type,status")
+      .eq("id", id)
+      .maybeSingle();
+    if (!appData) return { ok: false, error: "not_found" };
+    const app = appData as { id: string; member_id: string | null; app_type: string | null; status: string | null };
+    if (app.app_type !== "cert_sync") return { ok: false, error: "bad_state", before: { application: app } };
+    // M1 — re-validate at execute time: already approved is a success no-op
+    // (sync was enabled when it was approved).
+    if (app.status === "approved") {
+      return { ok: true, before: { application: app }, after: { applicationId: id, status: "approved" } };
+    }
+    const expect = str(args.expectStatus ?? args.fromStatus);
+    if (expect && app.status !== expect) return { ok: false, error: "state_moved", before: { application: app } };
+    if (app.status !== "submitted" && app.status !== "under_review") {
+      return { ok: false, error: "state_moved", before: { application: app } };
+    }
+    if (!app.member_id) return { ok: false, error: "bad_state", before: { application: app } };
+
+    // (a) Enable sync on the member's certifications — re-read, and only flip
+    // rows where it's still off (idempotent; nothing to sync fails closed).
+    const { data: certData } = await admin
+      .from("certifications")
+      .select("id,sync_enabled")
+      .eq("member_id", app.member_id);
+    const certs = (certData as { id: string; sync_enabled: boolean | null }[] | null) ?? [];
+    if (certs.length === 0) return { ok: false, error: "no_certifications", before: { application: app } };
+    const toEnable = certs.filter((c) => !c.sync_enabled).map((c) => c.id);
+    if (toEnable.length > 0) {
+      const { error: syncErr } = await admin
+        .from("certifications")
+        .update({ sync_enabled: true })
+        .eq("member_id", app.member_id)
+        .eq("sync_enabled", false); // only rows still off — re-runs touch nothing
+      if (syncErr) return { ok: false, error: syncErr.message, before: { application: app, certifications: certs } };
+    }
+
+    // (b) Approve the application (same write as set_application_status).
+    const { error: appErr } = await admin
+      .from("applications")
+      .update({ status: "approved", reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", app.status); // guard: lose the race rather than re-decide
+    if (appErr) {
+      // Sync flags may already be flipped (idempotent) but the approval failed —
+      // surface it so the run is marked failed and a human reconciles.
+      return { ok: false, error: `application_update_failed:${appErr.message}`, before: { application: app, certifications: certs } };
+    }
+    return {
+      ok: true,
+      before: { application: app, certifications: certs },
+      after: { applicationId: id, status: "approved", syncEnabledCertIds: toEnable },
+    };
+  },
 };
 
 export function isWhitelisted(handler: string): boolean {

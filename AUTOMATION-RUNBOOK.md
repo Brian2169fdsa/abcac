@@ -55,7 +55,9 @@ Safety invariants (enforced in code, not convention):
 | `refund_void` | escalate-only | permanent human gate — never automated | **built** |
 | `account_approval` | agent (Claude) | approve clean member accounts; never auto-rejects | **built** |
 | `name_change` | agent (Claude) | apply simple name changes (propose-capped) | **built** |
-| `cert_sync`, `print_request`, `reminders`, `inbox_faq`, `inbox_member` | — | — | not yet built |
+| `cert_sync` | deterministic | enable Certification Sync + approve clean cert-sync applications | **built** |
+| `reminders` | deterministic (audit wrapper) | mirror each legacy reminder send into run history (delivery stays with the legacy runner — never gated by this flag) | **built** |
+| `print_request`, `inbox_faq`, `inbox_member` | — | — | not yet built |
 
 Everything ships **disabled** (`automation_config.enabled = false`). A workflow
 with no evaluator that gets dispatched simply escalates (`no_evaluator`).
