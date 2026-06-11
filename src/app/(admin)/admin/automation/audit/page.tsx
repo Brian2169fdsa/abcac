@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AuditFilters } from "./audit-filters";
+import { AutomationTabs } from "../automation-tabs";
+import { formatDateTimeWithYear } from "@/lib/format";
 import {
   parseFilters,
   filtersToParams,
@@ -38,17 +40,6 @@ interface AuditRow extends ExportRow {
   target_id: string | null;
   automation_run_id: string | null;
   profiles: AuditProfile | AuditProfile[] | null;
-}
-
-function fmt(d: string | null): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function getProfile(profiles: AuditRow["profiles"]): AuditProfile | null {
@@ -92,10 +83,9 @@ const tierTone: Record<string, string> = {
 export default async function AutomationAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const sp = await searchParams;
-  const filters = parseFilters(sp);
+  const filters = parseFilters(searchParams);
 
   const sb = createSupabaseServerClient();
 
@@ -127,12 +117,7 @@ export default async function AutomationAuditPage({
 
   return (
     <>
-      <nav className="mb-6 flex gap-4 border-b border-line text-sm">
-        <Link href="/admin/automation" className="pb-2 font-semibold text-muted hover:text-brand">
-          Console
-        </Link>
-        <span className="border-b-2 border-brand pb-2 font-semibold text-brand">Audit</span>
-      </nav>
+      <AutomationTabs />
 
       <h1 className="text-2xl font-bold">Automation Audit</h1>
       <p className="mb-6 text-muted">
@@ -175,7 +160,7 @@ export default async function AutomationAuditPage({
                 const err = rowError(row.details);
                 return (
                   <tr key={row.id} className="border-b border-line align-top last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3 text-muted">{fmt(row.created_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted">{formatDateTimeWithYear(row.created_at)}</td>
                     <td className="px-4 py-3">
                       <span className="font-semibold">{actorLabel(row)}</span>
                       <div className="text-xs text-muted">{row.actor_type ?? "—"}</div>

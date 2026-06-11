@@ -7,6 +7,7 @@
 // controls stay populated across navigations.
 
 import Link from "next/link";
+import { WORKFLOW_CATALOG, workflowLabel } from "@/lib/automation/catalog";
 
 // Structural mirror of the route's AuditFilters (the GET form only needs the
 // current display values). Kept local so this client component imports nothing
@@ -22,29 +23,13 @@ interface AuditFilters {
   page: number;
 }
 
-// Option lists are duplicated here (rather than imported from the route) so this
-// client component never pulls the route module — which transitively imports the
-// server-only supabase client (next/headers) — into the client bundle. The route
-// is the source of truth for parsing/validation; these are display-only mirrors.
-const WORKFLOWS = [
-  "ceu_review",
-  "credential_verification",
-  "doc_request",
-  "dunning",
-  "invoice_generation",
-] as const;
+// Workflow keys/labels come from the shared catalog (all 16). The remaining
+// option lists are display-only mirrors kept local so this client component
+// never imports the route module (which pulls the server-only supabase client).
+const WORKFLOWS = WORKFLOW_CATALOG.map((m) => m.workflow);
 const ACTOR_TYPES = ["system", "agent", "human"] as const;
 const DECISION_TIERS = ["auto", "propose", "escalate"] as const;
 const OUTCOMES = ["ok", "error"] as const;
-
-const WORKFLOW_LABELS: Record<string, string> = {
-  ceu_review: "CEU Review",
-  credential_verification: "Credential Verification",
-  doc_request: "Document Request",
-  dunning: "Dunning",
-  invoice_generation: "Invoice Generation",
-};
-const workflowLabel = (wf: string): string => WORKFLOW_LABELS[wf] ?? wf;
 
 const TIER_LABELS: Record<string, string> = {
   auto: "Auto",

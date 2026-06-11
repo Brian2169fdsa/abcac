@@ -10,27 +10,17 @@
 // + escaping.
 // ---------------------------------------------------------------------------
 
-export const WORKFLOWS = [
-  "ceu_review",
-  "credential_verification",
-  "doc_request",
-  "dunning",
-  "invoice_generation",
-] as const;
-export type Workflow = (typeof WORKFLOWS)[number];
+// Workflow keys + labels come from the shared catalog (all 16), so the audit
+// filter offers every workflow the engine can run, not a hand-maintained subset.
+import { WORKFLOW_CATALOG, workflowLabel as catalogWorkflowLabel } from "@/lib/automation/catalog";
 
-const WORKFLOW_LABELS: Record<string, string> = {
-  ceu_review: "CEU Review",
-  credential_verification: "Credential Verification",
-  doc_request: "Document Request",
-  dunning: "Dunning",
-  invoice_generation: "Invoice Generation",
-};
+export const WORKFLOWS: string[] = WORKFLOW_CATALOG.map((m) => m.workflow);
+export type Workflow = string;
 
-/** Human label for a workflow key (falls back to the raw key). */
+/** Human label for a workflow key (falls back to a humanized key, or em dash). */
 export function workflowLabel(wf: string | null | undefined): string {
   if (!wf) return "—";
-  return WORKFLOW_LABELS[wf] ?? wf;
+  return catalogWorkflowLabel(wf);
 }
 
 export const ACTOR_TYPES = ["system", "agent", "human"] as const;
