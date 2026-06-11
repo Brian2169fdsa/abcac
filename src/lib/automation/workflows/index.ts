@@ -18,6 +18,7 @@ import { reciprocityRule } from "./reciprocity";
 import { refundVoidRule } from "./refund-void";
 import { accountApprovalRule, accountApprovalAgent } from "./account-approval";
 import { nameChangeRule, nameChangeAgent } from "./name-change";
+import { certSyncRule } from "./cert-sync";
 
 let registered = false;
 
@@ -48,4 +49,11 @@ export function registerWorkflows(): void {
   registerAgent("account_approval", accountApprovalAgent);
   registerRule("name_change", nameChangeRule);
   registerAgent("name_change", nameChangeAgent);
+
+  // Final deterministic batch — cert_sync approves clean Certification Sync
+  // applications (enable sync + approve in one vetted executor). The `reminders`
+  // workflow has NO evaluator on purpose: the legacy reminder runner stays the
+  // delivery engine, and its automation_config row only gates the run-history
+  // mirroring in reminders-bridge.ts.
+  registerRule("cert_sync", certSyncRule);
 }
