@@ -19,6 +19,7 @@ import { refundVoidRule } from "./refund-void";
 import { accountApprovalRule, accountApprovalAgent } from "./account-approval";
 import { nameChangeRule, nameChangeAgent } from "./name-change";
 import { certSyncRule } from "./cert-sync";
+import { printRequestRule } from "./print-request";
 import { inboxFaqRule, inboxFaqAgent } from "./inbox-faq";
 import { inboxMemberRule } from "./inbox-member";
 
@@ -58,6 +59,13 @@ export function registerWorkflows(): void {
   // delivery engine, and its automation_config row only gates the run-history
   // mirroring in reminders-bridge.ts.
   registerRule("cert_sync", certSyncRule);
+
+  // print_request — there is no print_requests table: a paper-certificate
+  // order IS a paid payments row for the $25 printed-copy product. The rule
+  // opens the staff fulfillment task ("Mail printed certificate") via the
+  // marker-idempotent create_print_task executor; a member with no
+  // certification on record escalates (nothing to print — refund or hold).
+  registerRule("print_request", printRequestRule);
 
   // INBOX workflows. inbox_faq: rule gates (bad address / member sender /
   // sensitive content), then the agent matches the message against the built-in

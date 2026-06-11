@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/lib/site-config";
+import { isPrintProduct, printTaskMarker, PRINT_PRODUCT_SLUG } from "./workflows/print-request";
 
 export interface ExecResult {
   ok: boolean;
@@ -35,7 +36,7 @@ const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? 
  */
 export type RunContext = { memberId?: string | null; entityId?: string | null };
 
-const ENTITY_ID_KEYS = ["entityId", "ceuId", "applicationId", "id"] as const;
+const ENTITY_ID_KEYS = ["entityId", "ceuId", "applicationId", "paymentId", "id"] as const;
 
 export function crossCheckArgs(args: Record<string, unknown>, ctx: RunContext): string | null {
   const ctxMember = str(ctx.memberId);
@@ -408,6 +409,113 @@ export const REGISTRY: Record<string, Executor> = {
       ok: true,
       before: { request: req, profile: profileBefore },
       after: { request: { id, status: "completed" }, profile: { id: req.member_id, ...namePatch } },
+    };
+  },
+
+  // Open the staff fulfillment task for a paid printed-certificate order
+  // (print_request). Mirrors what an admin does by hand on the member-detail
+  // page (task-actions.ts createMemberTask) — same table, same status/priority
+  // vocabulary — with `created_by` NULL because the system, not an admin,
+  // created it. Everything is re-read server-side by the payment id (which H3
+  // cross-checks against the run's entity); display strings are never trusted
+  // from args. IDEMPOTENCY: the detail carries the stable marker
+  // `[print_request:<paymentId>]` — the executor FIRST looks the marker up and
+  // no-ops ok when a task already exists, so a re-run can never open a second
+  // task. M1 — a payment that is no longer 'paid' (refunded/voided by a human)
+  // refuses with state_moved instead of shipping a certificate anyway.
+  create_print_task: async (admin, args) => {
+    const paymentId = str(args.paymentId ?? args.id);
+    if (!paymentId) return { ok: false, error: "bad_args" };
+    const { data: payData } = await admin
+      .from("payments")
+      .select("id,member_id,slug,product_name,status,amount_cents")
+      .eq("id", paymentId)
+      .maybeSingle();
+    if (!payData) return { ok: false, error: "not_found" };
+    const pay = payData as {
+      id: string;
+      member_id: string | null;
+      slug: string | null;
+      product_name: string | null;
+      status: string | null;
+      amount_cents: number | null;
+    };
+    if (!isPrintProduct(pay.slug, pay.product_name)) {
+      return { ok: false, error: "bad_state", before: { payment: pay } };
+    }
+    if (pay.status !== "paid") return { ok: false, error: "state_moved", before: { payment: pay } };
+    if (!pay.member_id) return { ok: false, error: "bad_state", before: { payment: pay } };
+
+    // Idempotency — a task already carrying this payment's marker means the
+    // order was handled (by this engine or a backfill); ok no-op.
+    const marker = printTaskMarker(pay.id);
+    const { data: existing } = await admin
+      .from("member_tasks")
+      .select("id")
+      .eq("member_id", pay.member_id)
+      .ilike("detail", `%${marker}%`)
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      return {
+        ok: true,
+        before: { task: existing },
+        after: { taskId: (existing as { id?: string }).id, deduped: true },
+      };
+    }
+
+    // Cert info for the task body is re-read here (never trusted from args).
+    // No certification at execute time fails closed — nothing to print.
+    const { data: certData } = await admin
+      .from("certifications")
+      .select("cert_type,cert_number,status,expiration_date")
+      .eq("member_id", pay.member_id);
+    const certs =
+      (certData as {
+        cert_type: string | null;
+        cert_number: string | null;
+        status: string | null;
+        expiration_date: string | null;
+      }[] | null) ?? [];
+    if (certs.length === 0) {
+      return { ok: false, error: "no_certification_to_print", before: { payment: pay } };
+    }
+
+    const certLines = certs
+      .map((c) => {
+        const name = c.cert_type ?? "Certification";
+        const num = c.cert_number ? ` #${c.cert_number}` : "";
+        const state = c.status ? `${c.status}${c.expiration_date ? `, expires ${c.expiration_date}` : ""}` : "";
+        return `- ${name}${num}${state ? ` (${state})` : ""}`;
+      })
+      .join("\n");
+    const amount =
+      typeof pay.amount_cents === "number" && pay.amount_cents > 0
+        ? `$${(pay.amount_cents / 100).toFixed(2)}`
+        : "the catalog fee";
+    const detail =
+      `Member paid ${amount} for ${pay.product_name || PRINT_PRODUCT_SLUG}. ` +
+      `Print the certificate and mail it to the member's address on file.\n\n` +
+      `Certification(s) on record:\n${certLines}\n\n${marker}`;
+
+    const { data: task, error } = await admin
+      .from("member_tasks")
+      .insert({
+        member_id: pay.member_id,
+        title: "Mail printed certificate",
+        detail,
+        status: "open",
+        priority: "high",
+        visible_to_member: true,
+        created_by: null, // system-created, not an admin
+      })
+      .select("id")
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message, before: { payment: pay } };
+    return {
+      ok: true,
+      before: { payment: pay },
+      after: { taskId: (task as { id?: string } | null)?.id ?? null, paymentId: pay.id, marker },
     };
   },
 

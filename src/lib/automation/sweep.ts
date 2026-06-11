@@ -19,6 +19,7 @@ import { PAID_PAYMENT_STATUSES } from "./workflows/payment-reconciliation";
 import { ISSUANCE_APP_TYPES } from "./workflows/certificate-issuance";
 import { CERT_SYNC_APP_TYPE, CERT_SYNC_PENDING_STATUSES } from "./workflows/cert-sync";
 import { INBOX_RECENT_DAYS, profileIdForEmail } from "./workflows/inbox-member";
+import { PRINT_RECENT_DAYS, isPrintProduct } from "./workflows/print-request";
 
 const DAY_MS = 86_400_000;
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -328,6 +329,33 @@ export async function sweepInboxFaq(admin: SupabaseClient, limit = 100): Promise
   return { scanned: rows.length, dispatched };
 }
 
+/**
+ * Dispatch every recent PAID paper-certificate order (print_request). The
+ * product filter happens client-side on slug OR product_name so a row written
+ * with only a description still matches; the recency window keeps the scan from
+ * re-walking all history (rule + executor are marker-idempotent regardless).
+ */
+export async function sweepPrintRequest(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const cutoff = new Date(Date.now() - PRINT_RECENT_DAYS * DAY_MS).toISOString();
+  const { data } = await admin
+    .from("payments")
+    .select("id, member_id, slug, product_name, status, created_at")
+    .eq("status", "paid")
+    .gte("created_at", cutoff)
+    .limit(limit);
+  const rows =
+    (data as { id: string; member_id: string | null; slug: string | null; product_name: string | null }[] | null) ?? [];
+  let dispatched = 0;
+  for (const r of rows) {
+    if (!r.member_id) continue;
+    if (!isPrintProduct(r.slug, r.product_name)) continue;
+    if (await hasExistingRun(admin, "print_request", r.id)) continue;
+    await dispatch({ workflow: "print_request", entityType: "payment", entityId: r.id, memberId: r.member_id });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
@@ -339,6 +367,7 @@ const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepRe
   { workflow: "account_approval", run: sweepAccountApproval },
   { workflow: "name_change", run: sweepNameChange },
   { workflow: "cert_sync", run: sweepCertSync },
+  { workflow: "print_request", run: sweepPrintRequest },
   // inbox_member is listed before inbox_faq to make the routing precedence
   // visible, though correctness doesn't depend on order: both sweeps partition
   // contact_messages by profile-email match (member match → inbox_member only).
