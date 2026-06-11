@@ -8,6 +8,8 @@
 // description), so a re-run never double-bills.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatCents } from "@/lib/format";
+import { DAY_MS } from "../time";
 import type { DispatchInput, RuleResult } from "../types";
 
 export const INVOICE_GENERATION_RULE_VERSION = "invgen-1";
@@ -30,7 +32,7 @@ function daysUntil(date: string | null, now: Date): number | null {
   if (!date) return null;
   const t = Date.parse(date);
   if (Number.isNaN(t)) return null;
-  return (t - now.getTime()) / 86_400_000;
+  return (t - now.getTime()) / DAY_MS;
 }
 
 export async function invoiceGenerationRule(
@@ -67,6 +69,6 @@ export async function invoiceGenerationRule(
         certId: cert.id,
       },
     },
-    summary: `Renewal invoice ($${RENEWAL_FEE_CENTS / 100}) generated for ${type} expiring in ${Math.round(days)} days.`,
+    summary: `Renewal invoice (${formatCents(RENEWAL_FEE_CENTS)}) generated for ${type} expiring in ${Math.round(days)} days.`,
   };
 }

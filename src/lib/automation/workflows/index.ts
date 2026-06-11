@@ -6,12 +6,22 @@
 // triggered it (API route, server action, cron). Idempotent — registration runs
 // at most once per process.
 
-import { registerRule } from "../registrar";
+import { registerRule, registerAgent } from "../registrar";
 import { credentialVerificationRule } from "./credential-verification";
 import { ceuReviewRule } from "./ceu-review";
 import { dunningRule } from "./dunning";
 import { invoiceGenerationRule } from "./invoice-generation";
 import { docRequestRule } from "./doc-request";
+import { paymentReconciliationRule } from "./payment-reconciliation";
+import { certificateIssuanceRule } from "./certificate-issuance";
+import { reciprocityRule } from "./reciprocity";
+import { refundVoidRule } from "./refund-void";
+import { accountApprovalRule, accountApprovalAgent } from "./account-approval";
+import { nameChangeRule, nameChangeAgent } from "./name-change";
+import { certSyncRule } from "./cert-sync";
+import { printRequestRule } from "./print-request";
+import { inboxFaqRule, inboxFaqAgent } from "./inbox-faq";
+import { inboxMemberRule } from "./inbox-member";
 
 let registered = false;
 
@@ -26,4 +36,45 @@ export function registerWorkflows(): void {
   registerRule("dunning", dunningRule);
   registerRule("invoice_generation", invoiceGenerationRule);
   registerRule("doc_request", docRequestRule);
+
+  // Phase 1, batch 3 — money/credential workflows. payment_reconciliation and
+  // certificate_issuance auto-execute only their narrow happy paths; reciprocity
+  // and refund_void are PERMANENT human gates (always escalate, never an action).
+  registerRule("payment_reconciliation", paymentReconciliationRule);
+  registerRule("certificate_issuance", certificateIssuanceRule);
+  registerRule("reciprocity", reciprocityRule);
+  registerRule("refund_void", refundVoidRule);
+
+  // Phase 2 — model-evaluated workflows: the rule gates the hard cases, the
+  // agent (Claude) weighs the rest. Without ANTHROPIC_API_KEY the agents return
+  // null and dispatch escalates with "no_evaluator". Still ship disabled.
+  registerRule("account_approval", accountApprovalRule);
+  registerAgent("account_approval", accountApprovalAgent);
+  registerRule("name_change", nameChangeRule);
+  registerAgent("name_change", nameChangeAgent);
+
+  // Final deterministic batch — cert_sync approves clean Certification Sync
+  // applications (enable sync + approve in one vetted executor). The `reminders`
+  // workflow has NO evaluator on purpose: the legacy reminder runner stays the
+  // delivery engine, and its automation_config row only gates the run-history
+  // mirroring in reminders-bridge.ts.
+  registerRule("cert_sync", certSyncRule);
+
+  // print_request — there is no print_requests table: a paper-certificate
+  // order IS a paid payments row for the $25 printed-copy product. The rule
+  // opens the staff fulfillment task ("Mail printed certificate") via the
+  // marker-idempotent create_print_task executor; a member with no
+  // certification on record escalates (nothing to print — refund or hold).
+  registerRule("print_request", printRequestRule);
+
+  // INBOX workflows. inbox_faq: rule gates (bad address / member sender /
+  // sensitive content), then the agent matches the message against the built-in
+  // FAQ pack — only a >= 0.90 match auto-sends a reply (migration 031 seeds
+  // propose NULL, so anything less escalates). inbox_member: escalate-only
+  // triage (both thresholds NULL) — the rule is always decisive and carries a
+  // member-context summary; no agent registered (add one later by returning
+  // null from the rule for the cases the agent should weigh).
+  registerRule("inbox_faq", inboxFaqRule);
+  registerAgent("inbox_faq", inboxFaqAgent);
+  registerRule("inbox_member", inboxMemberRule);
 }

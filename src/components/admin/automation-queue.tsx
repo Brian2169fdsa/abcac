@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format";
 import { approveAutomationRun, rejectAutomationRun } from "@/app/(admin)/admin/automation/actions";
 
 export interface PendingRun {
@@ -15,12 +16,6 @@ export interface PendingRun {
   created_at: string | null;
   handler: string | null;
   args: Record<string, unknown> | null;
-}
-
-function fmt(d: string | null): string {
-  return d
-    ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-    : "—";
 }
 
 function pct(c: number | null): string {
@@ -55,7 +50,7 @@ function PendingCard({ run }: { run: PendingRun }) {
             <span className="rounded-full bg-bg px-2 py-0.5 text-xs text-muted">
               confidence {pct(run.confidence)}
             </span>
-            <span className="text-xs text-muted">{fmt(run.created_at)}</span>
+            <span className="text-xs text-muted">{formatDateTime(run.created_at)}</span>
           </div>
           {run.summary ? <p className="mt-1 text-sm text-ink/80">{run.summary}</p> : null}
         </div>
