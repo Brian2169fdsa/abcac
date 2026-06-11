@@ -329,21 +329,23 @@ export const REGISTRY: Record<string, Executor> = {
       .eq("id", req.member_id)
       .maybeSingle();
 
+    // Profile write FIRST, request completion second: if the second write fails,
+    // the request stays pending and a retry re-applies the same parsed name
+    // idempotently then completes the request. (The reverse order would strand a
+    // 'completed' request with a stale profile that no retry could ever fix.)
+    const name = parseFullName(fullName);
+    const namePatch = { first_name: name.first, middle_name: name.middle, last_name: name.last };
+    const { error: profErr } = await admin.from("profiles").update(namePatch).eq("id", req.member_id);
+    if (profErr) {
+      return { ok: false, error: `profile_update_failed:${profErr.message}`, before: { request: req, profile: profileBefore } };
+    }
+
     const { error: reqErr } = await admin
       .from("name_change_requests")
       .update({ status: "completed", reviewed_at: new Date().toISOString() })
       .eq("id", id)
       .eq("status", "pending"); // guard: lose the race rather than re-decide
-    if (reqErr) return { ok: false, error: reqErr.message };
-
-    const name = parseFullName(fullName);
-    const namePatch = { first_name: name.first, middle_name: name.middle, last_name: name.last };
-    const { error: profErr } = await admin.from("profiles").update(namePatch).eq("id", req.member_id);
-    if (profErr) {
-      // The request was completed but the profile write failed — surface it so
-      // the run is marked failed and a human reconciles.
-      return { ok: false, error: `profile_update_failed:${profErr.message}`, before: { request: req, profile: profileBefore } };
-    }
+    if (reqErr) return { ok: false, error: reqErr.message, before: { request: req, profile: profileBefore } };
     return {
       ok: true,
       before: { request: req, profile: profileBefore },

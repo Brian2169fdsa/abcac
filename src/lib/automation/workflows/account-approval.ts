@@ -87,15 +87,23 @@ function missingRequiredFields(p: ProfileRow): string[] {
   return missing;
 }
 
-/** ACTIVE certifications rows matching any self-reported number. */
+/**
+ * ACTIVE certifications rows matching any self-reported number — scoped to the
+ * profile's OWN rows. Without the member_id scope, a registrant typing a
+ * STRANGER's valid cert number would corroborate themselves into an
+ * auto-approval; only certs already on file under this same profile id (e.g.
+ * imported members claiming their account) may count.
+ */
 async function matchedActiveCerts(
   admin: SupabaseClient,
+  memberId: string,
   tokens: string[],
 ): Promise<{ cert_number: string | null; cert_type: string | null }[]> {
   if (tokens.length === 0) return [];
   const { data } = await admin
     .from("certifications")
     .select("id,cert_number,cert_type,status")
+    .eq("member_id", memberId)
     .in("cert_number", tokens)
     .eq("status", "active");
   return (data as { cert_number: string | null; cert_type: string | null }[] | null) ?? [];
@@ -121,9 +129,9 @@ export async function accountApprovalRule(
   }
 
   // Clean positive: a self-reported certification number that matches an ACTIVE
-  // certification on file is the strongest possible corroboration — approve.
+  // certification ALREADY ON THIS PROFILE is the strongest corroboration — approve.
   const tokens = certNumberTokens(p.submitted_cert_numbers);
-  const matches = await matchedActiveCerts(admin, tokens);
+  const matches = await matchedActiveCerts(admin, p.id, tokens);
   if (matches.length > 0) {
     const label = matches
       .map((m) => `${m.cert_type ?? "certification"} #${m.cert_number ?? "?"}`)
@@ -186,7 +194,7 @@ export async function accountApprovalAgent(
   if (!p) return null;
 
   const tokens = certNumberTokens(p.submitted_cert_numbers);
-  const matched = await matchedActiveCerts(admin, tokens);
+  const matched = await matchedActiveCerts(admin, p.id, tokens);
   const prompt = buildAccountApprovalPrompt(p, { tokens, matched: matched.length });
 
   let text: string;

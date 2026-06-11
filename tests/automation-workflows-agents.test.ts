@@ -130,6 +130,10 @@ describe("accountApprovalRule", () => {
     expect(r?.action?.handler).toBe("approve_account");
     expect(r?.action?.args).toMatchObject({ memberId: "m1", expectStatus: "pending" });
     expect(r?.summary).toContain("CAC-1234");
+    // Security regression: the cert match MUST be scoped to the profile's own
+    // rows — a stranger's valid cert number must never corroborate this account.
+    const certQuery = c.callsFor("certifications", "select")[0];
+    expect(certQuery.filters).toContainEqual({ col: "member_id", val: "m1" });
   });
 
   it("returns null (agent's turn) for a complete profile with no cert match", async () => {
