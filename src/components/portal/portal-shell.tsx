@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { PortalTopbar } from "@/components/portal/portal-topbar";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { cn } from "@/lib/utils";
+import type { Notification } from "@/lib/notifications";
 
 /**
  * Portal chrome: maroon top bar + white brand bar, a fixed ~280px left sidebar
@@ -15,11 +16,15 @@ export function PortalShell({
   memberName,
   messageCount,
   isAdmin = false,
+  notificationCount = 0,
+  notifications = [],
   children,
 }: {
   memberName: string;
   messageCount?: number;
   isAdmin?: boolean;
+  notificationCount?: number;
+  notifications?: Notification[];
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -46,6 +51,8 @@ export function PortalShell({
           memberName={memberName}
           messageCount={messageCount}
           isAdmin={isAdmin}
+          notificationCount={notificationCount}
+          notifications={notifications}
           onMenuToggle={() => setDrawerOpen((o) => !o)}
         />
       </div>
