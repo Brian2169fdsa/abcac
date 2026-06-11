@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/format";
 import { AutomationQueue, type PendingRun } from "@/components/admin/automation-queue";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,6 @@ interface RunRow {
 }
 
 const ACTIVITY_STATUSES = ["auto_executed", "escalated", "failed", "approved", "rejected"];
-
-function fmt(d: string | null): string {
-  return d
-    ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-    : "—";
-}
 
 const STATUS_LABEL: Record<string, string> = {
   auto_executed: "Auto-executed",
@@ -128,7 +123,7 @@ export default async function AdminAutomation() {
             ) : (
               activityRows.map((r) => (
                 <tr key={r.id} className="border-b border-line last:border-0 align-top">
-                  <td className="px-5 py-3 text-muted">{fmt(r.created_at)}</td>
+                  <td className="px-5 py-3 text-muted">{formatDateTime(r.created_at)}</td>
                   <td className="px-5 py-3 font-semibold">{r.workflow}</td>
                   <td className="px-5 py-3 text-muted">{r.summary ?? "—"}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted">

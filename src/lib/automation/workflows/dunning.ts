@@ -8,6 +8,8 @@
 // multi-stage escalating sequence is a later iteration.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatCents } from "@/lib/format";
+import { DAY_MS } from "../time";
 import type { DispatchInput, RuleResult } from "../types";
 
 export const DUNNING_RULE_VERSION = "dunning-1";
@@ -28,7 +30,7 @@ function ageDays(iso: string | null, now: Date): number {
   if (!iso) return 0;
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return 0;
-  return (now.getTime() - t) / 86_400_000;
+  return (now.getTime() - t) / DAY_MS;
 }
 
 export async function dunningRule(
@@ -50,7 +52,7 @@ export async function dunningRule(
 
   const num = inv.invoice_number ?? "your invoice";
   const amount =
-    typeof inv.amount_cents === "number" ? `$${(inv.amount_cents / 100).toLocaleString("en-US")}` : "the balance";
+    typeof inv.amount_cents === "number" ? formatCents(inv.amount_cents) : "the balance";
 
   return {
     decisive: true,

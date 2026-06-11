@@ -12,7 +12,7 @@ vi.mock("@/lib/automation/dispatch", () => ({
 }));
 
 import { ceuReviewRule, CEU_REVIEW_RULE_VERSION } from "@/lib/automation/workflows/ceu-review";
-import { sweepCeuReview, hasExistingRun, runAutomationSweep } from "@/lib/automation/sweep";
+import { sweepCeuReview, hasExistingRun, existingRunEntityIds, runAutomationSweep } from "@/lib/automation/sweep";
 
 const INPUT = { workflow: "ceu_review", entityType: "ceu_record", entityId: "ceu-1" };
 
@@ -87,12 +87,31 @@ describe("sweepCeuReview", () => {
   it("skips CEUs that already have a run (idempotent)", async () => {
     active = makeClient({ id: "admin" }, (t: string, op: Op): QueryResult => {
       if (t === "ceu_records" && op === "select") return { data: [{ id: "c1", member_id: "m1", status: "pending" }] };
-      if (t === "automation_runs" && op === "select") return { data: { id: "run-existing" } };
+      // Batched dedup query returns the entity_ids that already have a run.
+      if (t === "automation_runs" && op === "select") return { data: [{ entity_id: "c1" }] };
       return { data: null };
     });
     const res = await sweepCeuReview(active.client);
     expect(res).toEqual({ scanned: 1, dispatched: 0 });
     expect(dispatchMock).not.toHaveBeenCalled();
+  });
+
+  it("existingRunEntityIds batches the dedup probe into one .in query", async () => {
+    active = makeClient({ id: "admin" }, (t: string): QueryResult =>
+      t === "automation_runs" ? { data: [{ entity_id: "c1" }, { entity_id: "c3" }] } : { data: null },
+    );
+    const set = await existingRunEntityIds(active.client, "ceu_review", ["c1", "c2", "c3"]);
+    expect(set).toEqual(new Set(["c1", "c3"]));
+    const call = active.callsFor("automation_runs", "select")[0];
+    expect(call.filters).toEqual(
+      expect.arrayContaining([
+        { col: "workflow", val: "ceu_review" },
+        { col: "entity_id", val: ["c1", "c2", "c3"] },
+      ]),
+    );
+    // No candidates → no query at all.
+    expect(await existingRunEntityIds(active.client, "ceu_review", [])).toEqual(new Set());
+    expect(active.callsFor("automation_runs", "select")).toHaveLength(1);
   });
 
   it("hasExistingRun filters on workflow + entity_id", async () => {

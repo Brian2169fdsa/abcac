@@ -12,12 +12,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getWorkflowConfig, isGloballyPaused } from "./config";
 import { dispatch } from "./dispatch";
+import { DAY_MS, isoDate } from "./time";
 import { DUNNING_AGE_DAYS } from "./workflows/dunning";
 import { RENEWAL_WINDOW_DAYS } from "./workflows/invoice-generation";
 import { REQUIRED_DOC_BY_APP_TYPE, docAlreadyCovered } from "./workflows/doc-request";
-
-const DAY_MS = 86_400_000;
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 /** True when an automation_runs row already exists for (workflow, entityId). */
 export async function hasExistingRun(
@@ -35,9 +33,79 @@ export async function hasExistingRun(
   return Boolean(data);
 }
 
+/**
+ * Batched run-dedup: which of these entityIds already have an automation_runs
+ * row for this workflow? One `.in()` query instead of one probe per row.
+ */
+export async function existingRunEntityIds(
+  admin: SupabaseClient,
+  workflow: string,
+  entityIds: string[],
+): Promise<Set<string>> {
+  if (entityIds.length === 0) return new Set();
+  const { data } = await admin
+    .from("automation_runs")
+    .select("entity_id")
+    .eq("workflow", workflow)
+    .in("entity_id", entityIds);
+  const rows = (data as { entity_id: string | null }[] | null) ?? [];
+  return new Set(rows.map((r) => r.entity_id).filter((v): v is string => Boolean(v)));
+}
+
 export interface SweepResult {
   scanned: number;
   dispatched: number;
+}
+
+interface SweepRow {
+  id: string;
+  member_id: string | null;
+}
+
+/**
+ * Shared sweep driver: given the already-queried candidate rows, apply any
+ * per-row pre-filter, dedup against existing runs in one batched query, and
+ * dispatch whatever's left. Counting matches the per-sweep loops it replaced:
+ * `scanned` is the raw row count, `dispatched` only what was handed off.
+ */
+async function runSweep<R extends SweepRow>(
+  admin: SupabaseClient,
+  opts: {
+    workflow: string;
+    entityType: string;
+    rows: R[];
+    /** Optional member attribution override (defaults to row.member_id). */
+    memberIdOf?: (row: R) => string | null;
+    /** Return false to skip the row before the dedup check (cross-table probes live here). */
+    preFilter?: (row: R) => boolean | Promise<boolean>;
+  },
+): Promise<SweepResult> {
+  const { workflow, entityType, rows, memberIdOf, preFilter } = opts;
+
+  const candidates: R[] = [];
+  for (const r of rows) {
+    if (preFilter && !(await preFilter(r))) continue;
+    candidates.push(r);
+  }
+
+  const existing = await existingRunEntityIds(
+    admin,
+    workflow,
+    candidates.map((r) => r.id),
+  );
+
+  let dispatched = 0;
+  for (const r of candidates) {
+    if (existing.has(r.id)) continue;
+    await dispatch({
+      workflow,
+      entityType,
+      entityId: r.id,
+      memberId: memberIdOf ? memberIdOf(r) : r.member_id,
+    });
+    dispatched++;
+  }
+  return { scanned: rows.length, dispatched };
 }
 
 /** Dispatch every still-pending CEU record that hasn't been processed yet. */
@@ -48,18 +116,7 @@ export async function sweepCeuReview(admin: SupabaseClient, limit = 100): Promis
     .eq("status", "pending")
     .limit(limit);
   const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
-  let dispatched = 0;
-  for (const r of rows) {
-    if (await hasExistingRun(admin, "ceu_review", r.id)) continue;
-    await dispatch({
-      workflow: "ceu_review",
-      entityType: "ceu_record",
-      entityId: r.id,
-      memberId: r.member_id,
-    });
-    dispatched++;
-  }
-  return { scanned: rows.length, dispatched };
+  return runSweep(admin, { workflow: "ceu_review", entityType: "ceu_record", rows });
 }
 
 /** Dispatch every unpaid invoice that's past the dunning grace window. */
@@ -72,13 +129,7 @@ export async function sweepDunning(admin: SupabaseClient, limit = 200): Promise<
     .lt("created_at", cutoff)
     .limit(limit);
   const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
-  let dispatched = 0;
-  for (const r of rows) {
-    if (await hasExistingRun(admin, "dunning", r.id)) continue;
-    await dispatch({ workflow: "dunning", entityType: "invoice", entityId: r.id, memberId: r.member_id });
-    dispatched++;
-  }
-  return { scanned: rows.length, dispatched };
+  return runSweep(admin, { workflow: "dunning", entityType: "invoice", rows });
 }
 
 /** Dispatch every active cert expiring within the renewal window (to bill it). */
@@ -93,13 +144,7 @@ export async function sweepInvoiceGeneration(admin: SupabaseClient, limit = 200)
     .lte("expiration_date", isoDate(windowEnd))
     .limit(limit);
   const rows = (data as { id: string; member_id: string | null }[] | null) ?? [];
-  let dispatched = 0;
-  for (const r of rows) {
-    if (await hasExistingRun(admin, "invoice_generation", r.id)) continue;
-    await dispatch({ workflow: "invoice_generation", entityType: "certification", entityId: r.id, memberId: r.member_id });
-    dispatched++;
-  }
-  return { scanned: rows.length, dispatched };
+  return runSweep(admin, { workflow: "invoice_generation", entityType: "certification", rows });
 }
 
 /** Dispatch every in-review application still missing its required document. */
@@ -112,16 +157,16 @@ export async function sweepDocRequest(admin: SupabaseClient, limit = 200): Promi
     .in("app_type", appTypes)
     .limit(limit);
   const rows = (data as { id: string; member_id: string | null; app_type: string | null }[] | null) ?? [];
-  let dispatched = 0;
-  for (const r of rows) {
-    const need = r.app_type ? REQUIRED_DOC_BY_APP_TYPE[r.app_type] : undefined;
-    if (!need || !r.member_id) continue;
-    if (await docAlreadyCovered(admin, r.member_id, need)) continue;
-    if (await hasExistingRun(admin, "doc_request", r.id)) continue;
-    await dispatch({ workflow: "doc_request", entityType: "application", entityId: r.id, memberId: r.member_id });
-    dispatched++;
-  }
-  return { scanned: rows.length, dispatched };
+  return runSweep(admin, {
+    workflow: "doc_request",
+    entityType: "application",
+    rows,
+    preFilter: async (r) => {
+      const need = r.app_type ? REQUIRED_DOC_BY_APP_TYPE[r.app_type] : undefined;
+      if (!need || !r.member_id) return false;
+      return !(await docAlreadyCovered(admin, r.member_id, need));
+    },
+  });
 }
 
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
