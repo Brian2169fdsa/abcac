@@ -12,6 +12,10 @@ import { ceuReviewRule } from "./ceu-review";
 import { dunningRule } from "./dunning";
 import { invoiceGenerationRule } from "./invoice-generation";
 import { docRequestRule } from "./doc-request";
+import { paymentReconciliationRule } from "./payment-reconciliation";
+import { certificateIssuanceRule } from "./certificate-issuance";
+import { reciprocityRule } from "./reciprocity";
+import { refundVoidRule } from "./refund-void";
 
 let registered = false;
 
@@ -26,4 +30,12 @@ export function registerWorkflows(): void {
   registerRule("dunning", dunningRule);
   registerRule("invoice_generation", invoiceGenerationRule);
   registerRule("doc_request", docRequestRule);
+
+  // Phase 1, batch 3 — money/credential workflows. payment_reconciliation and
+  // certificate_issuance auto-execute only their narrow happy paths; reciprocity
+  // and refund_void are PERMANENT human gates (always escalate, never an action).
+  registerRule("payment_reconciliation", paymentReconciliationRule);
+  registerRule("certificate_issuance", certificateIssuanceRule);
+  registerRule("reciprocity", reciprocityRule);
+  registerRule("refund_void", refundVoidRule);
 }

@@ -188,6 +188,74 @@ export const REGISTRY: Record<string, Executor> = {
     if (error) return { ok: false, error: error.message };
     return { ok: true, after: { id: (data as { id?: string } | null)?.id, invoiceNumber, amountCents: cents } };
   },
+
+  // Reconcile a completed payment to its invoice (payment_reconciliation).
+  // Mirrors the webhook's invoice mark-paid write. Idempotent — an already-paid
+  // invoice is an ok no-op; a refunded (or otherwise moved) invoice refuses with
+  // state_moved rather than resurrecting it. The Stripe session id is stamped
+  // into stripe_payment_intent only when that column is still empty.
+  mark_invoice_paid: async (admin, args) => {
+    const id = str(args.invoiceId ?? args.id);
+    if (!id) return { ok: false, error: "missing_invoice_id" };
+    const { data: before } = await admin
+      .from("invoices")
+      .select("id,status,paid_at,stripe_payment_intent")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const b = before as { status?: string | null; stripe_payment_intent?: string | null };
+    const current = b.status ?? null;
+    // M1 — re-validate at execute time: already paid is a success no-op.
+    if (current === "paid") return { ok: true, before, after: { id, status: "paid" } };
+    // Refunded (or any non-unpaid state) means a human moved it — never overwrite.
+    if (current !== "unpaid") return { ok: false, error: "state_moved", before };
+    const patch: Record<string, unknown> = { status: "paid", paid_at: new Date().toISOString() };
+    const session = str(args.stripeSessionId);
+    if (session && !str(b.stripe_payment_intent)) patch.stripe_payment_intent = session;
+    const { error } = await admin
+      .from("invoices")
+      .update(patch)
+      .eq("id", id)
+      .eq("status", "unpaid"); // guard: lose the race rather than double-mark
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, status: "paid", stripePaymentIntent: patch.stripe_payment_intent ?? b.stripe_payment_intent ?? null } };
+  },
+
+  // Extend an active certification to a rule-computed target expiration
+  // (certificate_issuance: paid renewal). The TARGET is staged by the rule
+  // (2 years from max(today, current expiration)), so a re-run is a no-op: an
+  // expiration already at/past the target never gets pushed out again. A cert
+  // that is no longer active means a human intervened — refuse (state_moved).
+  extend_certification: async (admin, args) => {
+    const id = str(args.certId ?? args.id);
+    const target = str(args.targetExpiration);
+    if (!id || !target || !/^\d{4}-\d{2}-\d{2}$/.test(target)) return { ok: false, error: "bad_args" };
+    const targetMs = Date.parse(target);
+    if (Number.isNaN(targetMs)) return { ok: false, error: "bad_args" };
+    // Sanity bound on a staged date: never set an expiration > 10 years out.
+    if (targetMs > Date.now() + 10 * 365.25 * 86_400_000) return { ok: false, error: "bad_args" };
+    const { data: before } = await admin
+      .from("certifications")
+      .select("id,status,expiration_date")
+      .eq("id", id)
+      .maybeSingle();
+    if (!before) return { ok: false, error: "not_found" };
+    const b = before as { status?: string | null; expiration_date?: string | null };
+    // M1 — idempotent: already at/past the staged target is a success no-op.
+    const currentMs = b.expiration_date ? Date.parse(b.expiration_date) : NaN;
+    if (!Number.isNaN(currentMs) && currentMs >= targetMs) {
+      return { ok: true, before, after: { id, expirationDate: b.expiration_date } };
+    }
+    // Only extend a still-active cert; anything else moved under us.
+    if ((b.status ?? null) !== "active") return { ok: false, error: "state_moved", before };
+    const { error } = await admin
+      .from("certifications")
+      .update({ expiration_date: target, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "active"); // guard: lose the race rather than extend a moved cert
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, before, after: { id, expirationDate: target } };
+  },
 };
 
 export function isWhitelisted(handler: string): boolean {
