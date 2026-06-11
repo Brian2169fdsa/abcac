@@ -23,3 +23,25 @@ export function formatDateTimeWithYear(d: string | null): string {
 export function formatCents(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US")}`;
 }
+
+/** Whole-dollar amount → "$1,234" (en-US grouping, rounded; non-finite → "$0"). */
+export function formatUsd(amount: number): string {
+  return `$${Math.round(Number.isFinite(amount) ? amount : 0).toLocaleString("en-US")}`;
+}
+
+/** 0..1 ratio → "85%" (rounded whole percent). */
+export function formatPercent(ratio: number): string {
+  return `${Math.round((Number.isFinite(ratio) ? ratio : 0) * 100)}%`;
+}
+
+/** Minutes → compact human duration: "0m", "45m", "3h 20m", "2d 4h". */
+export function formatDuration(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  if (m < 60) return `${m}m`;
+  const hours = Math.floor(m / 60);
+  const rem = m % 60;
+  if (hours < 24) return rem ? `${hours}h ${rem}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remH = hours % 24;
+  return remH ? `${days}d ${remH}h` : `${days}d`;
+}

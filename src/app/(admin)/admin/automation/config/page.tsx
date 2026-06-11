@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPortalRole, isSuperadmin } from "@/lib/auth/roles";
 import { AutomationConfigPanel } from "@/components/admin/automation-config-panel";
+import { AutomationTabs } from "../automation-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function AutomationConfigPage() {
 
   return (
     <>
+      <AutomationTabs />
       <h1 className="text-2xl font-bold">Automation Config</h1>
       <p className="mb-6 mt-2 max-w-3xl text-muted">
         Per-workflow kill switches and decision thresholds for the ABCAC automation engine.
