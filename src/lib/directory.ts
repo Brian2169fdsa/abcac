@@ -98,6 +98,15 @@ export const CREDENTIAL_TYPES = [
   "CPRS",
 ] as const;
 
+/**
+ * Human-readable label for a member's public-directory listing state, derived
+ * from `profiles.directory_opt_out`. Shared by the member control and the admin
+ * read-only indicator so both describe the state identically.
+ */
+export function directoryListingLabel(optOut: boolean | null | undefined): "Listed" | "Opted out" {
+  return optOut ? "Opted out" : "Listed";
+}
+
 /** True when a credential is valid today (active + not past expiration). */
 export function isCurrentlyValid(cred: PublicCredential, now: Date = new Date()): boolean {
   if (cred.status !== "active") return false;

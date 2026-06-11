@@ -35,6 +35,7 @@ import { MemberInvoiceManage } from "@/components/admin/member-invoice-manage";
 import { MemberSupervisionManage } from "@/components/admin/member-supervision-manage";
 import { MemberAuthorizationManage } from "@/components/admin/member-authorization-manage";
 import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
+import { directoryListingLabel } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 
@@ -276,6 +277,15 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               <span className="rounded-full border border-line px-2 py-0.5 capitalize text-muted">Cert: {cap(profile.cert_status)}</span>
               <StatusBadge status={profile.account_status} />
               <span className="rounded-full border border-line px-2 py-0.5 capitalize text-muted">Role: {cap(profile.portal_role)}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 font-semibold ${
+                  profile.directory_opt_out
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-green-100 text-green-800"
+                }`}
+              >
+                Public directory: {directoryListingLabel(profile.directory_opt_out)}
+              </span>
             </div>
           </div>
           <div className="flex flex-col items-end gap-3">
