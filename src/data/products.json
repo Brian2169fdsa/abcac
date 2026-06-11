@@ -72,6 +72,19 @@
       ]
     },
     {
+      "slug": "printed-certificate-copy",
+      "name": "Printed Certificate Copy",
+      "price": 25.0,
+      "category": "Service",
+      "exam_mode": null,
+      "short": "Request a printed copy of your official ABCAC certificate, processed and mailed to you. ABCAC issues digital certificates by default.",
+      "includes": [
+        "Professionally printed copy of your current certificate",
+        "Processing and mailing to your address on file",
+        "$25 processing and mailing fee"
+      ]
+    },
+    {
       "slug": "icrc-reciprocity-transfer",
       "name": "IC&RC Reciprocity Transfer",
       "price": 150.0,

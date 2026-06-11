@@ -20,6 +20,7 @@ import { PAID_PAYMENT_STATUSES } from "./workflows/payment-reconciliation";
 import { ISSUANCE_APP_TYPES } from "./workflows/certificate-issuance";
 import { CERT_SYNC_APP_TYPE, CERT_SYNC_PENDING_STATUSES } from "./workflows/cert-sync";
 import { INBOX_RECENT_DAYS, profileIdForEmail } from "./workflows/inbox-member";
+import { PRINT_RECENT_DAYS, isPrintProduct } from "./workflows/print-request";
 
 /** True when an automation_runs row already exists for (workflow, entityId). */
 export async function hasExistingRun(
@@ -362,6 +363,30 @@ export async function sweepInboxFaq(admin: SupabaseClient, limit = 100): Promise
   });
 }
 
+/**
+ * Dispatch every recent PAID paper-certificate order (print_request). The
+ * product filter happens client-side on slug OR product_name so a row written
+ * with only a description still matches; the recency window keeps the scan from
+ * re-walking all history (rule + executor are marker-idempotent regardless).
+ */
+export async function sweepPrintRequest(admin: SupabaseClient, limit = 200): Promise<SweepResult> {
+  const cutoff = new Date(Date.now() - PRINT_RECENT_DAYS * DAY_MS).toISOString();
+  const { data } = await admin
+    .from("payments")
+    .select("id, member_id, slug, product_name, status, created_at")
+    .eq("status", "paid")
+    .gte("created_at", cutoff)
+    .limit(limit);
+  const rows =
+    (data as { id: string; member_id: string | null; slug: string | null; product_name: string | null }[] | null) ?? [];
+  return runSweep(admin, {
+    workflow: "print_request",
+    entityType: "payment",
+    rows,
+    preFilter: (r) => Boolean(r.member_id) && isPrintProduct(r.slug, r.product_name),
+  });
+}
+
 const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepResult> }[] = [
   { workflow: "ceu_review", run: sweepCeuReview },
   { workflow: "dunning", run: sweepDunning },
@@ -373,6 +398,7 @@ const SCANS: { workflow: string; run: (admin: SupabaseClient) => Promise<SweepRe
   { workflow: "account_approval", run: sweepAccountApproval },
   { workflow: "name_change", run: sweepNameChange },
   { workflow: "cert_sync", run: sweepCertSync },
+  { workflow: "print_request", run: sweepPrintRequest },
   // inbox_member is listed before inbox_faq to make the routing precedence
   // visible, though correctness doesn't depend on order: both sweeps partition
   // contact_messages by profile-email match (member match → inbox_member only).

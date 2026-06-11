@@ -59,7 +59,7 @@ Safety invariants (enforced in code, not convention):
 | `reminders` | deterministic (audit wrapper) | mirror each legacy reminder send into run history (delivery stays with the legacy runner — never gated by this flag) | **built** |
 | `inbox_faq` | agent (Claude) | email FAQ answers to public contact-form messages (auto ≥ 0.90; rest escalate) | **built** |
 | `inbox_member` | escalate-only triage | triage member messages (portal + contact form) with member context; member match always wins over `inbox_faq` | **built** |
-| `print_request` | — | — | not yet built (no print_requests table exists) |
+| `print_request` | deterministic | when a member PAYS for the $25 printed-certificate product (a paid `payments` row, slug `printed-certificate-copy`), open the staff fulfillment task "Mail printed certificate" (visible to the member, marker-idempotent via `[print_request:<paymentId>]` in the task detail); no certification on record → escalate (nothing to print) | **built** |
 
 Everything ships **disabled** (`automation_config.enabled = false`). A workflow
 with no evaluator that gets dispatched simply escalates (`no_evaluator`).
