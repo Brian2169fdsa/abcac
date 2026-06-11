@@ -6,6 +6,8 @@ import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { ActivityTimeline, type ActivityEvent } from "@/components/dashboard/activity-timeline";
+import { ActivityTimeline as JourneyTimeline } from "@/components/activity-timeline";
+import { buildActivityFeed } from "@/lib/activity";
 import { NextSteps } from "@/components/dashboard/next-steps";
 import { MemberTasksCard, type MemberTask } from "@/components/dashboard/member-tasks-card";
 import { MemberAgentPanel } from "@/components/agent/member-agent-panel";
@@ -296,6 +298,19 @@ export default async function AccountPage() {
     .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
     .slice(0, 6);
 
+  // Compact "Recent activity" feed for the unified journey timeline — built from
+  // the records already fetched above, newest-first, capped at 5. Links to the
+  // full /account/activity page for everything else.
+  const recentJourney = buildActivityFeed(
+    {
+      applications: applications as unknown as Record<string, unknown>[],
+      certifications: certifications as unknown as Record<string, unknown>[],
+      payments: payments as unknown as Record<string, unknown>[],
+      ceuRecords: ceuRecords as unknown as Record<string, unknown>[],
+    },
+    { limit: 5 },
+  );
+
   return (
     <>
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
@@ -488,6 +503,24 @@ export default async function AccountPage() {
       {/* Recent activity */}
       <Section title="Recent Activity" compact>
         <ActivityTimeline events={activityEvents} />
+      </Section>
+
+      {/* Your activity — compact unified journey timeline */}
+      <Section compact>
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">Your activity</h3>
+              <p className="mt-0.5 text-sm text-muted">
+                Applications, payments, credentials, and more — your full ABCAC history.
+              </p>
+            </div>
+            <Link href="/account/activity" className="shrink-0 text-sm font-semibold text-brand hover:text-brand-600">
+              View all →
+            </Link>
+          </div>
+          <JourneyTimeline events={recentJourney} linkable emptyText="No activity yet." />
+        </div>
       </Section>
 
       {/* Credentials */}
