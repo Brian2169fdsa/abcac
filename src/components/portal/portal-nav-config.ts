@@ -50,6 +50,7 @@ export const PORTAL_NAV: PortalNavGroup[] = [
     divider: true,
     items: [
       { label: "Messages", href: "/account/messages" },
+      { label: "Notifications", href: "/account/notifications" },
       { label: "Invoices & Receipts", href: "/account/invoices" },
       { label: "Account Settings", href: "/account/settings" },
     ],
