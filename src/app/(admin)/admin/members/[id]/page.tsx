@@ -36,6 +36,8 @@ import { MemberSupervisionManage } from "@/components/admin/member-supervision-m
 import { MemberAuthorizationManage } from "@/components/admin/member-authorization-manage";
 import { isSuperadminRole, type PortalRole } from "@/lib/auth/roles";
 import { directoryListingLabel } from "@/lib/directory";
+import { buildActivityFeed } from "@/lib/activity";
+import { ActivityTimeline } from "@/components/activity-timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -257,6 +259,24 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
   // A single-member option for the preselected scoped forms.
   const memberOption = [{ id: memberId, label: `${[profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member"} (${profile.email ?? ""})` }];
 
+  // Unified, newest-first activity feed across this member's surfaces. Reuses the
+  // already-fetched rows (no new queries); mapped to the lib's source keys.
+  const activityFeed = buildActivityFeed(
+    {
+      applications,
+      certifications: certs,
+      payments,
+      invoices,
+      ceuRecords,
+      documents,
+      documentRequests: docRequests,
+      messages,
+      nameChangeRequests: nameChanges,
+      reciprocityRequests: reciprocity,
+    },
+    { limit: 40 },
+  );
+
   return (
     <>
       <div className="mb-4">
@@ -359,6 +379,15 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         description="The guided plan this member is shown on their dashboard — exactly as the client sees it (read-only)."
       >
         <MemberPlanPanel steps={planSteps} />
+      </MemberDetailSection>
+
+      {/* 1.7 Unified activity timeline — recent history across all of this
+          member's surfaces, newest first. Read-only (staff view, links off). */}
+      <MemberDetailSection
+        title="Activity timeline"
+        description="A unified, newest-first feed of this member's recent activity across applications, certifications, CEUs, documents, payments, invoices, messages, and requests."
+      >
+        <ActivityTimeline events={activityFeed} emptyText="No recorded activity for this member." />
       </MemberDetailSection>
 
       {/* 2. Personal Information + Employment */}
