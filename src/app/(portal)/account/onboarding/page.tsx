@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { redirect } from "next/navigation";
 import { PageHero } from "@/components/page-hero";
 import { Section } from "@/components/section";
@@ -9,11 +10,11 @@ export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
   const { data: profile } = await supabase
     .from("profiles")
     .select("first_name,last_name,phone,date_of_birth,address_line1,city,state,zip_code,account_status,account_submitted_at,account_review_notes")
-    .eq("id", user!.id)
+    .eq("id", __authUserId)
     .maybeSingle();
 
   // Approved members don't need onboarding.

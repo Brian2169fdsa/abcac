@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -19,8 +20,8 @@ export default async function AccountActivityPage({
   searchParams?: { type?: string | string[] };
 }) {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const uid = user!.id;
+  const __authUserId = await requireUserId();
+  const uid = __authUserId;
 
   const [
     { data: applications },

@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Check, X } from "lucide-react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -77,8 +78,8 @@ function Timeline({ status }: { status: string | null }) {
 
 export default async function ApplicationsPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const uid = user!.id;
+  const __authUserId = await requireUserId();
+  const uid = __authUserId;
 
   const [{ data: apps }, { data: pays }, { count: docCount }] = await Promise.all([
     supabase.from("applications").select("*").eq("member_id", uid).order("submitted_at", { ascending: false }),

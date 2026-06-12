@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CeuSubmitForm } from "@/components/ceu-submit-form";
@@ -18,10 +19,10 @@ function fmt(d: string | null) {
 
 export default async function CeusPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
   const [{ data }, { data: certData }, { data: scheduleData }] = await Promise.all([
-    supabase.from("ceu_records").select("*").eq("member_id", user!.id).order("completion_date", { ascending: false }),
-    supabase.from("certifications").select("cert_type, expiration_date, status").eq("member_id", user!.id).eq("status", "active"),
+    supabase.from("ceu_records").select("*").eq("member_id", __authUserId).order("completion_date", { ascending: false }),
+    supabase.from("certifications").select("cert_type, expiration_date, status").eq("member_id", __authUserId).eq("status", "active"),
     supabase
       .from("cert_schedules")
       .select("credential_type, renewal_cycle_months, ceu_total_required, ceu_ethics_required, ceu_cultural_required, grace_period_days, notes"),

@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Check, AlertCircle } from "lucide-react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -48,11 +49,11 @@ const CREDENTIAL_CHECKLIST: Record<string, { label: string; match: string }[]> =
 
 export default async function DocumentsPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
   const [{ data }, { data: latestApp }, { data: openReqData }] = await Promise.all([
-    supabase.from("documents").select("*").eq("member_id", user!.id).order("uploaded_at", { ascending: false }),
-    supabase.from("applications").select("cert_type").eq("member_id", user!.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("document_requests").select("id,document_type,note,created_at").eq("member_id", user!.id).eq("status", "open").order("created_at", { ascending: false }),
+    supabase.from("documents").select("*").eq("member_id", __authUserId).order("uploaded_at", { ascending: false }),
+    supabase.from("applications").select("cert_type").eq("member_id", __authUserId).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("document_requests").select("id,document_type,note,created_at").eq("member_id", __authUserId).eq("status", "open").order("created_at", { ascending: false }),
   ]);
   const docs = (data as Doc[]) ?? [];
   const openRequests = (openReqData as DocumentRequest[]) ?? [];

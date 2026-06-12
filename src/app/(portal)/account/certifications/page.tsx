@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -14,11 +15,11 @@ function fmt(d: string | null) {
 
 export default async function CertificationsPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
 
   const [{ data: profile }, { data: certs }] = await Promise.all([
-    supabase.from("profiles").select("first_name,last_name").eq("id", user!.id).maybeSingle(),
-    supabase.from("certifications").select("*").eq("member_id", user!.id).order("issued_date", { ascending: false }),
+    supabase.from("profiles").select("first_name,last_name").eq("id", __authUserId).maybeSingle(),
+    supabase.from("certifications").select("*").eq("member_id", __authUserId).order("issued_date", { ascending: false }),
   ]);
   const memberName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Member";
   const rows = certs ?? [];

@@ -4,6 +4,7 @@ import type { AdminCounts } from "@/components/admin/admin-nav";
 import { ChatWidget } from "@/components/assistant/chat-widget";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/auth/roles";
+import { requireUserId } from "@/lib/auth/current-user";
 
 export const metadata = { title: "ABCAC Admin Console" };
 export const dynamic = "force-dynamic";
@@ -34,10 +35,13 @@ async function queueCounts(sb: Sb): Promise<AdminCounts> {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Middleware already requires a session; here we enforce admin role.
+  // Middleware already validated the session and forwarded the user id; read it
+  // from the header instead of calling getUser() (which would risk a token
+  // refresh this Server Component can't persist). requireUserId redirects to
+  // /login if somehow absent — never dereferences a null user.
+  const userId = await requireUserId();
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("portal_role,first_name,last_name").eq("id", user!.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("portal_role,first_name,last_name").eq("id", userId).maybeSingle();
 
   if (!profile || !isAdminRole(profile.portal_role)) {
     return (

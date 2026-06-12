@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { AddEmploymentForm, EditEmploymentForm, AddOtherCertForm, AddSupervisionForm } from "@/components/portal-forms";
@@ -16,8 +17,8 @@ function fmt(d: string | null) {
 
 export default async function ExperiencePage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const uid = user!.id;
+  const __authUserId = await requireUserId();
+  const uid = __authUserId;
 
   // Supervision the member RECEIVES (they are the linked supervisee). Wrapped so
   // a not-yet-applied migration 023 (no supervisee_member_id column / no RLS

@@ -1,3 +1,4 @@
+import { optionalUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -117,11 +118,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
   // Determine the signed-in admin's own role to gate role management. Only the
   // superadmin "god account" may change portal roles; the server action
   // re-checks this regardless, so this boolean is purely a UI gate.
-  const {
-    data: { user: viewer },
-  } = await sb.auth.getUser();
-  const viewerProfile = viewer
-    ? await safeOne<any>(sb.from("profiles").select("portal_role").eq("id", viewer.id).maybeSingle())
+  const viewerId = optionalUserId();
+  const viewerProfile = viewerId
+    ? await safeOne<any>(sb.from("profiles").select("portal_role").eq("id", viewerId).maybeSingle())
     : null;
   const canManageRoles = isSuperadminRole(viewerProfile?.portal_role);
   const memberRole: PortalRole =

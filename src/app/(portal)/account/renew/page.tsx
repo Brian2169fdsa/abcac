@@ -1,3 +1,4 @@
+import { optionalUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
@@ -10,10 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function RenewPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userId = optionalUserId();
   let name = "there";
-  if (user) {
-    const { data: p } = await supabase.from("profiles").select("first_name").eq("id", user.id).maybeSingle();
+  if (userId) {
+    const { data: p } = await supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle();
     if (p?.first_name) name = p.first_name;
   }
 

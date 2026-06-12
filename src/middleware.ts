@@ -2,17 +2,25 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminRole } from "@/lib/auth/roles";
 
-// Refreshes the Supabase session cookie and gates the member portal / admin area.
+// Single source of auth truth for the portal/admin areas.
 //
-// CRITICAL (auth correctness): with refresh-token ROTATION enabled, the
-// middleware must be the single place that refreshes the session, and it must
-// write the rotated cookies onto BOTH the response (so the browser stores them)
-// AND the request (so the Server Components rendered in this same request read
-// the fresh token instead of re-refreshing with the just-rotated one, which they
-// can't persist — that desync is what forces a re-login on every navigation).
-// Redirects must also carry the refreshed cookies.
+// The middleware is the ONLY place that calls getUser() (and therefore the only
+// place that may refresh/rotate the session). It then forwards the validated
+// user id as the `x-user-id` request header, so downstream Server Components
+// read the user from the header instead of each calling getUser() themselves.
+// That eliminates two failure modes at once:
+//   • the refresh-token-rotation desync (Server Components can't persist a
+//     rotated token, so a per-page refresh would strand the browser's token and
+//     force a re-login on the next navigation), and
+//   • the `user!.id` crash (a null user from a failed per-page refresh used to
+//     throw in layouts → the "A critical error has occurred" global error).
+// Refreshed cookies are written onto BOTH request and response, and carried on
+// redirects, per the canonical @supabase/ssr pattern.
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+  // Strip any client-supplied spoof of our trusted header.
+  requestHeaders.delete("x-user-id");
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -24,12 +32,8 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-        // 1) reflect onto the request so downstream Server Components in THIS
-        //    request read the freshly-rotated token, not the stale one.
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        // 2) rebuild the response bound to the updated request, then write the
-        //    cookies so the browser also receives the rotation.
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: { headers: requestHeaders } });
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
@@ -40,8 +44,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  // A redirect that carries the refreshed auth cookies (so the rotation isn't
-  // lost when the middleware both refreshes and redirects).
+  // A redirect that carries the refreshed auth cookies.
   const redirectTo = (pathname: string, opts?: { keepNext?: boolean }) => {
     const target = request.nextUrl.clone();
     target.pathname = pathname;
@@ -74,6 +77,17 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
     if (profile && profile.account_status !== "approved") return redirectTo("/account/onboarding");
+  }
+
+  // Forward the validated user id to Server Components so they don't each call
+  // getUser() (and don't each risk a token-rotating refresh they can't persist).
+  // Rebuild the pass-through response so it carries BOTH the header and any
+  // cookies refreshed above.
+  if (user) {
+    requestHeaders.set("x-user-id", user.id);
+    const refreshed = response.cookies.getAll();
+    response = NextResponse.next({ request: { headers: requestHeaders } });
+    refreshed.forEach((cookie) => response.cookies.set(cookie));
   }
 
   return response;

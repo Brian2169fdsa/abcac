@@ -1,3 +1,4 @@
+import { optionalUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
 import { CtaButton } from "@/components/cta-button";
 import { Section } from "@/components/section";
@@ -85,7 +86,7 @@ function titleCase(s: string) {
 
 export default async function AccountPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userId = optionalUserId();
 
   let profile: Profile | null = null;
   let certifications: Certification[] = [];
@@ -98,9 +99,9 @@ export default async function AccountPage() {
   let openDocRequests = 0;
   let backendReady = true;
 
-  if (user) {
+  if (userId) {
     try {
-      const { data: p, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      const { data: p, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (error) throw error;
       profile = p as Profile | null;
       const [
@@ -111,19 +112,19 @@ export default async function AccountPage() {
         { count: msgCount },
         { count: docCount },
       ] = await Promise.all([
-        supabase.from("certifications").select("*").eq("member_id", user.id),
-        supabase.from("payments").select("*").eq("member_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("certifications").select("*").eq("member_id", userId),
+        supabase.from("payments").select("*").eq("member_id", userId).order("created_at", { ascending: false }),
         supabase
           .from("ceu_records")
           .select("id, hours, category, status, course_name, submitted_at")
-          .eq("member_id", user.id),
+          .eq("member_id", userId),
         supabase
           .from("applications")
           .select("id, app_type, cert_type, status, submitted_at")
-          .eq("member_id", user.id)
+          .eq("member_id", userId)
           .order("submitted_at", { ascending: false }),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("is_read", false),
-        supabase.from("document_requests").select("*", { count: "exact", head: true }).eq("member_id", user.id).eq("status", "open"),
+        supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", userId).eq("is_read", false),
+        supabase.from("document_requests").select("*", { count: "exact", head: true }).eq("member_id", userId).eq("status", "open"),
       ]);
       certifications = (certs as Certification[]) ?? [];
       payments = (pays as Payment[]) ?? [];
@@ -149,7 +150,7 @@ export default async function AccountPage() {
         const { data: tasks } = await supabase
           .from("member_tasks")
           .select("id, title, detail, status, priority, due_date")
-          .eq("member_id", user.id)
+          .eq("member_id", userId)
           .order("due_date", { ascending: true, nullsFirst: false });
         memberTasks = (tasks as MemberTask[]) ?? [];
       } catch {
@@ -163,7 +164,7 @@ export default async function AccountPage() {
   }
 
   const displayName =
-    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user?.email || "Member";
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Member";
   const syncOn = certifications.some((c) => c.sync_enabled);
   const profilePct = completeness(profile);
   const isAdmin = isAdminRole((profile as { portal_role?: string | null } | null)?.portal_role);

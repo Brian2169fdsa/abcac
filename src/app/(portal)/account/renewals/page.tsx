@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
@@ -47,17 +48,15 @@ function daysLeft(expiration: string | null): number | null {
 
 export default async function RenewalsPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
 
   const [{ data: certsData }, { data: ceuData }, { data: scheduleData }] = await Promise.all([
     supabase
       .from("certifications")
       .select("*")
-      .eq("member_id", user!.id)
+      .eq("member_id", __authUserId)
       .eq("status", "active"),
-    supabase.from("ceu_records").select("*").eq("member_id", user!.id),
+    supabase.from("ceu_records").select("*").eq("member_id", __authUserId),
     // Reference rules — read-only to any authenticated member. Degrade gracefully
     // if the table/rows are absent (falls back to the 90-day / 40-CEU defaults).
     supabase

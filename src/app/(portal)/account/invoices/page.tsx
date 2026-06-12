@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { PayInvoiceButton } from "@/components/pay-invoice-button";
@@ -24,12 +25,12 @@ function isPaid(status: string | null) { return status === "paid"; }
 
 export default async function InvoicesPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
 
   const [{ data: invData }, { data: payData }, { data: profData }] = await Promise.all([
-    supabase.from("invoices").select("*").eq("member_id", user!.id).order("created_at", { ascending: false }),
-    supabase.from("payments").select("id,product_name,amount_cents,status,created_at,stripe_session_id").eq("member_id", user!.id).order("created_at", { ascending: false }),
-    supabase.from("profiles").select("first_name,last_name,email").eq("id", user!.id).maybeSingle(),
+    supabase.from("invoices").select("*").eq("member_id", __authUserId).order("created_at", { ascending: false }),
+    supabase.from("payments").select("id,product_name,amount_cents,status,created_at,stripe_session_id").eq("member_id", __authUserId).order("created_at", { ascending: false }),
+    supabase.from("profiles").select("first_name,last_name,email").eq("id", __authUserId).maybeSingle(),
   ]);
 
   const invoices = (invData as Invoice[]) ?? [];
