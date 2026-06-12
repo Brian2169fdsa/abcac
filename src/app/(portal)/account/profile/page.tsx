@@ -1,5 +1,6 @@
 import { requireUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
+import { SignOutButton } from "@/components/sign-out-button";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { ProfileForm, type ProfileData, type Prefs } from "@/components/profile-form";
@@ -75,9 +76,9 @@ export default async function ProfilePage() {
               </div>
             </dl>
             <div className="mt-5 border-t border-line pt-4">
-              <Link href="/logout" className="text-sm font-semibold text-brand hover:text-brand-600">
+              <SignOutButton className="text-left text-sm font-semibold text-brand hover:text-brand-600">
                 Sign out
-              </Link>
+              </SignOutButton>
             </div>
           </div>
 

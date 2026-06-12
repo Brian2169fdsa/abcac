@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Menu, LogOut, ArrowLeft, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SignOutButton } from "@/components/sign-out-button";
 import { NotificationBell } from "@/components/portal/notification-bell";
 import type { Notification } from "@/lib/notifications";
 
@@ -88,13 +89,10 @@ export function PortalTopbar({
 
         <div className="h-6 w-px bg-white/15" aria-hidden />
 
-        <Link
-          href="/logout"
-          className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-        >
+        <SignOutButton className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white">
           <LogOut className="h-4 w-4 sm:hidden" aria-hidden />
           <span className="hidden sm:inline">Sign Out</span>
-        </Link>
+        </SignOutButton>
         </div>
       </div>
 

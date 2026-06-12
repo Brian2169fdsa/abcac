@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SignOutButton } from "@/components/sign-out-button";
 import { AdminNav, type AdminCounts } from "@/components/admin/admin-nav";
 import { Sparkles } from "lucide-react";
 
@@ -64,9 +65,9 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
             <Link href="/" className="text-sm font-semibold text-ink/80 hover:text-brand">
               ← Back to Site
             </Link>
-            <Link href="/logout" className="text-sm font-semibold text-brand hover:text-brand-600">
+            <SignOutButton className="text-left text-sm font-semibold text-brand hover:text-brand-600">
               Sign out
-            </Link>
+            </SignOutButton>
           </div>
         </div>
       </aside>
