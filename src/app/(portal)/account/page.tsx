@@ -1,5 +1,6 @@
 import { optionalUserId } from "@/lib/auth/current-user";
 import Link from "next/link";
+import { SignOutButton } from "@/components/sign-out-button";
 import { CtaButton } from "@/components/cta-button";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -317,7 +318,7 @@ export default async function AccountPage() {
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
         <div className="flex gap-4">
           <CtaButton href="/account/certifications" size="sm">My Certifications</CtaButton>
-          <Link href="/logout" className="self-center text-sm font-semibold text-brand hover:text-brand-600">Log out</Link>
+          <SignOutButton className="self-center text-sm font-semibold text-brand hover:text-brand-600">Log out</SignOutButton>
         </div>
       </PageHero>
 
