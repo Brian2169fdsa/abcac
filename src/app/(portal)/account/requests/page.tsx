@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { NameChangeForm, VerificationForm, ReciprocityForm, type VerifyCertOption } from "@/components/portal-forms";
@@ -10,8 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function RequestsPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const uid = user!.id;
+  const __authUserId = await requireUserId();
+  const uid = __authUserId;
 
   const [{ data: profile }, { data: nc }, { data: ver }, { data: rec }, { data: certs }, { data: otherCerts }] = await Promise.all([
     supabase.from("profiles").select("first_name,last_name").eq("id", uid).maybeSingle(),

@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { NotificationSettings, type AlertPrefs } from "@/components/notification-settings";
@@ -16,15 +17,15 @@ const DEFAULT_PREFS: AlertPrefs = {
 
 export default async function SettingsPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const __authUserId = await requireUserId();
 
   const [{ data: profile }, { data: prefs }] = await Promise.all([
-    supabase.from("profiles").select("email, directory_opt_out").eq("id", user!.id).maybeSingle(),
-    supabase.from("notification_preferences").select("*").eq("member_id", user!.id).maybeSingle(),
+    supabase.from("profiles").select("email, directory_opt_out").eq("id", __authUserId).maybeSingle(),
+    supabase.from("notification_preferences").select("*").eq("member_id", __authUserId).maybeSingle(),
   ]);
 
   const profileRow = profile as { email?: string | null; directory_opt_out?: boolean | null } | null;
-  const email = profileRow?.email ?? user?.email ?? null;
+  const email = profileRow?.email ?? null;
   const directoryOptOut = profileRow?.directory_opt_out ?? false;
 
   const prefsData: AlertPrefs = prefs
