@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
 import { AdminAgentWorkspace } from "@/components/agent/admin-agent-workspace";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { getAdminAnalytics } from "@/lib/admin-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +10,15 @@ export const metadata: Metadata = {
   title: "AI Agent — ABCAC Admin Console",
 };
 
-export default function AdminAgentPage() {
+export default async function AdminAgentPage() {
+  // Real analytics for the KPI strip, Trends panel, and data artifacts. The
+  // (admin) layout already enforces the admin role for this route; reads are
+  // aggregate + read-only, so the service-role client is used server-side only
+  // (never exposed to the browser) — the same data the assistant's admin tools
+  // read, so the chat and the charts always agree.
+  const admin = createSupabaseAdminClient();
+  const analytics = await getAdminAnalytics(admin);
+
   return (
     <div className="space-y-6">
       {/* Page heading */}
@@ -25,7 +35,7 @@ export default function AdminAgentPage() {
       </div>
 
       {/* Workspace */}
-      <AdminAgentWorkspace />
+      <AdminAgentWorkspace analytics={analytics} />
     </div>
   );
 }
