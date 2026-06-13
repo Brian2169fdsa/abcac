@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isKnownWorkflow, workflowMeta } from "@/lib/automation/catalog";
 import { getWorkflowAnalytics } from "@/lib/automation/analytics";
-import { formatDuration, formatPercent } from "@/lib/format";
-import { StatCard, StatCardRow, BarChart, formatCompact, type BarDatum } from "@/components/agent/charts";
+import { formatDuration, formatPercent, formatCompact } from "@/lib/format";
+import { StatCard, StatCardRow, BarChart, type BarDatum } from "@/components/agent/charts";
 import { AutomationTabs } from "../../automation-tabs";
 import {
   buildEnabledMap,
@@ -146,7 +146,7 @@ export default async function WorkflowDrilldownPage({
         <h2 className="mb-3 text-lg font-bold">Runs over time</h2>
         {runs > 0 ? (
           <div className="rounded-xl border border-line bg-surface p-5">
-            <BarChart data={dailyBars} showLegend={false} rotateLabels format={formatCompact} />
+            <BarChart data={dailyBars} showLegend={false} rotateLabels />
           </div>
         ) : (
           <div className="rounded-xl border border-line bg-surface px-5 py-8 text-center text-muted">

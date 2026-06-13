@@ -12,10 +12,11 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAutomationAnalytics } from "@/lib/automation/analytics";
 import { workflowLabel, workflowMeta, type WorkflowCategory } from "@/lib/automation/catalog";
-import { formatUsd, formatPercent, formatDuration } from "@/lib/format";
-import { StatCard, StatCardRow, DonutChart, formatCompact } from "@/components/agent/charts";
+import { formatUsd, formatPercent, formatDuration, formatCompact } from "@/lib/format";
+import { StatCard, StatCardRow, DonutChart } from "@/components/agent/charts";
 import { AutomationTabs } from "../automation-tabs";
-import { AnalyticsDashboard, ALLOWED_DAYS, clampDays } from "./analytics-dashboard";
+import { AnalyticsDashboard } from "./analytics-dashboard";
+import { ALLOWED_DAYS, clampDays } from "./analytics-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -182,7 +183,7 @@ export default async function AutomationAnalyticsPage({
               No tiered runs yet.
             </div>
           ) : (
-            <DonutChart data={tierDonut} centerLabel={formatCompact(totalRuns)} centerSub="runs" format={formatCompact} />
+            <DonutChart data={tierDonut} centerLabel={formatCompact(totalRuns)} centerSub="runs" />
           )}
         </section>
 

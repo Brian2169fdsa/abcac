@@ -16,6 +16,11 @@
 
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+// Pure formatters live in the server-safe format module; re-exported here so the
+// many client components that import them from the charts kit keep working.
+import { formatCompact, formatMoneyCompact } from "@/lib/format";
+
+export { formatCompact, formatMoneyCompact };
 
 /** Multi-series data palette (matches the reference analytics look). */
 export const SERIES_COLORS = [
@@ -55,21 +60,6 @@ export function axisTicks(max: number, steps = 5): number[] {
   const out: number[] = [];
   for (let i = 0; i <= steps; i++) out.push((top / steps) * i);
   return out;
-}
-
-/** Compact number: 1247 → "1,247"; 214600 → "215K"; 1.2e6 → "1.2M". */
-export function formatCompact(n: number): string {
-  if (!Number.isFinite(n)) return "0";
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (abs >= 10_000) return `${Math.round(n / 1000)}K`;
-  if (abs >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
-  return n.toLocaleString("en-US");
-}
-
-/** Compact money with a leading $. */
-export function formatMoneyCompact(n: number): string {
-  return `$${formatCompact(n)}`;
 }
 
 export interface DonutSegment {
@@ -181,7 +171,7 @@ export interface BarDatum {
 export function BarChart({
   data,
   height = 240,
-  format = (n: number) => n.toLocaleString("en-US"),
+  format = formatCompact,
   showLegend = true,
   rotateLabels = false,
 }: {
@@ -269,7 +259,7 @@ export function DonutChart({
   thickness = 22,
   centerLabel,
   centerSub,
-  format = (n: number) => n.toLocaleString("en-US"),
+  format = formatCompact,
 }: {
   data: { label: string; value: number }[];
   size?: number;

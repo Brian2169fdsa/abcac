@@ -34,6 +34,28 @@ export function formatPercent(ratio: number): string {
   return `${Math.round((Number.isFinite(ratio) ? ratio : 0) * 100)}%`;
 }
 
+/**
+ * Compact number: 1234 → "1.2K", 25000 → "25K", 1_500_000 → "1.5M";
+ * below 1000 falls back to en-US grouping. Lives here (not in the
+ * "use client" charts kit) so SERVER components can call it directly —
+ * importing a plain function across a "use client" boundary yields a
+ * client-reference proxy that throws "is not a function" when invoked
+ * during server render.
+ */
+export function formatCompact(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (abs >= 10_000) return `${Math.round(n / 1000)}K`;
+  if (abs >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return n.toLocaleString("en-US");
+}
+
+/** Compact money with a leading $. */
+export function formatMoneyCompact(n: number): string {
+  return `$${formatCompact(n)}`;
+}
+
 /** Minutes → compact human duration: "0m", "45m", "3h 20m", "2d 4h". */
 export function formatDuration(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));

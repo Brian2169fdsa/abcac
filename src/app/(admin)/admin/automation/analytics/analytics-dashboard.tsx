@@ -10,56 +10,27 @@
 // Workflow labels and value formatting come from the shared libs — not redefined.
 
 import { useState } from "react";
-import { BarChart, ChartToggle, formatCompact, type BarDatum } from "@/components/agent/charts";
-import type { DailyPoint } from "@/lib/automation/analytics";
+import { BarChart, ChartToggle, formatCompact } from "@/components/agent/charts";
+import {
+  LENSES,
+  coerceLens,
+  lensSeries,
+  type DailyPoint,
+  type Lens,
+} from "./analytics-shared";
 
-export type { DailyPoint };
-
-// ── Window selection ─────────────────────────────────────────────────────────
-
-export const ALLOWED_DAYS = [7, 30, 90] as const;
-export type AllowedDays = (typeof ALLOWED_DAYS)[number];
-export const DEFAULT_DAYS: AllowedDays = 30;
-
-/** Clamp an arbitrary `?days=` value to the allowed set; default 30. */
-export function clampDays(value: string | string[] | number | null | undefined): AllowedDays {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const n = typeof raw === "number" ? raw : Number(raw);
-  return (ALLOWED_DAYS as readonly number[]).includes(n) ? (n as AllowedDays) : DEFAULT_DAYS;
-}
-
-// ── Lenses (pure helpers, exported for unit tests) ───────────────────────────
-
-export const LENSES = ["Total", "Automated", "Escalated", "Failed"] as const;
-export type Lens = (typeof LENSES)[number];
-
-const LENS_FIELD: Record<Lens, keyof Omit<DailyPoint, "date">> = {
-  Total: "total",
-  Automated: "automated",
-  Escalated: "escalated",
-  Failed: "failed",
-};
-
-/** A safe Lens from arbitrary input (e.g. a `?lens=` param); defaults to Total. */
-export function coerceLens(value: string | null | undefined): Lens {
-  return (LENSES as readonly string[]).includes(value ?? "") ? (value as Lens) : "Total";
-}
-
-/**
- * Format an ISO date ("2026-06-04") as a short axis label ("Jun 4"). Parsed as
- * UTC so the label never drifts by a day across timezones.
- */
-export function shortDateLabel(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-}
-
-/** Project the daily series onto a single lens, as BarChart data. */
-export function lensSeries(daily: DailyPoint[], lens: Lens): BarDatum[] {
-  const field = LENS_FIELD[lens];
-  return daily.map((d) => ({ label: shortDateLabel(d.date), value: d[field] ?? 0 }));
-}
+// Pure window/lens helpers moved to ./analytics-shared (server-safe). Re-export
+// them so existing imports + unit tests that reach for them here keep working.
+export {
+  ALLOWED_DAYS,
+  DEFAULT_DAYS,
+  LENSES,
+  clampDays,
+  coerceLens,
+  shortDateLabel,
+  lensSeries,
+} from "./analytics-shared";
+export type { AllowedDays, Lens, DailyPoint } from "./analytics-shared";
 
 // ── Component ────────────────────────────────────────────────────────────────
 
