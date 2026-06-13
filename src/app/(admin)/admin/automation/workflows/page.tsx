@@ -2,8 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { WORKFLOW_CATALOG } from "@/lib/automation/catalog";
 import { getAutomationAnalytics, type WorkflowStat } from "@/lib/automation/analytics";
-import { formatPercent } from "@/lib/format";
-import { formatCompact } from "@/components/agent/charts";
+import { formatPercent, formatCompact } from "@/lib/format";
 import { AutomationTabs } from "../automation-tabs";
 import {
   buildEnabledMap,
