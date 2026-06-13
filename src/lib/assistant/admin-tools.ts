@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssistantTool, ToolExecutor } from "./run";
 import { decideVerification } from "@/app/(admin)/admin/requests/decide-verification";
 import { getPlanningTools, getPlanningExecutors } from "./planning-tools";
+import { getAdminAnalytics } from "@/lib/admin-analytics";
 import { isAdminRole } from "@/lib/auth/roles";
 
 /**
@@ -37,6 +38,12 @@ export function getAdminTools(): AssistantTool[] {
       name: "get_dashboard_counts",
       description:
         "Get the admin dashboard counts: total members, accounts awaiting approval, pending documents, pending CEUs, open applications, active credentials, and credentials expiring within 90 days.",
+      input_schema: { type: "object", properties: {} },
+    },
+    {
+      name: "get_analytics_trends",
+      description:
+        "Get real organization analytics for answering trend/reporting questions: headline KPIs (certs issued YTD, members, good-standing, revenue MTD & YTD, open work items), a 12-month time series (revenue, certifications issued, new members, CEU hours logged per month), the active credential mix by type, and the breakdown of open work needing attention. Use this for any question about revenue/certification/member/CEU trends or 'how are we doing' — the numbers match the Trends panel in the AI Agent workspace. Dollar amounts are returned in whole dollars.",
       input_schema: { type: "object", properties: {} },
     },
     {
@@ -219,6 +226,33 @@ export function getAdminExecutors(ctx: AdminToolContext): Record<string, ToolExe
 
   return {
     ...planning,
+
+    async get_analytics_trends() {
+      // Same source as the AI Agent Trends panel, so the chat and the charts agree.
+      const a = await getAdminAnalytics(admin);
+      const dollars = (cents: number) => Math.round(cents / 100);
+      return JSON.stringify({
+        kpis: {
+          certs_issued_ytd: a.kpis.certsYtd,
+          credential_types_ytd: a.kpis.certTypeCount,
+          total_members: a.kpis.totalMembers,
+          members_in_good_standing: a.kpis.goodStanding,
+          revenue_mtd_usd: dollars(a.kpis.revenueMtdCents),
+          revenue_ytd_usd: dollars(a.kpis.revenueYtdCents),
+          open_work_items: a.kpis.openItems,
+        },
+        monthly_trends: a.trends.map((t) => ({
+          month: t.month,
+          revenue_usd: dollars(t.revenueCents),
+          certs_issued: t.certsIssued,
+          new_members: t.newMembers,
+          ceu_hours_logged: t.ceusLogged,
+        })),
+        active_credential_mix: a.certsByType.map((s) => ({ type: s.certType, active: s.count })),
+        needs_attention: a.needsAttention,
+        generated_at: a.generatedAt,
+      });
+    },
 
     async get_dashboard_counts() {
       const now = new Date();
