@@ -109,6 +109,7 @@ Track A is owner-gated and can be same-day once credentials are in hand.
 | `docs/ship/02-code-work.md` | Remaining code work, file-scoped, with acceptance criteria |
 | `docs/ship/03-automation-rollout.md` | Phased, guarded enablement of the automation engine |
 | `docs/ship/04-launch-readiness.md` | Go/no-go criteria + end-to-end smoke test |
+| `docs/ship/05-pr-disposition.md` | All 155 PRs audited: 150 merged, 1 lost (#13), 3 open stale duplicates to close (#150/#153/#155) |
 
 > **Housekeeping:** once this plan is accepted, mark `MASTER-PLAN.md`, `ASSESSMENT.md`,
 > `EXECUTION-PLAN.md`, `PORTAL-PARITY.md` as historical (or delete) so there is one source of truth.

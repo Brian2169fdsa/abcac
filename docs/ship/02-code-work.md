@@ -18,8 +18,9 @@ Four shipped surfaces render the **demo dataset** `src/lib/mock/agent-data.ts`
 | Member **AI Agent panel** (`/account`) | `src/components/agent/member-agent-panel.tsx` | Panel data tiles |
 | **Task rail** | `src/components/agent/task-rail.tsx` | `MOCK_TASKS` |
 
-> PR **#150** (open, draft=false) is the in-flight attempt to wire the admin workspace to real
-> analytics with a "live API fallback." It is the only open PR — decide its fate as part of this item.
+> PR **#150** (open) is the *older mock-data* iteration of the admin workspace — `main` already has
+> the newer real-data wiring from #149. **Close #150 unmerged** (see `05-pr-disposition.md`); the
+> remaining work is finishing the live-data wiring in `main`, below.
 
 **Decision required (pick one):**
 - **(A) Hide for launch** — feature-flag these four surfaces off (or route them to an "coming soon"
