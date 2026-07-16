@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/assistant/markdown";
 import {
@@ -15,135 +15,142 @@ import {
   formatMoneyCompact,
 } from "@/components/agent/charts";
 import {
-  ADMIN_KPIS,
-  CERTS_BY_MONTH,
-  CERTS_BY_TYPE,
-  REVENUE_BY_STREAM,
-  REVENUE_BY_MONTH,
   MOCK_MEMBERS,
   MOCK_TASKS,
-  INSIGHTS,
   type MockMember,
 } from "@/lib/mock/agent-data";
+import type { AdminAnalytics, TrendPoint } from "@/lib/admin-analytics";
+import { formatUsd } from "@/lib/format";
 import { TaskRail } from "@/components/agent/task-rail";
+
+// ── Real-data series helpers (TrendPoint[] → chart BarDatum[]) ────────────────
+
+const revenueSeries = (t: TrendPoint[]) => t.map((p) => ({ label: p.label, value: p.revenueCents / 100 }));
+const certsSeries = (t: TrendPoint[]) => t.map((p) => ({ label: p.label, value: p.certsIssued }));
+const membersSeries = (t: TrendPoint[]) => t.map((p) => ({ label: p.label, value: p.newMembers }));
+const ceusSeries = (t: TrendPoint[]) => t.map((p) => ({ label: p.label, value: p.ceusLogged }));
+
+/** Month-over-month delta label from the last two points of a real series. */
+function momDelta(series: { value: number }[]): { delta?: string; trend: "up" | "down" | "flat" } {
+  if (series.length < 2) return { trend: "flat" };
+  const cur = series[series.length - 1].value;
+  const prev = series[series.length - 2].value;
+  if (prev === 0) return { trend: cur > 0 ? "up" : "flat", delta: cur > 0 ? "new" : undefined };
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  return { delta: `${pct >= 0 ? "+" : ""}${pct}% MoM`, trend: pct > 0 ? "up" : pct < 0 ? "down" : "flat" };
+}
 
 // ── Artifact helpers ─────────────────────────────────────────────────────────
 
-function ArtifactCertSales(): ReactNode {
-  const topCerts = CERTS_BY_TYPE.slice(0, 3);
-  const totalSold = CERTS_BY_TYPE.reduce((s, d) => s + d.value, 0);
+function ArtifactCertSales(a: AdminAnalytics): ReactNode {
+  const byType = a.certsByType.map((s) => ({ label: s.certType, value: s.count }));
+  const certsByMonth = certsSeries(a.trends);
+  const topCerts = byType.slice(0, 3);
+  const activeTotal = byType.reduce((s, d) => s + d.value, 0);
+  const avgPerMonth = certsByMonth.length
+    ? Math.round(certsByMonth.reduce((s, d) => s + d.value, 0) / certsByMonth.length)
+    : 0;
+  const certDelta = momDelta(certsByMonth);
 
   return (
     <div className="space-y-5 rounded-xl border border-line bg-surface p-5">
       {/* Mini KPIs */}
       <StatCardRow>
-        <StatCard
-          label="Total certs (YTD)"
-          value={String(totalSold)}
-          sub="All credential types"
-          delta="+12% vs last yr"
-          trend="up"
-        />
+        <StatCard label="Certs issued (YTD)" value={String(a.kpis.certsYtd)} sub="This calendar year" />
         <StatCard
           label="Top credential"
-          value={topCerts[0].label}
-          sub={`${topCerts[0].value} issued`}
+          value={topCerts[0]?.label ?? "—"}
+          sub={topCerts[0] ? `${topCerts[0].value} active` : "No active certs"}
           trend="up"
         />
+        <StatCard label="Active credentials" value={String(activeTotal)} sub={`${byType.length} credential types`} />
         <StatCard
-          label="Fastest growing"
-          value="Reciprocity"
-          sub="+34% YoY"
-          trend="up"
-        />
-        <StatCard
-          label="Avg certs / month"
-          value={String(Math.round(CERTS_BY_MONTH.reduce((s, d) => s + d.value, 0) / CERTS_BY_MONTH.length))}
-          sub="Last 12 months"
-          trend="flat"
+          label="Issued / month"
+          value={String(avgPerMonth)}
+          sub="Trailing 12 months"
+          delta={certDelta.delta}
+          trend={certDelta.trend}
         />
       </StatCardRow>
 
       {/* Type mix toggle */}
       <div>
         <div className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-muted">
-          Credential mix
+          Active credential mix
         </div>
-        <ToggleChart
-          options={["Bar chart", "Donut"]}
-          render={(selected) =>
-            selected === "Bar chart" ? (
-              <BarChart data={CERTS_BY_TYPE} height={220} />
-            ) : (
-              <DonutChart
-                data={CERTS_BY_TYPE}
-                centerLabel={String(totalSold)}
-                centerSub="total"
-              />
-            )
-          }
-        />
+        {byType.length ? (
+          <ToggleChart
+            options={["Bar chart", "Donut"]}
+            render={(selected) =>
+              selected === "Bar chart" ? (
+                <BarChart data={byType} height={220} />
+              ) : (
+                <DonutChart data={byType} centerLabel={String(activeTotal)} centerSub="total" />
+              )
+            }
+          />
+        ) : (
+          <EmptyChart label="No active certifications yet." />
+        )}
       </div>
 
       {/* Monthly trend */}
       <div>
         <div className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-muted">
-          Monthly volume (12 mo)
+          Issued per month (12 mo)
         </div>
-        <BarChart data={CERTS_BY_MONTH} height={180} showLegend={false} rotateLabels />
+        <BarChart data={certsByMonth} height={180} showLegend={false} rotateLabels />
       </div>
 
-      <InsightCallout>{INSIGHTS.certMix}</InsightCallout>
+      <InsightCallout>
+        {topCerts[0]
+          ? `${activeTotal} active credentials across ${byType.length} types — ${topCerts[0].label} leads with ${topCerts[0].value}. ${a.kpis.certsYtd} issued so far this year (${avgPerMonth}/month on average).`
+          : "No active certifications recorded yet."}
+      </InsightCallout>
     </div>
   );
 }
 
-function ArtifactRevenue(): ReactNode {
-  const total = REVENUE_BY_STREAM.reduce((s, d) => s + d.value, 0);
+function ArtifactRevenue(a: AdminAnalytics): ReactNode {
+  const revByMonth = revenueSeries(a.trends);
+  const revDelta = momDelta(revByMonth);
+  const peak = revByMonth.reduce((m, d) => (d.value > m.value ? d : m), { label: "—", value: 0 });
 
   return (
     <div className="space-y-5 rounded-xl border border-line bg-surface p-5">
-      {/* Toggle: donut vs bar for streams */}
-      <div>
-        <div className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-muted">
-          Revenue by stream (MTD)
-        </div>
-        <ToggleChart
-          options={["Donut", "Bar chart"]}
-          render={(selected) =>
-            selected === "Donut" ? (
-              <DonutChart
-                data={REVENUE_BY_STREAM}
-                format={formatMoneyCompact}
-                centerLabel={formatMoneyCompact(total)}
-                centerSub="MTD"
-              />
-            ) : (
-              <BarChart
-                data={REVENUE_BY_STREAM}
-                height={220}
-                format={formatMoneyCompact}
-              />
-            )
-          }
+      {/* Money KPIs (real) */}
+      <StatCardRow>
+        <StatCard
+          label="Revenue (MTD)"
+          value={formatUsd(a.kpis.revenueMtdCents / 100)}
+          sub="Month to date"
+          delta={revDelta.delta}
+          trend={revDelta.trend}
         />
-      </div>
+        <StatCard label="Revenue (YTD)" value={formatUsd(a.kpis.revenueYtdCents / 100)} sub="This calendar year" trend="up" />
+        <StatCard label="Best month" value={formatMoneyCompact(peak.value)} sub={`${peak.label} — peak`} trend="up" />
+        <StatCard
+          label="Avg / month"
+          value={formatMoneyCompact(
+            revByMonth.length ? Math.round(revByMonth.reduce((s, d) => s + d.value, 0) / revByMonth.length) : 0,
+          )}
+          sub="Trailing 12 months"
+        />
+      </StatCardRow>
 
       {/* Monthly trend */}
       <div>
         <div className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-muted">
           Revenue trend (12 mo)
         </div>
-        <BarChart
-          data={REVENUE_BY_MONTH}
-          height={180}
-          format={formatMoneyCompact}
-          showLegend={false}
-          rotateLabels
-        />
+        <BarChart data={revByMonth} height={200} format={formatMoneyCompact} showLegend={false} rotateLabels />
       </div>
 
-      <InsightCallout>{INSIGHTS.revenue}</InsightCallout>
+      <InsightCallout>
+        {`Revenue this month is ${formatUsd(a.kpis.revenueMtdCents / 100)} (${revDelta.delta ?? "no prior month"}); ${formatUsd(
+          a.kpis.revenueYtdCents / 100,
+        )} year to date, peaking in ${peak.label}.`}
+      </InsightCallout>
     </div>
   );
 }
@@ -189,27 +196,53 @@ function ArtifactMembers(): ReactNode {
   );
 }
 
-function ArtifactAttention(): ReactNode {
-  const highTasks = MOCK_TASKS.filter((t) => t.priority === "high");
+/** The real open-work queues, with the route an admin clears each from. */
+function attentionRows(a: AdminAnalytics) {
+  const n = a.needsAttention;
+  return [
+    { label: "Pending account approvals", value: n.pendingApprovals, href: "/admin/approvals" },
+    { label: "CEU certificates to review", value: n.pendingCeus, href: "/admin/ceus" },
+    { label: "Applications in review", value: n.pendingApplications, href: "/admin/applications" },
+    { label: "Open document requests", value: n.openDocRequests, href: "/admin/documents" },
+    { label: "Member requests (name / verify / reciprocity)", value: n.openRequests, href: "/admin/requests" },
+    { label: "Automation escalations", value: n.escalations, href: "/admin/automation" },
+    { label: "Credentials expiring ≤60 days", value: n.expiringSoon, href: "/admin/renewals" },
+  ];
+}
+
+function ArtifactAttention(a: AdminAnalytics): ReactNode {
+  const rows = attentionRows(a).filter((r) => r.value > 0);
 
   return (
     <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
       <div className="text-[12px] font-semibold uppercase tracking-wide text-muted">
-        High priority — {highTasks.length} items
+        Open work — {a.needsAttention.total} item{a.needsAttention.total === 1 ? "" : "s"}
       </div>
-      <div className="space-y-3">
-        {highTasks.map((t) => (
-          <div key={t.id} className="flex items-start gap-3 rounded-lg border border-[#C0432F]/20 bg-[#C0432F]/[0.03] p-3">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#C0432F]" aria-hidden />
-            <div>
-              <p className="text-[13px] font-semibold text-ink">{t.title}</p>
-              <p className="mt-0.5 text-[12px] text-muted">{t.detail}</p>
-              <p className="mt-1 text-[11px] font-medium text-[#C0432F]">{t.due}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <InsightCallout>{INSIGHTS.tasks}</InsightCallout>
+      {rows.length ? (
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <a
+              key={r.label}
+              href={r.href}
+              className="flex items-center justify-between gap-3 rounded-lg border border-line bg-bg/40 px-3 py-2.5 transition-colors hover:border-brand"
+            >
+              <span className="text-[13px] text-ink">{r.label}</span>
+              <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[12px] font-semibold text-brand">{r.value}</span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-line bg-bg/40 px-4 py-8 text-center text-[13px] text-muted">
+          Nothing needs attention right now — every queue is clear. 🎉
+        </p>
+      )}
+      <InsightCallout>
+        {a.needsAttention.total === 0
+          ? "All staff queues are clear."
+          : `${a.needsAttention.total} open items across ${rows.length} ${rows.length === 1 ? "queue" : "queues"}. ${
+              a.needsAttention.pendingCeus > 0 ? `${a.needsAttention.pendingCeus} CEUs await review; ` : ""
+            }${a.needsAttention.expiringSoon} credentials lapse within 60 days.`}
+      </InsightCallout>
     </div>
   );
 }
@@ -234,7 +267,19 @@ function ArtifactAutomate(): ReactNode {
           </div>
         ))}
       </div>
-      <InsightCallout>{INSIGHTS.recert}</InsightCallout>
+      <InsightCallout>
+        These are illustrative automation candidates. Turning on the matching workflows in
+        Automation clears them from the manual queue.
+      </InsightCallout>
+    </div>
+  );
+}
+
+/** Small placeholder shown when a chart has no data. */
+function EmptyChart({ label }: { label: string }): ReactNode {
+  return (
+    <div className="rounded-xl border border-dashed border-line bg-bg/40 px-4 py-10 text-center text-[13px] text-muted">
+      {label}
     </div>
   );
 }
@@ -248,14 +293,14 @@ type ArtifactKey =
   | "attention"
   | "automate";
 
-const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: () => ReactNode }> = {
+const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: (a: AdminAnalytics) => ReactNode }> = {
   "cert-sales": {
     label: "Certification sales overview",
-    render: () => <ArtifactCertSales />,
+    render: (a) => <>{ArtifactCertSales(a)}</>,
   },
   revenue: {
     label: "Revenue this month",
-    render: () => <ArtifactRevenue />,
+    render: (a) => <>{ArtifactRevenue(a)}</>,
   },
   members: {
     label: "Member directory",
@@ -263,13 +308,84 @@ const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: () => Reac
   },
   attention: {
     label: "Items needing attention",
-    render: () => <ArtifactAttention />,
+    render: (a) => <>{ArtifactAttention(a)}</>,
   },
   automate: {
     label: "Automatable tasks",
     render: () => <ArtifactAutomate />,
   },
 };
+
+// ── Trends panel (real data, toggled by the top-right button) ─────────────────
+
+function TrendsPanel({ analytics }: { analytics: AdminAnalytics }): ReactNode {
+  const a = analytics;
+  const byType = a.certsByType.map((s) => ({ label: s.certType, value: s.count }));
+  const attention = attentionRows(a);
+  const generated = new Date(a.generatedAt).toLocaleString("en-US", {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  });
+
+  return (
+    <section className="space-y-5 rounded-xl border border-line bg-surface p-5">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-bold text-ink">Trends</h2>
+          <p className="text-[13px] text-muted">Live data across the last 12 months · as of {generated}</p>
+        </div>
+      </div>
+
+      {/* KPI row (real) */}
+      <StatCardRow>
+        <StatCard label="Certs issued (YTD)" value={String(a.kpis.certsYtd)} sub={`${a.kpis.certTypeCount} credential types`} />
+        <StatCard label="Members" value={String(a.kpis.totalMembers)} sub={`${a.kpis.goodStanding} in good standing`} />
+        <StatCard label="Revenue (YTD)" value={formatUsd(a.kpis.revenueYtdCents / 100)} sub={`${formatUsd(a.kpis.revenueMtdCents / 100)} MTD`} trend="up" />
+        <StatCard label="Open work items" value={String(a.kpis.openItems)} sub="Across all staff queues" />
+      </StatCardRow>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <TrendBlock title="Revenue per month">
+          <BarChart data={revenueSeries(a.trends)} height={200} format={formatMoneyCompact} showLegend={false} rotateLabels />
+        </TrendBlock>
+        <TrendBlock title="Certifications issued per month">
+          <BarChart data={certsSeries(a.trends)} height={200} showLegend={false} rotateLabels />
+        </TrendBlock>
+        <TrendBlock title="New members per month">
+          <BarChart data={membersSeries(a.trends)} height={200} showLegend={false} rotateLabels />
+        </TrendBlock>
+        <TrendBlock title="CEU hours logged per month">
+          <BarChart data={ceusSeries(a.trends)} height={200} showLegend={false} rotateLabels />
+        </TrendBlock>
+        <TrendBlock title="Active credential mix">
+          {byType.length ? (
+            <DonutChart data={byType} centerLabel={String(byType.reduce((s, d) => s + d.value, 0))} centerSub="active" />
+          ) : (
+            <EmptyChart label="No active certifications yet." />
+          )}
+        </TrendBlock>
+        <TrendBlock title="What needs attention">
+          <div className="space-y-2">
+            {attention.map((r) => (
+              <a key={r.label} href={r.href} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-bg/40 px-3 py-2 transition-colors hover:border-brand">
+                <span className="text-[13px] text-ink">{r.label}</span>
+                <span className={cn("rounded-full px-2.5 py-0.5 text-[12px] font-semibold", r.value > 0 ? "bg-brand/10 text-brand" : "bg-muted/10 text-muted")}>{r.value}</span>
+              </a>
+            ))}
+          </div>
+        </TrendBlock>
+      </div>
+    </section>
+  );
+}
+
+function TrendBlock({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-muted">{title}</div>
+      {children}
+    </div>
+  );
+}
 
 // ── Scripted suggestions ─────────────────────────────────────────────────────
 
@@ -345,12 +461,22 @@ const GREETING: ChatMessage = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function AdminAgentWorkspace() {
+export function AdminAgentWorkspace({ analytics }: { analytics: AdminAnalytics }) {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showTrends, setShowTrends] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const k = analytics.kpis;
+  const revDelta = momDelta(revenueSeries(analytics.trends));
+  const kpiCards = [
+    { label: "Certs issued (YTD)", value: String(k.certsYtd), sub: `Across ${k.certTypeCount} credential type${k.certTypeCount === 1 ? "" : "s"}`, trend: "up" as const },
+    { label: "Active members", value: String(k.goodStanding), sub: `${k.totalMembers} total members`, trend: "flat" as const },
+    { label: "Revenue (MTD)", value: formatUsd(k.revenueMtdCents / 100), sub: `${formatUsd(k.revenueYtdCents / 100)} YTD`, delta: revDelta.delta, trend: revDelta.trend },
+    { label: "Open work items", value: String(k.openItems), sub: "Across all staff queues", trend: "flat" as const },
+  ];
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -446,20 +572,32 @@ export function AdminAgentWorkspace() {
 
   return (
     <div className="space-y-6">
-      {/* KPI strip */}
+      {/* Top bar: live KPI context + Trends toggle (top-right) */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] font-medium uppercase tracking-wide text-muted">Live overview</p>
+        <button
+          type="button"
+          onClick={() => setShowTrends((v) => !v)}
+          aria-pressed={showTrends}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+            showTrends ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink hover:border-brand hover:text-brand",
+          )}
+        >
+          <TrendingUp className="h-4 w-4" aria-hidden />
+          {showTrends ? "Hide trends" : "Trends"}
+        </button>
+      </div>
+
+      {/* KPI strip (real data) */}
       <StatCardRow>
-        {ADMIN_KPIS.map((kpi) => (
-          <StatCard
-            key={kpi.label}
-            label={kpi.label}
-            value={kpi.value}
-            sub={kpi.sub}
-            delta={kpi.delta}
-            trend={kpi.trend}
-            menu
-          />
+        {kpiCards.map((kpi) => (
+          <StatCard key={kpi.label} label={kpi.label} value={kpi.value} sub={kpi.sub} delta={kpi.delta} trend={kpi.trend} menu />
         ))}
       </StatCardRow>
+
+      {/* Trends panel (real data) */}
+      {showTrends && <TrendsPanel analytics={analytics} />}
 
       {/* Two-column workspace */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -520,7 +658,7 @@ export function AdminAgentWorkspace() {
                   {/* Rendered artifact */}
                   {msg.artifact && (
                     <div className="max-w-full">
-                      {ARTIFACT_REGISTRY[msg.artifact].render()}
+                      {ARTIFACT_REGISTRY[msg.artifact].render(analytics)}
                     </div>
                   )}
                 </div>
