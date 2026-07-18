@@ -24,7 +24,7 @@ export const CERT_SYNC_RULE_VERSION = "certsync-1";
 export const CERT_SYNC_APP_TYPE = "cert_sync";
 
 /** Application statuses still awaiting a decision. */
-export const CERT_SYNC_PENDING_STATUSES = ["submitted", "under_review"];
+export const CERT_SYNC_PENDING_STATUSES = ["under_review"];
 
 /** Pending cert_sync applications fetched per member (>1 already escalates). */
 const PENDING_APP_SCAN_LIMIT = 5;

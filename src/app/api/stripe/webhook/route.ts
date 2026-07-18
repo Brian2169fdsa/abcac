@@ -161,15 +161,21 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     }
   }
 
-  // The ONLY automatic credential effect on payment is enabling Certification
-  // Sync. Initial certification and renewals are issued by ABCAC staff AFTER
-  // reviewing the member's application/CEU documentation in the admin console —
-  // paying a fee does not by itself grant or renew a credential.
-  if (meta.slug === "certification-sync" && memberId) {
+  // Certification Sync payment advances the linked request to the review queue.
+  // It does NOT change credential dates or enable sync by itself; ABCAC staff (or
+  // the guarded automation workflow, when explicitly enabled) completes review.
+  if (meta.slug === "certification-sync" && memberId && meta.sync_application_id) {
     try {
-      await admin.from("certifications").update({ sync_enabled: true }).eq("member_id", memberId);
+      await admin.from("applications").update({ status: "under_review" })
+        .eq("id", meta.sync_application_id)
+        .eq("member_id", memberId)
+        .eq("app_type", "cert_sync")
+        .eq("status", "submitted");
+      await admin.from("member_tasks").update({
+        detail: `Certification Sync payment received. Application ${meta.sync_application_id}; Stripe session ${session.id}. Review credential dates before approval.`,
+      }).eq("member_id", memberId).eq("title", "Review certification sync request").eq("status", "open");
     } catch (err) {
-      console.error("sync flag update skipped:", err);
+      console.error("sync request payment reconciliation skipped:", err);
     }
   }
 }

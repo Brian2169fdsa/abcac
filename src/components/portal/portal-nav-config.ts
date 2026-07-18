@@ -35,6 +35,7 @@ export const PORTAL_NAV: PortalNavGroup[] = [
       { label: "Document Upload", href: "/account/documents" },
       { label: "Continuing Education Unit Tracker", href: "/account/ceus" },
       { label: "Certification Renewal", href: "/account/renew" },
+      { label: "Certification Sync", href: "/account/certification-sync" },
       { label: "Authorizations: Clinical Supervision", href: "/account/experience" },
     ],
   },

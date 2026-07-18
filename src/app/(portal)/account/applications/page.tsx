@@ -36,6 +36,7 @@ function stageIndex(status: string | null): number {
 // Loosely associate a recorded payment with an application by type.
 function feePaid(appType: string | null, payments: Payment[]): boolean {
   const slugs = payments.map((p) => p.slug ?? "");
+  if (appType === "cert_sync") return slugs.includes("certification-sync");
   if (appType === "renewal") return slugs.some((s) => s.includes("renewal"));
   if (appType === "initial") return slugs.some((s) => s.startsWith("initial-certification") || s.includes("certification-only"));
   return payments.length > 0;

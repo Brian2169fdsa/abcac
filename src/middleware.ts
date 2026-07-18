@@ -20,7 +20,9 @@ import { PORTAL_PREVIEW_COOKIE, isValidPortalPreviewToken } from "@/lib/portal-p
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  if (path.startsWith("/account")) {
+  const isPublicPortalFeature = path === "/account/certification-sync";
+
+  if (path.startsWith("/account") && !isPublicPortalFeature) {
     const previewToken = request.cookies.get(PORTAL_PREVIEW_COOKIE)?.value;
     if (!(await isValidPortalPreviewToken(previewToken))) {
       const previewUrl = request.nextUrl.clone();
@@ -82,7 +84,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Gate unapproved members to the onboarding/approval flow.
-  if (user && path.startsWith("/account") && path !== "/account/onboarding") {
+  if (user && path.startsWith("/account") && path !== "/account/onboarding" && !isPublicPortalFeature) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("account_status")

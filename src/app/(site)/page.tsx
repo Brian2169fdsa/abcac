@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import {
   Award,
+  BadgeCheck,
   ClipboardCheck,
   RefreshCw,
   Globe,
   CheckCircle2,
-  FileText,
-  Upload,
-  CreditCard,
   Phone,
   Sparkles,
   ShieldCheck,
@@ -19,8 +17,6 @@ import { StatCard } from "@/components/stat-card";
 import { ServiceCard } from "@/components/service-card";
 import { CtaButton } from "@/components/cta-button";
 import { FaqSection } from "@/components/faq-section";
-import { getProductBySlug } from "@/lib/catalog";
-import { PriceTag } from "@/components/price-tag";
 import { siteConfig } from "@/lib/site-config";
 import { FAQS, TESTIMONIALS } from "@/lib/faqs";
 
@@ -58,7 +54,6 @@ const credentials = [
 ];
 
 export default function HomePage() {
-  const sync = getProductBySlug("certification-sync");
   return (
     <>
       {/* Hero */}
@@ -225,57 +220,38 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Sync Your Certifications */}
-      <Section className="bg-gradient-to-b from-bg to-surface">
-        <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-surface p-6 shadow-[0_28px_80px_-48px_rgba(13,34,63,0.45)] sm:p-8 lg:p-12">
-          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/[0.05] blur-2xl" aria-hidden />
-          <div className="relative grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
-          {/* Left: heading + certificate */}
+      {/* Certification Sync feature */}
+      <section className="relative isolate overflow-hidden border-y border-line bg-surface">
+        <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.08]" aria-hidden />
+        <div className="absolute -right-28 -top-36 -z-10 h-96 w-96 rounded-full border-[56px] border-brand/[0.06]" aria-hidden />
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.95fr_1.05fr] lg:px-12 lg:py-24 xl:px-16">
           <div>
-            <h2>Sync Your Certifications – One Date, One Renewal, Less Stress.</h2>
-            <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-white shadow-lg shadow-info/10">
-              <Image
-                src="/brand/cadac-certificate.png"
-                alt="Sample ABCAC Certified Alcohol and Drug Abuse Counselor certificate"
-                fill
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="object-contain"
-              />
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand">
+              <RefreshCw className="h-4 w-4" aria-hidden /> One date. One renewal cycle.
+            </div>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong">Certification management</p>
+            <h2 className="mt-3 max-w-[15ch] text-[clamp(2.5rem,5vw,4.35rem)] tracking-[-0.04em]">Sync Your ABCAC Certifications</h2>
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">Align staggered ABCAC credential expiration dates into one easier renewal cycle. Pay a one-time $15 fee for each month an earlier credential moves forward.</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <CtaButton href="/certification-sync" size="lg" className="w-full justify-center sm:w-auto">Explore Certification Sync</CtaButton>
+              <CtaButton href="/certification-sync#calculator" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Calculate Your Fee</CtaButton>
+            </div>
+            <div className="mt-7 grid gap-3 text-sm font-semibold text-ink sm:grid-cols-3">
+              {["One-time payment", "$15 per month moved", "ABCAC review included"].map((item) => <span key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />{item}</span>)}
             </div>
           </div>
-
-          {/* Right: copy + video */}
-          <div>
-            <p className="text-lg text-muted">
-              Align the renewal dates of your CADAC, CCJP, AADC, or other ABCAC certifications into one easy, unified
-              cycle. For just $15 per month forward, you can eliminate staggered renewals and manage all your
-              certifications together — saving time, reducing hassle, and staying compliant. Submit your
-              synchronization request and pay securely online today!
-            </p>
-            <p className="mt-5 font-semibold text-brand">Watch our how to video below.</p>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-ink shadow-xl shadow-info/15">
-              <video
-                controls
-                preload="metadata"
-                playsInline
-                poster="/brand/sync-video-poster.png"
-                className="aspect-video w-full object-cover"
-              >
-                <source
-                  src="https://vid.cdn-website.com/249de5f7/videos/g8mVT8s4Q8eUpyl1TN3Z_ABCAC+3-v.mp4"
-                  type="video/mp4"
-                />
-                Your browser does not support the video tag.
-              </video>
+          <div className="relative">
+            <div className="absolute -left-6 -top-6 h-24 w-24 rounded-full border-8 border-brand/10" aria-hidden />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line bg-white p-4 shadow-2xl shadow-info/15 sm:p-7">
+              <Image src="/brand/cadac-certificate.png" alt="Sample ABCAC certification displayed for renewal-date synchronization" fill sizes="(max-width: 1024px) 100vw, 48vw" className="object-contain p-4 sm:p-8" />
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <CtaButton href="/certification-sync" size="lg">Explore Certification Sync</CtaButton>
-              {sync && <span className="text-sm font-semibold text-muted"><PriceTag product={sync} className="text-xl text-brand" /> per month moved</span>}
+            <div className="absolute -bottom-5 right-5 flex items-center gap-3 rounded-2xl border border-line bg-white px-5 py-4 shadow-xl">
+              <BadgeCheck className="h-7 w-7 text-brand" aria-hidden />
+              <div><p className="text-sm font-bold text-ink">Simpler credential management</p><p className="text-xs text-muted">Fewer renewal dates to track</p></div>
             </div>
-          </div>
           </div>
         </div>
-      </Section>
+      </section>
 
       {/* Digital certificate notice */}
       <Section compact className="bg-surface">
@@ -300,67 +276,6 @@ export default function HomePage() {
             This change allows ABCAC to deliver certificates faster, reduce administrative processing time, and support
             environmentally responsible practices.
             </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* Certification sync process */}
-      <Section
-        eyebrow="Follow this easy step-by-step process"
-        title="Complete Your Certification Sync"
-        intro="Submit your synchronization form and payment so ABCAC can align all of your renewal dates into one easy cycle."
-        className="bg-bg"
-      >
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
-            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>01</span>
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
-              <FileText className="h-5 w-5" aria-hidden />
-            </div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 1</p>
-            <h3 className="mt-1">Fill out the sync form</h3>
-            <p className="mt-2 text-muted">
-              Complete your certification synchronization form with the credentials and renewal dates you want ABCAC
-              to align.
-            </p>
-          </div>
-
-          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
-            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>02</span>
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
-              <Upload className="h-5 w-5" aria-hidden />
-            </div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 2</p>
-            <h3 className="mt-1">Upload Cert Sync Document</h3>
-            <p className="mt-2 flex-1 text-muted">
-              Your member profile securely supplies your name, email, and phone. Upload the completed certification sync
-              document through your account to finish your request.
-            </p>
-            <CtaButton href="/account/documents" variant="outline" className="mt-5 w-full justify-center">
-              Upload File
-            </CtaButton>
-          </div>
-
-          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
-            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>03</span>
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
-              <CreditCard className="h-5 w-5" aria-hidden />
-            </div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 3</p>
-            <h3 className="mt-1">Certification Sync Payment Instructions</h3>
-            <p className="mt-2 text-muted">
-              The cost is $15 per month you wish to sync forward. Count the months needed to align your certifications,
-              enter that quantity at checkout, and complete your payment securely online.
-            </p>
-            <p className="mt-3 rounded-lg bg-bg p-3 text-sm text-muted">
-              <span className="font-semibold text-ink">Example:</span> If your certifications are 6 months apart, enter
-              “6” to pay $90.
-            </p>
-            <p className="mt-3 flex-1 text-sm text-muted">
-              Once your payment and completed form are received, ABCAC will process your request and align all renewal
-              dates accordingly.
-            </p>
-            <CtaButton href="/certification-sync" className="mt-5 w-full justify-center">Calculate and Pay</CtaButton>
           </div>
         </div>
       </Section>

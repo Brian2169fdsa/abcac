@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import { CertificationSyncCalculator } from "@/components/certification-sync-calculator";
+import { CertificationSyncStart } from "@/components/certification-sync-start";
 import { CtaButton } from "@/components/cta-button";
 import { FaqSection } from "@/components/faq-section";
 import { siteConfig } from "@/lib/site-config";
@@ -86,7 +87,7 @@ export default function CertificationSyncPage() {
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <CtaButton href="#calculator" size="lg" className="w-full justify-center sm:w-auto">Calculate Your Fee</CtaButton>
-              <CtaButton href="/account/documents" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Upload Sync Documents</CtaButton>
+              <CertificationSyncStart />
             </div>
             <div className="mt-7 grid gap-3 text-sm font-semibold text-ink sm:grid-cols-3">
               {["One-time payment", "$15 per month moved", "ABCAC review included"].map((item) => (
@@ -160,7 +161,7 @@ export default function CertificationSyncPage() {
             ))}
           </div>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <CtaButton href="/account/documents" size="lg" className="w-full justify-center sm:w-auto">Upload Completed Request</CtaButton>
+            <CertificationSyncStart label="Start or Upload Your Request" />
             <CtaButton href={siteConfig.contact.emailHref} variant="outline" size="lg" className="w-full justify-center sm:w-auto">Ask ABCAC to Confirm Months</CtaButton>
           </div>
         </div>

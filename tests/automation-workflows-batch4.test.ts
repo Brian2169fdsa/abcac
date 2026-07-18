@@ -54,12 +54,13 @@ describe("certSyncRule", () => {
     expect(await certSyncRule(ruleClient({ app: null }).client, INPUT)).toBeNull();
     expect(await certSyncRule(ruleClient({ app: { ...APP, member_id: null } }).client, INPUT)).toBeNull();
     expect(await certSyncRule(ruleClient({ app: { ...APP, app_type: "renewal" } }).client, INPUT)).toBeNull();
+    expect(await certSyncRule(ruleClient({ app: APP }).client, INPUT)).toBeNull();
     expect(await certSyncRule(ruleClient({ app: { ...APP, status: "approved" } }).client, INPUT)).toBeNull();
     expect(await certSyncRule(ruleClient({ app: APP }).client, { ...INPUT, entityId: undefined })).toBeNull();
   });
 
   it("decisively escalates when the member has no certifications (nothing to sync)", async () => {
-    const r = await certSyncRule(ruleClient({ app: APP, certs: [] }).client, INPUT);
+    const r = await certSyncRule(ruleClient({ app: { ...APP, status: "under_review" }, certs: [] }).client, INPUT);
     expect(r?.decisive).toBe(true);
     expect(r?.tier).toBe("escalate");
     expect(r?.action).toBeUndefined();
@@ -70,7 +71,11 @@ describe("certSyncRule", () => {
 
   it("escalates with an anomaly flag when the member has multiple pending cert_sync apps", async () => {
     const r = await certSyncRule(
-      ruleClient({ app: APP, certs: CERTS, pending: [{ id: "app-1" }, { id: "app-2" }] }).client,
+      ruleClient({
+        app: { ...APP, status: "under_review" },
+        certs: CERTS,
+        pending: [{ id: "app-1" }, { id: "app-2" }],
+      }).client,
       INPUT,
     );
     expect(r?.decisive).toBe(true);

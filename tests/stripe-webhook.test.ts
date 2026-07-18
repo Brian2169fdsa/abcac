@@ -241,7 +241,7 @@ describe("POST /api/stripe/webhook", () => {
     expect(update!.payload).toMatchObject({ status: "paid", stripe_payment_intent: "pi_42" });
   });
 
-  it("enables certification sync for the certification-sync slug", async () => {
+  it("moves a paid certification sync request into admin review", async () => {
     constructEvent.mockReturnValue({
       id: "evt_sync",
       type: "checkout.session.completed",
@@ -252,15 +252,26 @@ describe("POST /api/stripe/webhook", () => {
           amount_total: 9000,
           currency: "usd",
           mode: "payment",
-          metadata: { slug: "certification-sync", member_id: "user-1", sync_months: "6" },
+          metadata: {
+            slug: "certification-sync",
+            member_id: "user-1",
+            sync_months: "6",
+            sync_application_id: "app-sync-1",
+          },
         },
       },
     });
 
     await POST(req());
-    const update = adminClient.calls.find((c) => c.table === "certifications" && c.op === "update");
-    expect(update).toBeTruthy();
-    expect(update!.payload).toMatchObject({ sync_enabled: true });
+    const applicationUpdate = adminClient.calls.find((c) => c.table === "applications" && c.op === "update");
+    expect(applicationUpdate?.payload).toEqual({ status: "under_review" });
+
+    const taskUpdate = adminClient.calls.find((c) => c.table === "member_tasks" && c.op === "update");
+    expect(taskUpdate?.payload).toMatchObject({
+      detail: expect.stringContaining("app-sync-1"),
+    });
+
+    expect(adminClient.calls.find((c) => c.table === "certifications" && c.op === "update")).toBeUndefined();
   });
 
   it("writes a payment row on invoice.paid (renewal)", async () => {
