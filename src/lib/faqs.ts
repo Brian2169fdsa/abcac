@@ -19,7 +19,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: "Is ABCAC certification recognized in other states?",
-    a: "Yes. ABCAC is a member of the International Certification & Reciprocity Consortium (IC&RC), which allows certified professionals to transfer their credentials to 57 other member boards across the U.S. and internationally through a formal reciprocity process.",
+    a: "ABCAC is an IC&RC member board. Eligible, current credentials may transfer through formal reciprocity when both ABCAC and the destination member board offer the credential at a reciprocal level. The receiving board may have additional requirements or fees.",
   },
   {
     q: "How do I start the certification process?",
@@ -36,7 +36,7 @@ export const EXTRA_FAQS: Faq[] = [
   { q: "How often do ABCAC credentials renew?", a: "All ABCAC credentials renew every two years. Renewal requires completing your continuing education hours and paying the $150 renewal fee." },
   { q: "What does the IC&RC exam look like?", a: "It's Computer-Based Testing at IQT centers: 150 multiple-choice questions (125 scored + 25 pretest) with a 3-hour limit. If needed, you may retake after a minimum of 90 days (may be longer per member board)." },
   { q: "Can I take the exam remotely?", a: "Yes. You can choose a remote-proctored exam via Prometric's ProProctor platform, or test in person at an authorized Arizona center. See the Testing page to register." },
-  { q: "How do I move my credential to or from Arizona?", a: "Through IC&RC reciprocity. To transfer to Arizona, initiate with your current board (a $150 fee is due on approval). To transfer out, email ABCAC for the Reciprocity Request Form. Allow up to 4 weeks." },
+  { q: "How do I move my credential to or from Arizona?", a: "First contact the destination IC&RC member board to confirm its requirements. Then request the official reciprocity application from the board where you are currently credentialed. The IC&RC fee is $150 per credential, and the destination board may charge additional fees." },
   { q: "How long does CEU workshop endorsement take?", a: "Standard review turnaround is 4 weeks. Submit your workshop materials to abcac@abcac.org and pay the fee tier matching your total contact hours." },
   { q: "Will I receive a paper certificate?", a: "ABCAC issues official digital certificates upon approval or renewal. A printed copy can be requested for a $25 processing and mailing fee." },
 ];

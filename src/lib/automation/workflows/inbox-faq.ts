@@ -122,7 +122,7 @@ export const INBOX_FAQ_PACK: readonly FaqEntry[] = [
   {
     id: "reciprocity_transfer",
     q: "Is ABCAC certification recognized in other states / how do I transfer my credential?",
-    a: "Yes — ABCAC is an IC&RC member board, so credentials transfer to 57 other member boards through formal reciprocity. To transfer to Arizona, initiate with your current board (a $150 fee is due on approval). To transfer out, email ABCAC for the Reciprocity Request Form. Allow up to 4 weeks.",
+    a: "Eligible, current ABCAC credentials may transfer through IC&RC reciprocity when the destination member board offers the same credential at a reciprocal level. Contact the destination board first, then request the official application from the board where you are currently credentialed. The IC&RC fee is $150 per credential, and local requirements or fees may also apply.",
   },
   {
     id: "getting_started",

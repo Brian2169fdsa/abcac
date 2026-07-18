@@ -90,11 +90,11 @@
       "price": 150.0,
       "category": "Service",
       "exam_mode": null,
-      "short": "Processing fee to transfer an approved IC&RC credential to or from Arizona through ABCAC. Due upon approval.",
+      "short": "Processing fee for an approved outbound transfer of an ABCAC-issued IC&RC credential to another member board.",
       "includes": [
-        "IC&RC reciprocity transfer processing",
-        "Coordination with the destination / origin member board",
-        "Applies to transfers into or out of Arizona"
+        "IC&RC reciprocity processing for one credential",
+        "Coordination with IC&RC and the destination member board",
+        "Applies to transfers out of Arizona through ABCAC"
       ]
     },
     {
