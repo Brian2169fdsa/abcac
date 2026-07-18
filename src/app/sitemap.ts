@@ -5,7 +5,6 @@ import { getPosts } from "@/lib/blog";
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 const staticPrimaryRoutes = [
-  "choose-your-cert-path",
   "initial-certification",
   "certification-renewal",
   "ceu",

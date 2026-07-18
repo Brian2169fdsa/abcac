@@ -52,7 +52,7 @@ export default function InitialCertificationPage() {
               to study materials and exam registration.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full sm:w-auto">Choose Your Cert Path</CtaButton>
+              <CtaButton href="/account/apply" size="lg" className="w-full sm:w-auto">Begin Your Application</CtaButton>
               <CtaButton href="/store" variant="outline" size="lg" className="w-full sm:w-auto">Visit the Store</CtaButton>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">

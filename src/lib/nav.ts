@@ -26,14 +26,13 @@ export const MENU: MegaGroup[] = [
   {
     label: "Certification",
     featured: {
-      image: "/brand/cadac-certificate.png",
-      title: "Start your certification",
-      text: "Find the credential that fits your career and apply online through our secure portal.",
-      href: "/choose-your-cert-path",
-      cta: "Choose Your Path",
+      image: "/brand/initial-cert-hero.png",
+      title: "Initial or renewal",
+      text: "Apply for your first ABCAC credential or keep your current certification active.",
+      href: "/initial-certification",
+      cta: "Initial Certification",
     },
     links: [
-      { label: "Choose Your Cert Path", href: "/choose-your-cert-path", desc: "Not sure where to start? Find your path.", image: "/brand/menu/choose-path.png" },
       { label: "Initial Certification", href: "/initial-certification", desc: "Apply for your first ABCAC credential.", image: "/brand/menu/int-cert.png" },
       { label: "Certification Renewal", href: "/certification-renewal", desc: "Renew every two years with your CEUs.", image: "/brand/menu/renewal.png" },
     ],
@@ -83,7 +82,6 @@ export const MENU_LINKS: MenuLink[] = [
 export const NAV: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "CEU", href: "/ceu" },
-  { label: "Choose Your Cert Path", href: "/choose-your-cert-path" },
   { label: "Initial Certification", href: "/initial-certification" },
   { label: "Certification Renewal", href: "/certification-renewal" },
   { label: "IC&RC", href: "/ic-rc" },
@@ -92,12 +90,3 @@ export const NAV: NavItem[] = [
   { label: "Sync Your Certs", href: "/store/certification-sync" },
   { label: "Contact Us", href: "/contact" },
 ];
-
-// Primary entry to the member portal. Points to the unified Next.js member
-// portal at /account (brand-matched chrome, server-rendered, AI-interlaced).
-// The original static /portal is kept in place as a fallback until cutover is
-// confirmed. Plain link — no dropdown/submenu.
-export const MEMBER_PORTAL = {
-  label: "Member Portal",
-  href: "/account",
-};

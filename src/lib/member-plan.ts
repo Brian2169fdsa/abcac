@@ -138,9 +138,9 @@ export function buildMemberPlan(input: MemberPlanInput): PlanStep[] {
       ? "Your certification application has been approved."
       : appInProgress
         ? "Your application is being reviewed by ABCAC. We'll let you know when it's approved."
-        : "Choose your certification path and submit your application to get started.",
+        : "Submit your initial certification application to get started.",
     status: appDone ? "done" : appInProgress ? "in_progress" : "todo",
-    href: appDone ? "/account/applications" : "/choose-your-cert-path",
+    href: appDone ? "/account/applications" : "/account/apply",
     priority: "high",
   });
 

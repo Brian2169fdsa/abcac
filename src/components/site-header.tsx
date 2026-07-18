@@ -4,16 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { HEADER_CTA, MEMBER_PORTAL } from "@/lib/nav";
+import { HEADER_CTA } from "@/lib/nav";
 import { siteConfig } from "@/lib/site-config";
 import { CtaButton } from "@/components/cta-button";
+import { Button } from "@/components/ui/button";
 import { MegaMenu } from "@/components/mega-menu";
 import { MobileNav } from "@/components/mobile-nav";
+import { MemberPortalPreviewPopover } from "@/components/member-portal-preview-popover";
 import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [portalPreviewOpen, setPortalPreviewOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -25,6 +28,20 @@ export function SiteHeader() {
 
   // Close the drawer whenever the route changes.
   useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("portal") === "coming-soon") setPortalPreviewOpen(true);
+  }, [pathname]);
+
+  function closePortalPreview() {
+    setPortalPreviewOpen(false);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("portal")) {
+      url.searchParams.delete("portal");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
 
   return (
     <>
@@ -44,9 +61,9 @@ export function SiteHeader() {
             <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden lg:inline-flex">
               {HEADER_CTA.label}
             </CtaButton>
-            <CtaButton href={MEMBER_PORTAL.href} size="sm" className="hidden md:inline-flex">
-              {MEMBER_PORTAL.label}
-            </CtaButton>
+            <Button type="button" size="sm" className="hidden md:inline-flex" onClick={() => setPortalPreviewOpen(true)}>
+              Member Portal
+            </Button>
             <button
               type="button"
               className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink xl:hidden"
@@ -64,7 +81,15 @@ export function SiteHeader() {
           `backdrop-blur` creates a containing block for fixed-position
           descendants, which otherwise traps this `fixed inset-0` drawer inside
           the 64px header box instead of covering the viewport. */}
-      <MobileNav open={open} onClose={() => setOpen(false)} />
+      <MobileNav
+        open={open}
+        onClose={() => setOpen(false)}
+        onPortalOpen={() => {
+          setOpen(false);
+          setPortalPreviewOpen(true);
+        }}
+      />
+      <MemberPortalPreviewPopover open={portalPreviewOpen} onClose={closePortalPreview} />
     </>
   );
 }

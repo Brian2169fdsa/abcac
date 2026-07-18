@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminRole } from "@/lib/auth/roles";
+import { PORTAL_PREVIEW_COOKIE, isValidPortalPreviewToken } from "@/lib/portal-preview";
 
 // Single source of auth truth for the portal/admin areas.
 //
@@ -17,6 +18,19 @@ import { isAdminRole } from "@/lib/auth/roles";
 // Refreshed cookies are written onto BOTH request and response, and carried on
 // redirects, per the canonical @supabase/ssr pattern.
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  if (path.startsWith("/account")) {
+    const previewToken = request.cookies.get(PORTAL_PREVIEW_COOKIE)?.value;
+    if (!(await isValidPortalPreviewToken(previewToken))) {
+      const previewUrl = request.nextUrl.clone();
+      previewUrl.pathname = "/";
+      previewUrl.search = "";
+      previewUrl.searchParams.set("portal", "coming-soon");
+      return NextResponse.redirect(previewUrl);
+    }
+  }
+
   const requestHeaders = new Headers(request.headers);
   // Strip any client-supplied spoof of our trusted header.
   requestHeaders.delete("x-user-id");
@@ -42,8 +56,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
-
   // A redirect that carries the refreshed auth cookies.
   const redirectTo = (pathname: string, opts?: { keepNext?: boolean }) => {
     const target = request.nextUrl.clone();

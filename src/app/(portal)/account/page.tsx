@@ -568,7 +568,7 @@ export default async function AccountPage() {
           </div>
         )}
         {certifications.length === 0 && (
-          <CtaButton href="/choose-your-cert-path" className="mt-6">Choose Your Cert Path</CtaButton>
+          <CtaButton href="/account/apply" className="mt-6">Apply for Certification</CtaButton>
         )}
       </Section>
 

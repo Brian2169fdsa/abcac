@@ -84,8 +84,8 @@ export default function HomePage() {
               addiction counseling professionals.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">Choose Your Cert Path</CtaButton>
-              <CtaButton href="/store" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Visit the Store</CtaButton>
+              <CtaButton href="/initial-certification" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">Initial Certification</CtaButton>
+              <CtaButton href="/certification-renewal" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Renew Certification</CtaButton>
             </div>
             <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (

@@ -19,7 +19,6 @@ import { getProducts, formatPrice } from "@/lib/catalog";
 /** Allowlist of known public routes the assistant may point visitors to. */
 const PUBLIC_PAGES: Array<{ path: string; title: string; about: string }> = [
   { path: "/", title: "Home", about: "ABCAC overview and main services." },
-  { path: "/choose-your-cert-path", title: "Choose Your Cert Path", about: "Help deciding which credential fits your career." },
   { path: "/initial-certification", title: "Initial Certification", about: "How to apply for your first ABCAC credential." },
   { path: "/certification-renewal", title: "Certification Renewal", about: "Renewing your credential every two years with CEUs." },
   { path: "/ceu", title: "CEU & Endorsement", about: "Continuing education and provider/workshop endorsement." },
