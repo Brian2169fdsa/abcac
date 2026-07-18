@@ -115,11 +115,13 @@ export default function HomePage() {
                 className="object-cover"
               />
             </div>
-            <div className="absolute -bottom-4 right-3 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-xl backdrop-blur sm:right-8">
-              <ShieldCheck className="h-6 w-6 text-brand" aria-hidden />
+            <div className="absolute -bottom-4 right-3 flex min-w-[15rem] items-center gap-3 rounded-2xl border border-brand/10 bg-white px-4 py-3 shadow-2xl shadow-info/20 sm:right-8">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10">
+                <ShieldCheck className="h-5 w-5 text-brand" aria-hidden />
+              </span>
               <div>
                 <div className="text-sm font-semibold text-ink">IC&amp;RC Member Board</div>
-                <div className="text-xs text-muted">Credentials built for reciprocity</div>
+                <div className="mt-0.5 text-xs font-medium text-slate-600">Credentials built for reciprocity</div>
               </div>
             </div>
           </div>
