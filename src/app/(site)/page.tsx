@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Award, ClipboardCheck, RefreshCw, Globe, CheckCircle2 } from "lucide-react";
+import {
+  Award,
+  ClipboardCheck,
+  RefreshCw,
+  Globe,
+  CheckCircle2,
+  FileText,
+  Upload,
+  CreditCard,
+  Phone,
+} from "lucide-react";
 import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
 import { ServiceCard } from "@/components/service-card";
@@ -31,10 +41,10 @@ const stats = [
 ];
 
 const services = [
-  { icon: Award, title: "Certification & Credentialing", description: "Apply for initial certification in addiction counseling, peer recovery, prevention, or supervision, recognized by IC&RC.", href: "/initial-certification" },
-  { icon: ClipboardCheck, title: "Exam Registration & Support", description: "ABCAC provides IC&RC certification exams and supports licensure testing through AZBBHE.", href: "/testing" },
-  { icon: RefreshCw, title: "Recertification & Continuing Education", description: "Maintain your credentials with clear recertification pathways and access to endorsed CEU opportunities.", href: "/certification-renewal" },
-  { icon: Globe, title: "Reciprocity", description: "Move your credential to Arizona or transfer to another IC&RC member board with our streamlined reciprocity services.", href: "/reciprocity" },
+  { icon: Award, title: "Certification & Credentialing", description: "Apply for initial certification in addiction counseling, peer recovery, prevention, or supervision, recognized by IC&RC.", href: "/initial-certification", linkLabel: "Go to Certification Page" },
+  { icon: ClipboardCheck, title: "Exam Registration & Support", description: "ABCAC provides IC&RC certification exams and supports licensure testing through AZBBHE.", href: "/testing", linkLabel: "Go to Testing Page" },
+  { icon: RefreshCw, title: "Recertification & Continuing Education", description: "Maintain your credentials with clear recertification pathways and access to endorsed CEU opportunities.", href: "/certification-renewal", linkLabel: "Go to Renewal Page" },
+  { icon: Globe, title: "Reciprocity Transfers", description: "Move your credential to Arizona or transfer to another IC&RC member board with our streamlined reciprocity services.", href: "/reciprocity", linkLabel: "Go to Reciprocity Page" },
 ];
 
 const credentials = [
@@ -62,6 +72,7 @@ export default function HomePage() {
               CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
+            <p className="mt-5 font-semibold text-brand">{siteConfig.trustLine}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center sm:w-auto">Choose Your Cert Path</CtaButton>
               <CtaButton href="/store" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Visit the Store</CtaButton>
@@ -107,10 +118,10 @@ export default function HomePage() {
       </Section>
 
       {/* Services */}
-      <Section eyebrow="What we do" title="Certification services for every stage of your career" surface>
+      <Section eyebrow="Our services" title="Certification services for every stage of your career" surface>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((s) => (
-            <ServiceCard key={s.title} {...s} linkLabel="Learn more" />
+            <ServiceCard key={s.title} {...s} />
           ))}
         </div>
       </Section>
@@ -235,12 +246,77 @@ export default function HomePage() {
         <div className="rounded-xl border border-accent/40 bg-accent/5 p-6">
           <h3>Certification Delivery Update</h3>
           <p className="mt-2 text-muted">
-            ABCAC is transitioning to a digital certificate system. Paper copies of certificates will no longer be
-            automatically mailed — all recipients receive an official digital certificate upon approval or renewal. A
-            printed copy can be requested for a $25 processing and mailing fee. Questions? Contact our office at{" "}
+            ABCAC is transitioning to a digital certificate system. Beginning immediately, paper copies of certificates
+            will no longer be automatically mailed. All certification recipients will receive an official digital
+            certificate upon approval or renewal.
+          </p>
+          <p className="mt-3 text-muted">
+            If you would like a printed copy of your certificate, one can be requested for a $25 processing and mailing
+            fee. If you have questions, contact our office at{" "}
             <a href={siteConfig.contact.emailHref} className="font-semibold text-brand">{siteConfig.contact.email}</a>{" "}
             or submit your request through the ABCAC portal.
           </p>
+          <p className="mt-3 text-muted">
+            This change allows ABCAC to deliver certificates faster, reduce administrative processing time, and support
+            environmentally responsible practices.
+          </p>
+        </div>
+      </Section>
+
+      {/* Certification sync process */}
+      <Section
+        eyebrow="Follow this easy step-by-step process"
+        title="Complete Your Certification Sync"
+        intro="Submit your synchronization form and payment so ABCAC can align all of your renewal dates into one easy cycle."
+      >
+        <div className="grid gap-5 lg:grid-cols-3">
+          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <FileText className="h-5 w-5" aria-hidden />
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 1</p>
+            <h3 className="mt-1">Fill out the sync form</h3>
+            <p className="mt-2 text-muted">
+              Complete your certification synchronization form with the credentials and renewal dates you want ABCAC
+              to align.
+            </p>
+          </div>
+
+          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <Upload className="h-5 w-5" aria-hidden />
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 2</p>
+            <h3 className="mt-1">Upload Cert Sync Document</h3>
+            <p className="mt-2 flex-1 text-muted">
+              Your member profile securely supplies your name, email, and phone. Upload the completed certification sync
+              document through your account to finish your request.
+            </p>
+            <CtaButton href="/account/documents" variant="outline" className="mt-5 w-full justify-center">
+              Upload File
+            </CtaButton>
+          </div>
+
+          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <CreditCard className="h-5 w-5" aria-hidden />
+            </div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 3</p>
+            <h3 className="mt-1">Certification Sync Payment Instructions</h3>
+            <p className="mt-2 text-muted">
+              The cost is $15 per month you wish to sync forward. Count the months needed to align your certifications,
+              enter that quantity at checkout, and complete your payment securely online.
+            </p>
+            <p className="mt-3 rounded-lg bg-bg p-3 text-sm text-muted">
+              <span className="font-semibold text-ink">Example:</span> If your certifications are 6 months apart, enter
+              “6” to pay $90.
+            </p>
+            <p className="mt-3 flex-1 text-sm text-muted">
+              Once your payment and completed form are received, ABCAC will process your request and align all renewal
+              dates accordingly.
+            </p>
+            <CtaButton href="/store/certification-sync" className="mt-5 w-full justify-center">Pay for Sync</CtaButton>
+          </div>
         </div>
       </Section>
 
@@ -282,7 +358,7 @@ export default function HomePage() {
                 our board of directors. Your insights are invaluable, and your leadership helps shape the future of
                 addiction counselor certification in Arizona.
               </p>
-              <CtaButton href="/board-application" size="lg" className="mt-6">Express Interest</CtaButton>
+              <CtaButton href="/board-application" size="lg" className="mt-6">Apply Now</CtaButton>
             </div>
             {/* Right: image with on-brand stylized overlay */}
             <div className="relative mx-auto w-full max-w-md">
@@ -311,6 +387,23 @@ export default function HomePage() {
           </div>
         </div>
       </Section>
+
+      {/* Final CTA */}
+      <section className="bg-brand text-white">
+        <div className="mx-auto flex w-full max-w-content flex-col items-start justify-between gap-6 px-5 py-10 sm:flex-row sm:items-center md:px-8 md:py-12">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-white/75">Ready for your next step?</p>
+            <h2 className="mt-1 text-white">Get certified today!</h2>
+          </div>
+          <a
+            href={siteConfig.contact.phoneHref}
+            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-brand transition-colors hover:bg-bg"
+          >
+            <Phone className="h-5 w-5" aria-hidden />
+            Call now · {siteConfig.contact.phone}
+          </a>
+        </div>
+      </section>
     </>
   );
 }

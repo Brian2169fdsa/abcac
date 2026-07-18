@@ -255,14 +255,26 @@ export function ChatWidget({ surface }: { surface: Surface }) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open AI assistant"
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-      >
-        <MessageCircle className="h-6 w-6" aria-hidden />
-      </button>
+      <div className="fixed bottom-5 right-5 z-50 flex items-end gap-3">
+        {isWebsite && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="hidden max-w-56 rounded-xl border border-line bg-surface px-4 py-3 text-left shadow-lg sm:block"
+          >
+            <span className="block text-sm font-semibold text-ink">Need help?</span>
+            <span className="mt-0.5 block text-xs text-muted">Send a message to our team.</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open AI assistant"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+        >
+          <MessageCircle className="h-6 w-6" aria-hidden />
+        </button>
+      </div>
     );
   }
 
