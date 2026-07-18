@@ -1,1 +1,15 @@
-{}
+{
+  "initial-certification-full-application-exam-fee": "price_1Tuh3MF95bCMc0sUfHhkA9on",
+  "initial-certification-full-application-exam-fee-remote-proctored-exam": "price_1Tuh3NF95bCMc0sUpqz7jj7A",
+  "certification-certification-only-fee-already-passed-icrc-exam": "price_1Tuh3OF95bCMc0sUNWd03uk6",
+  "certification-renewal-2-year-credential-renewal-fee": "price_1Tuh3OF95bCMc0sUen5CLlmH",
+  "certification-sync": "price_1Tuh3PF95bCMc0sUub7ePmq9",
+  "printed-certificate-copy": "price_1Tuh3QF95bCMc0sUKEOxtbkJ",
+  "icrc-reciprocity-transfer": "price_1Tuh3RF95bCMc0sUP1zfTJt8",
+  "testing-for-licensure-with-azbbhe": "price_1Tuh3SF95bCMc0sU3yOeo8x5",
+  "testing-for-licensure-with-azbbhe-remote-proctored-exam": "price_1Tuh3SF95bCMc0sUhPvvXvvo",
+  "ceu-workshop-endorsement-up-to-8-contact-hours": "price_1Tuh3TF95bCMc0sUpOSSmfLa",
+  "ceu-workshop-endorsement-9-15-contact-hours": "price_1Tuh3UF95bCMc0sUy7Xplebo",
+  "ceu-workshop-endorsement-more-than-15-contact-hours": "price_1Tuh3VF95bCMc0sU0Y3We2wn",
+  "annual-credential-fee-approved-ceu-providers": "price_1Tuh3WF95bCMc0sUA3uk5F3D"
+}

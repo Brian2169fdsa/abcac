@@ -9,8 +9,11 @@
  * active price with the same unit amount + interval already exists.
  */
 import Stripe from "stripe";
+import { loadEnvConfig } from "@next/env";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+loadEnvConfig(process.cwd());
 
 const key = process.env.STRIPE_SECRET_KEY;
 if (!key) {
