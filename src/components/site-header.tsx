@@ -28,11 +28,14 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className={cn("sticky top-0 z-40 bg-surface/95 backdrop-blur transition-shadow", scrolled && "shadow-sm")}>
-        <div className="mx-auto flex h-16 w-full max-w-content items-center justify-between gap-3 px-4 sm:gap-4 sm:px-5 md:px-8">
-          <Link href="/" className="flex min-w-0 flex-col leading-none" aria-label={`${siteConfig.shortName} home`}>
-            <span className="font-display text-lg font-bold text-brand sm:text-xl">{siteConfig.shortName}</span>
-            <span className="truncate text-[10px] uppercase tracking-wider text-muted">Arizona Board for Certification</span>
+      <header className={cn("sticky top-0 z-40 border-b border-line/80 bg-surface/90 backdrop-blur-xl transition-all", scrolled && "shadow-[0_10px_35px_-24px_rgba(13,34,63,0.45)]")}>
+        <div className="mx-auto flex h-[4.5rem] w-full max-w-content items-center justify-between gap-3 px-4 sm:gap-4 sm:px-5 md:px-8">
+          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label={`${siteConfig.shortName} home`}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-600 font-display text-lg font-bold text-white shadow-md shadow-brand/15">A</span>
+            <span className="flex min-w-0 flex-col leading-none">
+              <span className="font-display text-lg font-bold text-brand sm:text-xl">{siteConfig.shortName}</span>
+              <span className="mt-1 truncate text-[9px] uppercase tracking-[0.16em] text-muted sm:text-[10px]">Arizona Board for Certification</span>
+            </span>
           </Link>
 
           <nav aria-label="Primary"><MegaMenu /></nav>

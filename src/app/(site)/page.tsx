@@ -10,6 +10,9 @@ import {
   Upload,
   CreditCard,
   Phone,
+  Sparkles,
+  ShieldCheck,
+  Quote,
 } from "lucide-react";
 import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
@@ -59,28 +62,34 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[1fr_1.35fr] md:gap-12 md:px-10 md:py-24 lg:px-16">
+      <section className="relative isolate overflow-hidden border-b border-line bg-surface">
+        <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.06]" aria-hidden />
+        <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.07] blur-3xl" aria-hidden />
+        <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
+        <div className="mx-auto grid w-full max-w-[80rem] items-center gap-10 px-5 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 md:grid-cols-[0.9fr_1.1fr] md:gap-14 md:px-10 lg:px-12 lg:py-28">
           {/* Left: copy */}
-          <div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-strong">
+          <div className="relative z-10">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
+              <Sparkles className="h-4 w-4" aria-hidden />
+              {siteConfig.trustLine}
+            </div>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong">
               Certification &amp; Testing Support
             </p>
-            <h1>{siteConfig.tagline}</h1>
+            <h1 className="max-w-[13ch] text-[clamp(2.55rem,4.4vw,4.35rem)] tracking-[-0.035em]">{siteConfig.tagline}</h1>
             <p className="mt-5 max-w-xl text-base text-muted sm:text-lg">
               Apply for initial certification, renew your credentials, register for IC&amp;RC exams, earn
               CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
-            <p className="mt-5 font-semibold text-brand">{siteConfig.trustLine}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center sm:w-auto">Choose Your Cert Path</CtaButton>
+              <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">Choose Your Cert Path</CtaButton>
               <CtaButton href="/store" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Visit the Store</CtaButton>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-ink">
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
                 <li key={item} className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-brand" aria-hidden />
+                  <CheckCircle2 className="h-4 w-4 fill-brand/10 text-brand" aria-hidden />
                   {item}
                 </li>
               ))}
@@ -88,13 +97,14 @@ export default function HomePage() {
           </div>
 
           {/* Right: hero image with maroon arc accent */}
-          <div className="relative">
+          <div className="relative mx-auto w-full max-w-3xl">
             {/* Decorative maroon arc, top-right of the image */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -right-4 -top-6 h-28 w-28 rounded-full border-[6px] border-brand/70 md:-right-6 md:h-36 md:w-36"
+              className="pointer-events-none absolute -right-5 -top-7 h-28 w-28 rounded-full border-[8px] border-brand/15 md:-right-8 md:h-40 md:w-40"
             />
-            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line bg-bg shadow-lg ring-1 ring-black/5">
+            <div className="absolute -bottom-5 -left-5 h-24 w-24 rounded-3xl bg-info shadow-xl" aria-hidden />
+            <div className="relative aspect-[16/9] overflow-hidden rounded-3xl border border-white/80 bg-info shadow-[0_32px_75px_-30px_rgba(13,34,63,0.5)] ring-1 ring-info/10">
               <Image
                 src="/brand/hero-v2.png"
                 alt="Arizona addiction counseling professionals reviewing certification materials"
@@ -104,21 +114,33 @@ export default function HomePage() {
                 className="object-cover"
               />
             </div>
+            <div className="absolute -bottom-5 right-5 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-xl backdrop-blur sm:right-8">
+              <ShieldCheck className="h-6 w-6 text-brand" aria-hidden />
+              <div>
+                <div className="text-sm font-semibold text-ink">IC&amp;RC Member Board</div>
+                <div className="text-xs text-muted">Credentials built for reciprocity</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Stat band */}
-      <Section compact>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="relative z-10 -mt-8 px-4 pb-14 sm:px-6 lg:px-8">
+        <div className="mx-auto grid w-full max-w-content gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((s) => (
             <StatCard key={s.label} {...s} />
           ))}
         </div>
-      </Section>
+      </section>
 
       {/* Services */}
-      <Section eyebrow="Our services" title="Certification services for every stage of your career" surface>
+      <Section
+        eyebrow="Our services"
+        title="Certification services for every stage of your career"
+        intro="Clear pathways, trusted standards, and practical support from your first application through every renewal."
+        className="bg-gradient-to-b from-surface to-bg/50"
+      >
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((s) => (
             <ServiceCard key={s.title} {...s} />
@@ -127,13 +149,15 @@ export default function HomePage() {
       </Section>
 
       {/* Why it matters */}
-      <section className="overflow-hidden bg-info text-white">
-        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12 md:px-10 md:py-24 lg:px-16">
+      <section className="relative isolate overflow-hidden bg-info text-white">
+        <div className="absolute -left-40 top-1/2 -z-10 h-96 w-96 -translate-y-1/2 rounded-full bg-brand/25 blur-3xl" aria-hidden />
+        <div className="absolute right-0 top-0 -z-10 h-full w-1/2 bg-gradient-to-l from-white/[0.04] to-transparent" aria-hidden />
+        <div className="mx-auto grid w-full max-w-[80rem] items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 md:grid-cols-2 md:gap-16 md:px-10 lg:px-12 lg:py-28">
           {/* Left: copy */}
           <div>
-            <div className="mb-4 h-1 w-10 rounded bg-brand" aria-hidden />
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">Why It Matters</p>
-            <h2 className="text-white">Why Addiction Counselors Matter</h2>
+            <div className="mb-5 h-1 w-12 rounded-full bg-brand" aria-hidden />
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/60">Why It Matters</p>
+            <h2 className="max-w-xl text-white">Why Addiction Counselors Matter</h2>
             <p className="mt-5 max-w-xl text-base text-white/75 sm:text-lg">
               Addictions counselors help people reclaim their lives from substance use disorders. They provide
               support, education, and treatment planning to individuals, families, and communities. Whether working
@@ -146,8 +170,8 @@ export default function HomePage() {
                 "Serving individuals, families, and communities",
                 "Working in hospitals, recovery centers, and private practice",
               ].map((item) => (
-                <li key={item} className="flex items-center gap-3 font-semibold text-white">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-white" aria-hidden />
+                <li key={item} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 font-semibold text-white">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-brand" aria-hidden />
                   {item}
                 </li>
               ))}
@@ -155,19 +179,19 @@ export default function HomePage() {
           </div>
 
           {/* Right: image with on-brand stylized overlay */}
-          <div className="relative mx-auto w-full max-w-md">
+          <div className="relative mx-auto w-full max-w-lg">
             {/* Gold offset frame, top-right */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -right-3 -top-3 h-full w-full rounded-2xl border border-accent/50"
+              className="pointer-events-none absolute -right-4 -top-4 h-full w-full rounded-3xl border border-white/20"
             />
             {/* Maroon arc accent, bottom-left */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full border-[6px] border-brand/70"
+              className="pointer-events-none absolute -bottom-6 -left-6 h-28 w-28 rounded-full border-[8px] border-brand/70"
             />
             {/* Image card */}
-            <div className="relative aspect-square overflow-hidden rounded-2xl bg-white/5 shadow-xl ring-1 ring-white/10">
+            <div className="relative aspect-square overflow-hidden rounded-3xl bg-white/5 shadow-2xl ring-1 ring-white/10">
               <Image
                 src="/brand/why-counselors.png"
                 alt="ABCAC certified addiction counselor"
@@ -184,12 +208,13 @@ export default function HomePage() {
       </section>
 
       {/* Credential teaser */}
-      <Section eyebrow="Credentials" title="Which Credential Is Right for You?" intro="Whether you're just starting out, advancing your clinical skills, or supporting others through lived experience — ABCAC offers the credential that aligns with your path." surface>
+      <Section eyebrow="Credentials" title="Which Credential Is Right for You?" intro="Whether you're just starting out, advancing your clinical skills, or supporting others through lived experience — ABCAC offers the credential that aligns with your path." className="bg-surface">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {credentials.map((c) => (
-            <div key={c.code} className="rounded-xl border border-line bg-bg p-6">
-              <h3 className="text-base">{c.code}</h3>
-              <p className="mt-2 text-sm text-muted">{c.desc}</p>
+          {credentials.map((c, index) => (
+            <div key={c.code} className="group rounded-2xl border border-line bg-bg p-6 transition duration-300 hover:-translate-y-1 hover:border-brand/20 hover:bg-surface hover:shadow-xl hover:shadow-info/10">
+              <span className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-sm font-bold text-brand">0{index + 1}</span>
+              <h3 className="text-base leading-snug">{c.code}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted">{c.desc}</p>
             </div>
           ))}
         </div>
@@ -199,12 +224,14 @@ export default function HomePage() {
       </Section>
 
       {/* Sync Your Certifications */}
-      <Section surface>
-        <div className="grid items-start gap-10 lg:grid-cols-2">
+      <Section className="bg-gradient-to-b from-bg to-surface">
+        <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-surface p-6 shadow-[0_28px_80px_-48px_rgba(13,34,63,0.45)] sm:p-8 lg:p-12">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/[0.05] blur-2xl" aria-hidden />
+          <div className="relative grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
           {/* Left: heading + certificate */}
           <div>
             <h2>Sync Your Certifications – One Date, One Renewal, Less Stress.</h2>
-            <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+            <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-white shadow-lg shadow-info/10">
               <Image
                 src="/brand/cadac-certificate.png"
                 alt="Sample ABCAC Certified Alcohol and Drug Abuse Counselor certificate"
@@ -224,7 +251,7 @@ export default function HomePage() {
               synchronization request and pay securely online today!
             </p>
             <p className="mt-5 font-semibold text-brand">Watch our how to video below.</p>
-            <div className="mt-4 overflow-hidden rounded-xl border border-line bg-ink shadow-sm">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-ink shadow-xl shadow-info/15">
               <video controls preload="metadata" playsInline className="aspect-video w-full">
                 <source
                   src="https://vid.cdn-website.com/249de5f7/videos/g8mVT8s4Q8eUpyl1TN3Z_ABCAC+3-v.mp4"
@@ -238,28 +265,34 @@ export default function HomePage() {
               {sync && <PriceTag product={sync} className="text-xl text-brand" />}
             </div>
           </div>
+          </div>
         </div>
       </Section>
 
       {/* Digital certificate notice */}
-      <Section compact surface>
-        <div className="rounded-xl border border-accent/40 bg-accent/5 p-6">
-          <h3>Certification Delivery Update</h3>
-          <p className="mt-2 text-muted">
+      <Section compact className="bg-surface">
+        <div className="flex flex-col gap-5 rounded-2xl border border-brand/15 bg-gradient-to-br from-brand/[0.06] to-surface p-6 sm:flex-row sm:p-8">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-lg shadow-brand/20">
+            <ShieldCheck className="h-6 w-6" aria-hidden />
+          </div>
+          <div>
+            <h3>Certification Delivery Update</h3>
+            <p className="mt-2 text-muted">
             ABCAC is transitioning to a digital certificate system. Beginning immediately, paper copies of certificates
             will no longer be automatically mailed. All certification recipients will receive an official digital
             certificate upon approval or renewal.
-          </p>
-          <p className="mt-3 text-muted">
+            </p>
+            <p className="mt-3 text-muted">
             If you would like a printed copy of your certificate, one can be requested for a $25 processing and mailing
             fee. If you have questions, contact our office at{" "}
             <a href={siteConfig.contact.emailHref} className="font-semibold text-brand">{siteConfig.contact.email}</a>{" "}
             or submit your request through the ABCAC portal.
-          </p>
-          <p className="mt-3 text-muted">
+            </p>
+            <p className="mt-3 text-muted">
             This change allows ABCAC to deliver certificates faster, reduce administrative processing time, and support
             environmentally responsible practices.
-          </p>
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -268,10 +301,12 @@ export default function HomePage() {
         eyebrow="Follow this easy step-by-step process"
         title="Complete Your Certification Sync"
         intro="Submit your synchronization form and payment so ABCAC can align all of your renewal dates into one easy cycle."
+        className="bg-bg"
       >
         <div className="grid gap-5 lg:grid-cols-3">
-          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
+            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>01</span>
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <FileText className="h-5 w-5" aria-hidden />
             </div>
             <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 1</p>
@@ -282,8 +317,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
+            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>02</span>
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <Upload className="h-5 w-5" aria-hidden />
             </div>
             <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 2</p>
@@ -297,8 +333,9 @@ export default function HomePage() {
             </CtaButton>
           </div>
 
-          <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-brand/10 text-brand">
+          <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.45)] transition duration-300 hover:-translate-y-1 hover:border-brand/20">
+            <span className="absolute right-5 top-3 font-display text-6xl font-bold text-brand/[0.05]" aria-hidden>03</span>
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <CreditCard className="h-5 w-5" aria-hidden />
             </div>
             <p className="text-sm font-semibold uppercase tracking-wide text-accent-strong">Step 3</p>
@@ -321,23 +358,28 @@ export default function HomePage() {
       </Section>
 
       {/* Testimonials */}
-      <Section eyebrow="Testimonials" title="What people say about us">
+      <Section eyebrow="Testimonials" title="What people say about us" intro="Real experiences from professionals who trusted ABCAC with their certification journey." className="bg-surface">
         <div className="grid gap-5 md:grid-cols-3">
           {TESTIMONIALS.map((t) => (
-            <figure key={t.author} className="flex h-full flex-col rounded-xl border border-line bg-surface p-6">
-              <blockquote className="flex-1 text-muted">“{t.quote}”</blockquote>
-              <figcaption className="mt-4 text-sm font-semibold text-ink">— {t.author}</figcaption>
+            <figure key={t.author} className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-bg p-6 shadow-[0_18px_50px_-36px_rgba(13,34,63,0.4)] sm:p-7">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand to-info" aria-hidden />
+              <Quote className="mb-5 h-8 w-8 fill-brand/10 text-brand" aria-hidden />
+              <blockquote className="flex-1 leading-relaxed text-muted">“{t.quote}”</blockquote>
+              <figcaption className="mt-5 border-t border-line pt-4 text-sm font-semibold text-ink">— {t.author}</figcaption>
             </figure>
           ))}
         </div>
       </Section>
 
       {/* FAQ */}
-      <section className="bg-info text-white">
-        <div className="mx-auto w-full max-w-content px-5 py-16 md:px-8 md:py-24">
+      <section className="relative isolate overflow-hidden bg-info text-white">
+        <div className="absolute -left-32 -top-32 -z-10 h-80 w-80 rounded-full bg-brand/25 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-40 -right-32 -z-10 h-96 w-96 rounded-full bg-white/[0.05] blur-3xl" aria-hidden />
+        <div className="mx-auto w-full max-w-content px-5 py-20 md:px-8 md:py-28">
           <div className="mb-10 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">Questions</p>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/60">Questions</p>
             <h2 className="text-white">Frequently Asked Questions</h2>
+            <p className="mx-auto mt-3 max-w-xl text-white/65">Straight answers to the questions Arizona certification candidates ask most.</p>
           </div>
           <FaqAccordion items={FAQS} />
           <div className="mt-8 text-center">
@@ -347,8 +389,9 @@ export default function HomePage() {
       </section>
 
       {/* Become a Board Member */}
-      <Section>
-        <div className="rounded-2xl border border-line bg-bg p-6 sm:p-8 md:p-12">
+      <Section className="bg-bg">
+        <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-surface p-6 shadow-[0_30px_80px_-50px_rgba(13,34,63,0.55)] sm:p-8 md:p-12">
+          <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-brand/[0.05] blur-2xl" aria-hidden />
           <div className="grid items-center gap-10 md:grid-cols-2">
             {/* Left: text + button */}
             <div>
@@ -358,14 +401,14 @@ export default function HomePage() {
                 our board of directors. Your insights are invaluable, and your leadership helps shape the future of
                 addiction counselor certification in Arizona.
               </p>
-              <CtaButton href="/board-application" size="lg" className="mt-6">Apply Now</CtaButton>
+              <CtaButton href="/board-application" size="lg" className="mt-6 shadow-lg shadow-brand/20">Apply Now</CtaButton>
             </div>
             {/* Right: image with on-brand stylized overlay */}
             <div className="relative mx-auto w-full max-w-md">
               {/* Gold offset frame, top-right */}
               <div
                 aria-hidden
-                className="pointer-events-none absolute -right-3 -top-3 h-full w-full rounded-2xl border border-accent/50"
+                className="pointer-events-none absolute -right-3 -top-3 h-full w-full rounded-3xl border border-brand/20"
               />
               {/* Maroon arc accent, bottom-left */}
               <div
@@ -373,7 +416,7 @@ export default function HomePage() {
                 className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full border-[6px] border-brand/70"
               />
               {/* Image card */}
-              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line bg-surface shadow-2xl shadow-info/20">
                 <Image
                   src="/brand/board-member.png"
                   alt="Expand your impact as an ABCAC board member"
@@ -389,8 +432,10 @@ export default function HomePage() {
       </Section>
 
       {/* Final CTA */}
-      <section className="bg-brand text-white">
-        <div className="mx-auto flex w-full max-w-content flex-col items-start justify-between gap-6 px-5 py-10 sm:flex-row sm:items-center md:px-8 md:py-12">
+      <section className="relative isolate overflow-hidden bg-gradient-to-r from-brand-600 via-brand to-brand-600 text-white">
+        <div className="absolute -right-20 -top-24 -z-10 h-64 w-64 rounded-full border-[40px] border-white/[0.05]" aria-hidden />
+        <div className="absolute -bottom-24 left-1/3 -z-10 h-48 w-48 rounded-full bg-white/[0.05] blur-xl" aria-hidden />
+        <div className="mx-auto flex w-full max-w-content flex-col items-start justify-between gap-6 px-5 py-12 sm:flex-row sm:items-center md:px-8 md:py-14">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-white/75">Ready for your next step?</p>
             <h2 className="mt-1 text-white">Get certified today!</h2>

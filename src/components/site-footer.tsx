@@ -13,47 +13,55 @@ const quickLinks = [
 export function SiteFooter() {
   const c = siteConfig.contact;
   return (
-    <footer className="border-t border-line bg-surface">
-      <div className="mx-auto grid w-full max-w-content grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 sm:gap-10 sm:px-5 md:grid-cols-3 md:px-8 md:py-14">
+    <footer className="border-t-4 border-brand bg-info text-white">
+      <div className="mx-auto grid w-full max-w-content grid-cols-1 gap-8 px-4 py-12 sm:grid-cols-2 sm:gap-10 sm:px-5 md:grid-cols-3 md:px-8 md:py-16">
         <div>
-          <div className="font-display text-lg font-bold text-brand">{siteConfig.shortName}</div>
-          <address className="mt-3 not-italic text-sm text-muted">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand font-display text-lg font-bold text-white">A</span>
+            <div>
+              <div className="font-display text-lg font-bold text-white">{siteConfig.shortName}</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-white/55">Arizona Board for Certification</div>
+            </div>
+          </div>
+          <address className="mt-5 not-italic text-sm leading-7 text-white/65">
             {c.org}
             <br />
             {c.addressLine}
             <br />
             {c.cityStateZip}
             <br />
-            <a href={c.phoneHref} className="hover:text-brand">{c.phone}</a>
+            <a href={c.phoneHref} className="transition-colors hover:text-white">{c.phone}</a>
             <br />
-            <a href={c.emailHref} className="hover:text-brand">{c.email}</a>
+            <a href={c.emailHref} className="transition-colors hover:text-white">{c.email}</a>
           </address>
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-ink">Our services</h4>
-          <ul className="mt-3 space-y-1 text-sm text-muted">
+          <h4 className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Our services</h4>
+          <ul className="mt-4 space-y-1 text-sm text-white/65">
             {quickLinks.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="inline-flex min-h-[44px] items-center hover:text-brand sm:min-h-0">{l.label}</Link>
+                <Link href={l.href} className="inline-flex min-h-[44px] items-center transition-colors hover:text-white sm:min-h-0">{l.label}</Link>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <Image
-            src="/brand/icrc-logo.png"
-            alt="International Certification & Reciprocity Consortium (IC&RC)"
-            width={120}
-            height={41}
-            className="h-9 w-auto"
-          />
-          <p className="mt-3 text-sm text-muted">{siteConfig.icrcLine}</p>
+          <div className="inline-flex rounded-xl bg-white px-4 py-3">
+            <Image
+              src="/brand/icrc-logo.png"
+              alt="International Certification & Reciprocity Consortium (IC&RC)"
+              width={120}
+              height={41}
+              className="h-9 w-auto"
+            />
+          </div>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/65">{siteConfig.icrcLine}</p>
         </div>
       </div>
-      <div className="border-t border-line">
-        <div className="mx-auto w-full max-w-content px-4 py-6 text-xs text-muted sm:px-5 md:px-8">{siteConfig.legal}</div>
+      <div className="border-t border-white/10 bg-black/10">
+        <div className="mx-auto w-full max-w-content px-4 py-6 text-xs text-white/50 sm:px-5 md:px-8">{siteConfig.legal}</div>
       </div>
     </footer>
   );
