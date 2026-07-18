@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { HEADER_CTA } from "@/lib/nav";
 import { siteConfig } from "@/lib/site-config";
+import { BrandLogo } from "@/components/brand-logo";
 import { CtaButton } from "@/components/cta-button";
 import { Button } from "@/components/ui/button";
 import { MegaMenu } from "@/components/mega-menu";
@@ -45,20 +46,16 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className={cn("sticky top-0 z-40 border-b border-line/80 bg-surface/90 backdrop-blur-xl transition-all", scrolled && "shadow-[0_10px_35px_-24px_rgba(13,34,63,0.45)]")}>
-        <div className="mx-auto flex h-[4.5rem] w-full max-w-content items-center justify-between gap-3 px-4 sm:gap-4 sm:px-5 md:px-8">
-          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label={`${siteConfig.shortName} home`}>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-600 font-display text-lg font-bold text-white shadow-md shadow-brand/15">A</span>
-            <span className="flex min-w-0 flex-col leading-none">
-              <span className="font-display text-lg font-bold text-brand sm:text-xl">{siteConfig.shortName}</span>
-              <span className="mt-1 truncate text-[9px] uppercase tracking-[0.16em] text-muted sm:text-[10px]">Arizona Board for Certification</span>
-            </span>
+      <header className={cn("sticky top-0 z-40 border-b border-line/80 bg-surface/95 backdrop-blur-xl transition-all", scrolled && "shadow-[0_10px_35px_-24px_rgba(13,34,63,0.45)]")}>
+        <div className="mx-auto flex h-20 w-full max-w-[94rem] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="shrink-0 overflow-hidden rounded-md bg-info" aria-label={`${siteConfig.shortName} home`}>
+            <BrandLogo priority className="h-12 sm:h-14" />
           </Link>
 
           <nav aria-label="Primary"><MegaMenu /></nav>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden lg:inline-flex">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden 2xl:inline-flex">
               {HEADER_CTA.label}
             </CtaButton>
             <Button type="button" size="sm" className="hidden md:inline-flex" onClick={() => setPortalPreviewOpen(true)}>

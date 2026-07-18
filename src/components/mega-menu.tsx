@@ -21,7 +21,7 @@ export function MegaMenu() {
   }, []);
 
   return (
-    <div className="relative hidden items-center gap-1 xl:flex" onMouseLeave={() => setOpen(null)}>
+    <div className="relative hidden items-center gap-1.5 xl:flex" onMouseLeave={() => setOpen(null)}>
       {MENU.map((group, i) => (
         <div key={group.label} onMouseEnter={() => setOpen(i)}>
           <button
@@ -30,7 +30,7 @@ export function MegaMenu() {
             aria-haspopup="true"
             onClick={() => setOpen(open === i ? null : i)}
             className={cn(
-              "flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+              "flex items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors",
               open === i ? "text-brand" : "text-muted hover:text-brand",
             )}
           >
@@ -45,7 +45,7 @@ export function MegaMenu() {
           key={link.href}
           href={link.href}
           className={cn(
-            "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+            "rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors",
             pathname === link.href ? "text-brand" : "text-muted hover:text-brand",
           )}
         >

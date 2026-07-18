@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { siteConfig } from "@/lib/site-config";
+import { BrandLogo } from "@/components/brand-logo";
 
 const quickLinks = [
   { label: "Sync Your Certs", href: "/store/certification-sync" },
@@ -14,15 +15,9 @@ export function SiteFooter() {
   const c = siteConfig.contact;
   return (
     <footer className="border-t-4 border-brand bg-info text-white">
-      <div className="mx-auto grid w-full max-w-content grid-cols-1 gap-8 px-4 py-12 sm:grid-cols-2 sm:gap-10 sm:px-5 md:grid-cols-3 md:px-8 md:py-16">
+      <div className="mx-auto grid w-full max-w-[90rem] grid-cols-1 gap-8 px-4 py-12 sm:grid-cols-2 sm:gap-10 sm:px-6 md:grid-cols-3 md:px-8 md:py-16">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand font-display text-lg font-bold text-white">A</span>
-            <div>
-              <div className="font-display text-lg font-bold text-white">{siteConfig.shortName}</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-white/55">Arizona Board for Certification</div>
-            </div>
-          </div>
+          <BrandLogo className="h-14 rounded-md" />
           <address className="mt-5 not-italic text-sm leading-7 text-white/65">
             {c.org}
             <br />
@@ -61,7 +56,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 bg-black/10">
-        <div className="mx-auto w-full max-w-content px-4 py-6 text-xs text-white/50 sm:px-5 md:px-8">{siteConfig.legal}</div>
+        <div className="mx-auto w-full max-w-[90rem] px-4 py-6 text-xs text-white/50 sm:px-6 md:px-8">{siteConfig.legal}</div>
       </div>
     </footer>
   );

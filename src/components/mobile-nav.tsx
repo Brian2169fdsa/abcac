@@ -6,9 +6,9 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 import { MENU, MENU_LINKS, HEADER_CTA } from "@/lib/nav";
-import { siteConfig } from "@/lib/site-config";
 import { CtaButton } from "@/components/cta-button";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -64,7 +64,7 @@ export function MobileNav({ open, onClose, onPortalOpen }: MobileNavProps) {
       <div className="absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-surface shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <span className="font-display text-lg font-bold text-brand">{siteConfig.shortName}</span>
+          <BrandLogo className="h-11 rounded" />
           <button
             type="button"
             className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink hover:bg-line/60"

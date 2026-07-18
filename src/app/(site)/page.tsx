@@ -62,12 +62,11 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-bg px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        <div className="relative isolate mx-auto w-full max-w-[84rem] overflow-hidden rounded-[2rem] border border-brand/10 bg-surface shadow-[0_32px_90px_-55px_rgba(13,34,63,0.5)]">
-          <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.07]" aria-hidden />
-          <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.08] blur-3xl" aria-hidden />
-          <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
-          <div className="grid items-center gap-10 px-6 py-10 sm:px-8 sm:py-12 md:grid-cols-[1.05fr_0.95fr] md:gap-12 lg:px-14 lg:py-16 xl:px-16">
+      <section className="relative isolate overflow-hidden border-b border-line bg-surface">
+        <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.07]" aria-hidden />
+        <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.08] blur-3xl" aria-hidden />
+        <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-8 sm:py-14 md:grid-cols-[1.05fr_0.95fr] md:gap-12 lg:px-12 lg:py-20 xl:px-16">
           {/* Left: copy */}
           <div className="relative z-10">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
@@ -124,7 +123,6 @@ export default function HomePage() {
                 <div className="mt-0.5 text-xs font-medium text-slate-600">Credentials built for reciprocity</div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </section>
