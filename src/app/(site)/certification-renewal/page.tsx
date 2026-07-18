@@ -62,30 +62,35 @@ const renewalTracks = [
     code: "CAC · CADAC · AADC",
     title: "Counselor Recertification",
     description: "For Certified Addiction Counselor, Certified Alcohol & Drug Abuse Counselor, and Advanced Alcohol & Drug Counselor credentials.",
+    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-150-Re-Certification-Fee-Re-Certification-Packet.pdf",
     tone: "bg-info",
   },
   {
     code: "CPS",
     title: "Prevention Specialist Recertification",
     description: "For professionals renewing the Certified Prevention Specialist credential and prevention-focused continuing education.",
+    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Prevention-Specialist-150-Re-Certification-Fee-Re-Certification-Packet-Fillable-vrxrup.pdf",
     tone: "bg-success",
   },
   {
     code: "CCS",
     title: "Clinical Supervisor Recertification",
     description: "For Certified Clinical Supervisors maintaining advanced supervision, ethics, and professional-development requirements.",
+    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Clinical-Supervisor-150-Re-Certification-Fee-Re-Certification-Packet-430yed-1-ac9ed310.pdf",
     tone: "bg-brand",
   },
   {
     code: "CCJP",
     title: "Criminal Justice Professional Recertification",
     description: "For professionals renewing a credential focused on addiction services in criminal-justice and community-supervision settings.",
+    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Criminal-Justice-Addictions-Professional-150-Re-Certification-Fee-oxaayt.pdf",
     tone: "bg-[#6B2A91]",
   },
   {
     code: "CPRS",
     title: "Peer Recovery Specialist Recertification",
     description: "For Certified Peer Recovery Specialists documenting continued education in peer support, advocacy, ethics, and recovery services.",
+    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Peer-Recovery-Specialist-Recet.pdf",
     tone: "bg-[#A24922]",
   },
 ];
@@ -255,7 +260,7 @@ export default function CertificationRenewalPage() {
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Renewal Tracks</p>
             <h2 className="mt-3 text-3xl sm:text-4xl">Prepare the packet for your credential</h2>
-            <p className="mt-4 text-lg text-muted">Select your current credential, complete the matching renewal information, then upload your supporting documents in the member portal.</p>
+            <p className="mt-4 text-lg text-muted">Please select the appropriate recertification form for your current credential. Download and complete the form, then continue to the submission section below to upload your documents and submit payment.</p>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {renewalTracks.map((track) => (
@@ -268,7 +273,7 @@ export default function CertificationRenewalPage() {
                   </div>
                   <h3 className="mt-4 text-xl">{track.title}</h3>
                   <p className="mt-3 flex-1 text-sm leading-relaxed text-muted">{track.description}</p>
-                  <CtaButton href="/account/renew" variant="outline" className="mt-5 w-full">Prepare Renewal <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
+                  <CtaButton href={track.formHref} variant="outline" className="mt-5 w-full">Download Form <FileCheck2 className="h-4 w-4" aria-hidden /></CtaButton>
                 </div>
               </article>
             ))}
@@ -276,17 +281,20 @@ export default function CertificationRenewalPage() {
         </div>
       </section>
 
-      <section className="bg-bg">
+      <section id="submit-renewal" className="scroll-mt-24 bg-bg">
         <div className="mx-auto grid w-full max-w-[90rem] gap-8 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 lg:py-24">
           <div className="rounded-3xl bg-gradient-to-br from-info to-[#17365c] p-7 text-white sm:p-9">
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10"><Upload className="h-6 w-6" aria-hidden /></span>
             <h2 className="mt-6 text-3xl text-white">Submit your renewal documentation</h2>
             <p className="mt-4 leading-relaxed text-white/70">
-              Upload your completed renewal application and CE certificates through the member portal. Enter your name exactly as it appears on your certification, include your certification number, and label every file clearly.
+              Upload your completed recertification form and Continuing Education Unit certificates through the secure renewal form. Make sure every file is clear, complete, and labeled with your full name to avoid processing delays.
             </p>
-            <p className="mt-4 leading-relaxed text-white/70">
-              If online submission is unavailable, email <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a> for alternate instructions.
-            </p>
+            <ol className="mt-5 space-y-3 text-sm leading-relaxed text-white/75">
+              <li><strong className="text-white">1. Name:</strong> Enter your full name exactly as it appears on your certification.</li>
+              <li><strong className="text-white">2. File upload:</strong> Upload your completed renewal packet and all required CE certificates.</li>
+              <li><strong className="text-white">3. Certification number:</strong> Enter your current certification number so the team can identify your record.</li>
+            </ol>
+            <p className="mt-5 leading-relaxed text-white/70">Once every field is complete, submit the form to send your documents to ABCAC. Questions? Email <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a>.</p>
             <CtaButton href="/account/renew" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Upload Renewal Documents</CtaButton>
           </div>
 
