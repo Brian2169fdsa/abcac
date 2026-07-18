@@ -8,6 +8,7 @@ export interface NavItem {
 // Secondary CTA at the right of the header. Points to /contact until a booking
 // URL is provided (logged in DECISIONS.md).
 export const HEADER_CTA = { label: "Book an Audit", href: "/contact" };
+export const HOME_LINK: NavItem = { label: "Home", href: "/" };
 
 // ─── Mega menu (desktop dropdowns + mobile accordion) ───
 export interface MenuLink {

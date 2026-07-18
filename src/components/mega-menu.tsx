@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ArrowRight } from "lucide-react";
-import { MENU, MENU_LINKS } from "@/lib/nav";
+import { HOME_LINK, MENU, MENU_LINKS } from "@/lib/nav";
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,17 @@ export function MegaMenu() {
 
   return (
     <div className="relative hidden items-center gap-1.5 xl:flex" onMouseLeave={() => setOpen(null)}>
+      <Link
+        href={HOME_LINK.href}
+        aria-current={pathname === HOME_LINK.href ? "page" : undefined}
+        className={cn(
+          "rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors",
+          pathname === HOME_LINK.href ? "text-brand" : "text-muted hover:text-brand",
+        )}
+      >
+        {HOME_LINK.label}
+      </Link>
+
       {MENU.map((group, i) => (
         <div key={group.label} onMouseEnter={() => setOpen(i)}>
           <button

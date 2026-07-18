@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
-import { MENU, MENU_LINKS, HEADER_CTA } from "@/lib/nav";
+import { HOME_LINK, MENU, MENU_LINKS, HEADER_CTA } from "@/lib/nav";
 import { CtaButton } from "@/components/cta-button";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
@@ -78,6 +78,17 @@ export function MobileNav({ open, onClose, onPortalOpen }: MobileNavProps) {
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           <nav className="flex flex-col gap-1" aria-label="Mobile">
+            <Link
+              href={HOME_LINK.href}
+              aria-current={pathname === HOME_LINK.href ? "page" : undefined}
+              className={cn(
+                "flex min-h-[48px] items-center rounded-lg px-3 text-base font-semibold transition-colors hover:bg-line/50 active:bg-line/70",
+                pathname === HOME_LINK.href ? "bg-line/50 text-brand" : "text-ink",
+              )}
+            >
+              {HOME_LINK.label}
+            </Link>
+
             {MENU.map((group, i) => {
               const isOpen = expanded === i;
               const panelId = `mobile-group-${i}`;
