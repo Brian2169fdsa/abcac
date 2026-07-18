@@ -258,7 +258,7 @@ export default function HomePage() {
                 controls
                 preload="metadata"
                 playsInline
-                poster="/brand/cert-sync-video-poster.png"
+                poster="/brand/sync-video-poster.png"
                 className="aspect-video w-full object-cover"
               >
                 <source
