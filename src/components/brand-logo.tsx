@@ -9,7 +9,7 @@ interface BrandLogoProps {
 export function BrandLogo({ className, priority = false }: BrandLogoProps) {
   return (
     <Image
-      src="/brand/abcac-wordmark.png"
+      src="/brand/abcac-wordmark-maroon.png"
       alt="ABCAC"
       width={163}
       height={56}
