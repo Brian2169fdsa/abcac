@@ -61,10 +61,9 @@
       "slug": "certification-sync",
       "name": "Certification Sync",
       "price": 15.0,
-      "billing": "per month",
       "category": "Service",
       "exam_mode": null,
-      "short": "Sync all your ABCAC certifications into one unified renewal date for $15/month. Eliminate multiple deadlines and stay compliant.",
+      "short": "Move multiple ABCAC certifications to one unified renewal date. Pay a one-time $15 fee for each month moved forward.",
       "includes": [
         "Unified single renewal date",
         "Reduced admin work",

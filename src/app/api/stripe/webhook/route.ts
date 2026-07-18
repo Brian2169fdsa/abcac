@@ -175,7 +175,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
 }
 
 async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
-  // Recurring subscription renewal (Certification Sync, annual provider fee).
+  // Recurring subscription renewal (for example, an annual provider fee).
   const invoice = event.data.object as Stripe.Invoice;
   if (invoice.billing_reason === "subscription_create") return; // first invoice handled by checkout.session.completed
 

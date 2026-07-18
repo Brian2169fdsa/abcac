@@ -18,7 +18,7 @@ function initials(name: string): string {
 
 /**
  * Maroon top bar + white brand bar, matching the static portal chrome
- * (public/portal/index.html). The hamburger button (mobile only) toggles the
+ * The hamburger button (mobile only) toggles the
  * sidebar drawer owned by the shell.
  */
 export function PortalTopbar({

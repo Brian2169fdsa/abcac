@@ -33,11 +33,11 @@ describe("getCategories", () => {
 });
 
 describe("getProductBySlug", () => {
-  it("certification-sync is a subscription with interval 'month'", () => {
+  it("certification-sync is a one-time payment", () => {
     const product = getProductBySlug("certification-sync");
     expect(product).toBeDefined();
-    expect(product!.mode).toBe("subscription");
-    expect(product!.interval).toBe("month");
+    expect(product!.mode).toBe("payment");
+    expect(product!.interval).toBeUndefined();
   });
 
   it("returns undefined for a slug that does not exist", () => {
@@ -46,9 +46,9 @@ describe("getProductBySlug", () => {
 });
 
 describe("formatPrice", () => {
-  it("monthly subscription (certification-sync) formats with '/mo' suffix", () => {
+  it("certification-sync formats without a recurring suffix", () => {
     const product = getProductBySlug("certification-sync")!;
-    expect(formatPrice(product).endsWith("/mo")).toBe(true);
+    expect(formatPrice(product)).toBe("$15.00");
   });
 
   it("annual provider product ($500/yr) formats with '/yr' suffix", () => {

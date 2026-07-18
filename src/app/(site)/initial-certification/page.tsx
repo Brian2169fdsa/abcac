@@ -15,7 +15,7 @@ import {
   Upload,
 } from "lucide-react";
 import { CtaButton } from "@/components/cta-button";
-import { FaqAccordion } from "@/components/faq-accordion";
+import { FaqSection } from "@/components/faq-section";
 import { PriceTag } from "@/components/price-tag";
 import { getProductBySlug } from "@/lib/catalog";
 import { siteConfig } from "@/lib/site-config";
@@ -35,6 +35,11 @@ const credentials = [
     requirements:
       "High school diploma or GED, 200–250 hours of addiction and behavioral sciences education, and 2 years or 4,000 hours of work experience.",
     application: "General application plus the CAC supplemental application.",
+    forms: [
+      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
+      { label: "CAC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual.pdf" },
+    ],
+    imagePosition: "0% 0%",
     tone: "bg-brand",
   },
   {
@@ -45,6 +50,11 @@ const credentials = [
     requirements:
       "Bachelor’s degree, 200 hours of addiction and counseling studies, and 3 years or 6,000 hours of work experience.",
     application: "General application plus the CADAC supplemental application.",
+    forms: [
+      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
+      { label: "CADAC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual-27032384.pdf" },
+    ],
+    imagePosition: "50% 0%",
     tone: "bg-info",
   },
   {
@@ -55,6 +65,11 @@ const credentials = [
     requirements:
       "Master’s degree, 180 hours of education in alcohol and drug counseling, and 2,000 hours of supervised work experience.",
     application: "General application plus the AADC supplemental application.",
+    forms: [
+      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
+      { label: "AADC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual-27032384.pdf" },
+    ],
+    imagePosition: "100% 0%",
     tone: "bg-success",
   },
   {
@@ -65,6 +80,10 @@ const credentials = [
     requirements:
       "High school diploma or GED, 46 hours of education in advocacy, mentoring, recovery support, and ethics, and 500 hours of supervised practical experience.",
     application: "Certified Peer Recovery Specialist application.",
+    forms: [
+      { label: "CPRS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CPRS-Application-Manual.pdf" },
+    ],
+    imagePosition: "0% 50%",
     tone: "bg-[#6B2A91]",
   },
   {
@@ -75,6 +94,10 @@ const credentials = [
     requirements:
       "A current reciprocal-level AODA credential, qualifying counseling experience, 4,000 hours of clinical supervisory experience, and 30 hours of clinical-supervision education.",
     application: "Certified Clinical Supervisor application.",
+    forms: [
+      { label: "CCS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Clinical-Supervisor-Manual-1.pdf" },
+    ],
+    imagePosition: "50% 50%",
     tone: "bg-[#386FA4]",
   },
   {
@@ -85,6 +108,10 @@ const credentials = [
     requirements:
       "Education and experience aligned with criminal justice and substance-use treatment. Contact ABCAC for credential-specific guidance.",
     application: "Certified Criminal Justice Professional application.",
+    forms: [
+      { label: "CCJP Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/CCJP-Manual.pdf" },
+    ],
+    imagePosition: "100% 50%",
     tone: "bg-[#527A16]",
   },
   {
@@ -95,6 +122,10 @@ const credentials = [
     requirements:
       "High school diploma or GED, 120 hours of prevention-specific education including 6 ethics hours, 2,000 hours of supervised prevention experience, and 120 hours of direct supervision.",
     application: "Certified Prevention Specialist application.",
+    forms: [
+      { label: "CPS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/Prevention-Specialist-Manual-1-3.pdf" },
+    ],
+    imagePosition: "0% 100%",
     tone: "bg-[#4D78B5]",
   },
 ];
@@ -176,7 +207,7 @@ export default function InitialCertificationPage() {
               ABCAC makes initial certification clear and accessible with straightforward requirements, guided application steps, study resources, and exam-registration support.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <CtaButton href="/account/apply" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">
+              <CtaButton href="#credentials" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">
                 Begin Your Application <ArrowRight className="h-4 w-4" aria-hidden />
               </CtaButton>
               <CtaButton href="#credentials" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Explore Credentials</CtaButton>
@@ -211,7 +242,7 @@ export default function InitialCertificationPage() {
         <div className="mx-auto grid w-full max-w-[80rem] items-center gap-10 px-5 py-14 sm:px-8 sm:py-16 md:grid-cols-[0.95fr_1.05fr] md:gap-14 lg:px-10 lg:py-24">
           <div className="relative overflow-hidden rounded-3xl border border-line bg-white shadow-[0_24px_60px_-45px_rgba(13,34,63,0.45)]">
             <div className="relative aspect-[1.3/1]">
-              <Image src="/brand/cadac-certificate.png" alt="Example ABCAC certification document" fill sizes="(max-width: 768px) 100vw, 45vw" className="object-cover" />
+              <Image src="/brand/credential-counselors.png" alt="Arizona addiction counseling professionals collaborating during certification training" fill sizes="(max-width: 768px) 100vw, 45vw" className="object-cover" />
             </div>
           </div>
           <div>
@@ -263,6 +294,17 @@ export default function InitialCertificationPage() {
             {credentials.map((credential) => (
               <article key={credential.code} className="group overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_18px_45px_-38px_rgba(13,34,63,0.5)] transition duration-200 hover:-translate-y-1 hover:shadow-xl">
                 <div className={`h-1.5 ${credential.tone}`} />
+                <div className="relative h-44 overflow-hidden bg-info">
+                  <div
+                    className="absolute inset-0 bg-[length:300%_300%] bg-no-repeat transition-transform duration-500 group-hover:scale-105"
+                    style={{
+                      backgroundImage: "url('/brand/credential-pathways-atlas.png')",
+                      backgroundPosition: credential.imagePosition,
+                    }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-info/45 via-transparent to-transparent" aria-hidden />
+                </div>
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand">{credential.code}</span>
@@ -278,6 +320,20 @@ export default function InitialCertificationPage() {
                     <div>
                       <div className="font-semibold text-ink">Application</div>
                       <p className="mt-1 leading-relaxed text-muted">{credential.application}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {credential.forms.map((form) => (
+                        <a
+                          key={form.href}
+                          href={form.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
+                        >
+                          <FileCheck2 className="h-3.5 w-3.5" aria-hidden />
+                          {form.label}
+                        </a>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -316,12 +372,14 @@ export default function InitialCertificationPage() {
               You may also email documents to <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a>. Include your full name and credential in the subject line. Questions? Call <a href={siteConfig.contact.phoneHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.phone}</a>.
             </p>
             <CtaButton href="/account/apply" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Upload Documents &amp; Apply</CtaButton>
+            <CtaButton href="#payment-options" variant="outline" size="lg" className="mt-3 w-full border-white text-white hover:bg-white hover:text-info sm:w-auto">View Secure Payment Options</CtaButton>
           </div>
 
-          <div className="rounded-3xl border border-line bg-bg p-6 sm:p-8">
+          <div id="payment-options" className="scroll-mt-28 rounded-3xl border border-line bg-bg p-6 sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Application &amp; Exam Fees</p>
             <h2 className="mt-3 text-3xl">Already submitted your documentation?</h2>
             <p className="mt-4 text-muted">Choose the payment option that matches your testing plan. Payment confirms your intent to complete the certification process and starts official review and scheduling.</p>
+            <CtaButton href="/certification-payment" size="lg" className="mt-6 w-full justify-center">Open Secure Payment Page <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {full && (
                 <div className="flex flex-col rounded-2xl border border-line bg-surface p-5">
@@ -366,16 +424,12 @@ export default function InitialCertificationPage() {
         </div>
       </section>
 
-      <section className="bg-surface">
-        <div className="mx-auto w-full max-w-[80rem] px-5 py-14 sm:px-8 sm:py-16 lg:px-10 lg:py-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Initial Certification FAQ</p>
-            <h2 className="mt-3 text-3xl sm:text-4xl">Answers before you apply</h2>
-            <p className="mt-4 text-lg text-muted">Review the most common questions about eligibility, pricing, submission, and timing.</p>
-          </div>
-          <div className="mt-10"><FaqAccordion items={initialFaqs} /></div>
-        </div>
-      </section>
+      <FaqSection
+        eyebrow="Initial Certification FAQ"
+        title="Answers before you apply"
+        intro="Review the most common questions about eligibility, pricing, submission, and timing."
+        items={initialFaqs}
+      />
 
       <section className="relative overflow-hidden bg-info text-white">
         <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full bg-brand/30 blur-3xl" aria-hidden />

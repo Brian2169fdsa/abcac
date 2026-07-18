@@ -123,6 +123,29 @@ describe("POST /api/stripe/checkout", () => {
     expect(arg.metadata.member_id).toBe("");
   });
 
+  it("uses the requested month quantity for certification sync", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "certification-sync",
+      name: "Certification Sync",
+      category: "Service",
+    });
+    const res = await POST(req({ slug: "certification-sync", quantity: 6 }));
+    expect(res.status).toBe(200);
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.mode).toBe("payment");
+    expect(arg.line_items).toEqual([{ price: "price_123", quantity: 6 }]);
+    expect(arg.metadata.sync_months).toBe("6");
+  });
+
+  it("does not accept quantity overrides for other products", async () => {
+    const res = await POST(req({ slug: "initial-cert", quantity: 6 }));
+    expect(res.status).toBe(200);
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.line_items).toEqual([{ price: "price_123", quantity: 1 }]);
+    expect(arg.metadata.sync_months).toBe("");
+  });
+
   it("attributes to a signed-in member and reuses an existing customer id", async () => {
     serverClient = fakeProfileClient({
       user: { id: "user-1", email: "m@example.com" },

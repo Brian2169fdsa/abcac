@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     slug?: string;
     credentialLevel?: string;
     examMode?: string;
+    quantity?: number;
     reciprocityRequestId?: string;
     // Optional free-form metadata to forward onto the Checkout session. Values
     // are coerced to strings (Stripe metadata is string→string). Backward
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  const { slug, credentialLevel, examMode, reciprocityRequestId, metadata: extraMetadata } = parsed;
+  const { slug, credentialLevel, examMode, quantity, reciprocityRequestId, metadata: extraMetadata } = parsed;
   if (typeof slug !== "string" || !slug) {
     return NextResponse.json({ error: "missing_slug" }, { status: 400 });
   }
@@ -33,6 +34,12 @@ export async function POST(req: Request) {
   if (!product) {
     return NextResponse.json({ error: "product_not_found" }, { status: 404 });
   }
+
+  const checkoutQuantity = slug === "certification-sync"
+    ? Number.isInteger(quantity) && quantity! >= 1 && quantity! <= 120
+      ? quantity!
+      : 1
+    : 1;
 
   const priceId = getPriceId(slug);
   if (!priceId) {
@@ -86,7 +93,7 @@ export async function POST(req: Request) {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: product.mode,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: checkoutQuantity }],
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/checkout/cancel`,
       // Prefer an existing customer id; fall back to customer_email for guests
@@ -102,6 +109,7 @@ export async function POST(req: Request) {
         product_name: product.name,
         credential_level: credentialLevel ?? "",
         exam_mode: examMode ?? "",
+        sync_months: slug === "certification-sync" ? String(checkoutQuantity) : "",
         member_id: memberId ?? "",
         ceu_note: product.category === "CEU Endorsement" ? "Submit materials to abcac@abcac.org (4-week review)" : "",
         // Caller-supplied + reciprocity markers last so they can't clobber the

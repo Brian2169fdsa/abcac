@@ -24,10 +24,11 @@ describe("getProducts", () => {
 });
 
 describe("getProductBySlug", () => {
-  it("returns the certification-sync product with mode subscription", () => {
+  it("returns certification-sync as a one-time quantity payment", () => {
     const product = getProductBySlug("certification-sync");
     expect(product).toBeDefined();
-    expect(product!.mode).toBe("subscription");
+    expect(product!.mode).toBe("payment");
+    expect(product!.interval).toBeUndefined();
   });
 
   it("returns undefined for a slug that does not exist", () => {
@@ -36,12 +37,10 @@ describe("getProductBySlug", () => {
 });
 
 describe("formatPrice", () => {
-  it("monthly subscription ends with /mo", () => {
-    // certification-sync: $15/month subscription
+  it("certification sync has no recurring suffix", () => {
     const product = getProductBySlug("certification-sync")!;
-    expect(product.interval).toBe("month");
     const result = formatPrice(product);
-    expect(result.endsWith("/mo")).toBe(true);
+    expect(result).toBe("$15.00");
   });
 
   it("yearly subscription ends with /yr", () => {

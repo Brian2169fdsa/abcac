@@ -18,7 +18,7 @@ import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
 import { ServiceCard } from "@/components/service-card";
 import { CtaButton } from "@/components/cta-button";
-import { FaqAccordion } from "@/components/faq-accordion";
+import { FaqSection } from "@/components/faq-section";
 import { getProductBySlug } from "@/lib/catalog";
 import { PriceTag } from "@/components/price-tag";
 import { siteConfig } from "@/lib/site-config";
@@ -62,11 +62,11 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative isolate overflow-hidden border-b border-line bg-surface">
+      <section className="relative isolate flex min-h-[calc(100svh-5rem)] items-center overflow-hidden border-b border-line bg-surface">
         <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.07]" aria-hidden />
         <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.08] blur-3xl" aria-hidden />
         <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
-        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-5 py-12 sm:px-8 sm:py-14 md:grid-cols-[1.05fr_0.95fr] md:gap-12 lg:px-12 lg:py-20 xl:px-16">
+        <div className="mx-auto grid w-full max-w-[94rem] items-center gap-10 px-5 py-10 sm:px-8 sm:py-12 md:grid-cols-[1.05fr_0.95fr] md:gap-12 lg:px-12 xl:px-16">
           {/* Left: copy */}
           <div className="relative z-10">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
@@ -254,7 +254,13 @@ export default function HomePage() {
             </p>
             <p className="mt-5 font-semibold text-brand">Watch our how to video below.</p>
             <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-ink shadow-xl shadow-info/15">
-              <video controls preload="metadata" playsInline className="aspect-video w-full">
+              <video
+                controls
+                preload="metadata"
+                playsInline
+                poster="/brand/cert-sync-video-poster.png"
+                className="aspect-video w-full object-cover"
+              >
                 <source
                   src="https://vid.cdn-website.com/249de5f7/videos/g8mVT8s4Q8eUpyl1TN3Z_ABCAC+3-v.mp4"
                   type="video/mp4"
@@ -263,8 +269,8 @@ export default function HomePage() {
               </video>
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-4">
-              <CtaButton href="/store/certification-sync" size="lg">Start Your Sync Now</CtaButton>
-              {sync && <PriceTag product={sync} className="text-xl text-brand" />}
+              <CtaButton href="/certification-sync" size="lg">Explore Certification Sync</CtaButton>
+              {sync && <span className="text-sm font-semibold text-muted"><PriceTag product={sync} className="text-xl text-brand" /> per month moved</span>}
             </div>
           </div>
           </div>
@@ -354,7 +360,7 @@ export default function HomePage() {
               Once your payment and completed form are received, ABCAC will process your request and align all renewal
               dates accordingly.
             </p>
-            <CtaButton href="/store/certification-sync" className="mt-5 w-full justify-center">Pay for Sync</CtaButton>
+            <CtaButton href="/certification-sync" className="mt-5 w-full justify-center">Calculate and Pay</CtaButton>
           </div>
         </div>
       </Section>
@@ -373,22 +379,13 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* FAQ */}
-      <section className="relative isolate overflow-hidden bg-info text-white">
-        <div className="absolute -left-32 -top-32 -z-10 h-80 w-80 rounded-full bg-brand/25 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-40 -right-32 -z-10 h-96 w-96 rounded-full bg-white/[0.05] blur-3xl" aria-hidden />
-        <div className="mx-auto w-full max-w-content px-5 py-20 md:px-8 md:py-28">
-          <div className="mb-10 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/60">Questions</p>
-            <h2 className="text-white">Frequently Asked Questions</h2>
-            <p className="mx-auto mt-3 max-w-xl text-white/65">Straight answers to the questions Arizona certification candidates ask most.</p>
-          </div>
-          <FaqAccordion items={FAQS} />
-          <div className="mt-8 text-center">
-            <CtaButton href="/faq">See all FAQs</CtaButton>
-          </div>
-        </div>
-      </section>
+      <FaqSection
+        eyebrow="ABCAC FAQ"
+        title="Frequently Asked Questions"
+        items={FAQS}
+        intro="Straight answers to the questions Arizona certification candidates ask most."
+        actions={<CtaButton href="/faq">See all FAQs</CtaButton>}
+      />
 
       {/* Become a Board Member */}
       <Section className="bg-bg">

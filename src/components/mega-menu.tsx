@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { MENU, MENU_LINKS } from "@/lib/nav";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
 export function MegaMenu() {
@@ -58,18 +59,21 @@ export function MegaMenu() {
         <div className="absolute left-0 top-full z-50 pt-3">
           <div className="w-[780px] max-w-[92vw] overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
             <div className="grid grid-cols-[260px_1fr]">
-              {/* Featured image block */}
-              <Link href={MENU[open].featured.href} className="group relative flex flex-col bg-brand p-6 text-white">
-                <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-lg bg-white/10">
-                  <Image
-                    src={MENU[open].featured.image}
-                    alt=""
-                    fill
-                    sizes="260px"
-                    className="object-cover"
-                  />
+              {/* Branded featured block */}
+              <Link href={MENU[open].featured.href} className="group relative isolate flex min-h-[360px] flex-col overflow-hidden bg-info p-6 text-white">
+                <div className="absolute -right-20 -top-24 -z-10 h-64 w-64 rounded-full border-[36px] border-white/[0.06]" aria-hidden />
+                <div className="absolute -bottom-20 -left-14 -z-10 h-52 w-52 rounded-full bg-brand/45 blur-3xl" aria-hidden />
+                <div className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-brand/35 to-transparent" aria-hidden />
+                <div className="mb-8 rounded-2xl border border-white/15 bg-white/[0.08] p-5 shadow-inner">
+                  <BrandLogo className="h-14" />
+                  <div className="mt-5 grid grid-cols-5 gap-1" aria-hidden>
+                    {[0, 1, 2, 3, 4].map((bar) => (
+                      <span key={bar} className="h-1 rounded-full bg-white/25 group-hover:bg-accent/80" />
+                    ))}
+                  </div>
                 </div>
-                <h3 className="text-white">{MENU[open].featured.title}</h3>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">ABCAC pathways</p>
+                <h3 className="text-2xl text-white">{MENU[open].featured.title}</h3>
                 <p className="mt-1 flex-1 text-sm text-white/80">{MENU[open].featured.text}</p>
                 <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent">
                   {MENU[open].featured.cta}
@@ -85,11 +89,21 @@ export function MegaMenu() {
                     <>
                       <div className="text-sm font-semibold text-ink">{link.label}</div>
                       {link.desc && <div className="mt-0.5 text-xs text-muted">{link.desc}</div>}
-                      {link.image && (
+                      {link.image && (link.imagePosition ? (
+                        <div
+                          aria-hidden
+                          className="mt-2 aspect-[16/9] overflow-hidden rounded-md border border-line bg-bg bg-no-repeat"
+                          style={{
+                            backgroundImage: `url(${link.image})`,
+                            backgroundPosition: link.imagePosition,
+                            backgroundSize: "300% 300%",
+                          }}
+                        />
+                      ) : (
                         <div className="relative mt-2 aspect-[16/9] overflow-hidden rounded-md border border-line bg-bg">
                           <Image src={link.image} alt="" fill sizes="240px" className="object-cover" />
                         </div>
-                      )}
+                      ))}
                     </>
                   );
                   const cls = "rounded-lg p-3 transition-colors hover:bg-bg";

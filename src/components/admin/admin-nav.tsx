@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { agentWorkspaceEnabled } from "@/lib/feature-flags";
 
 export type AdminCounts = {
   approvals: number;
@@ -14,7 +15,7 @@ export type AdminCounts = {
 type CountKey = keyof AdminCounts;
 
 const ITEMS: { label: string; href: string; count?: CountKey }[] = [
-  { label: "AI Agent", href: "/admin/agent" },
+  ...(agentWorkspaceEnabled ? [{ label: "AI Agent", href: "/admin/agent" }] : []),
   { label: "Dashboard", href: "/admin" },
   { label: "Inbox", href: "/admin/inbox" },
   { label: "Automation", href: "/admin/automation" },

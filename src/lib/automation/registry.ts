@@ -523,7 +523,7 @@ export const REGISTRY: Record<string, Executor> = {
   // Approve a cert_sync application (cert_sync). TWO-step, mirroring what a
   // human does: (a) enable Certification Sync on the member's certifications —
   // the same `sync_enabled = true` flip the Stripe webhook performs on a sync
-  // subscription, scoped to rows where it's still false so a re-run touches
+  // payment, scoped to rows where it's still false so a re-run touches
   // nothing — then (b) mark the application approved with the same write
   // conventions as set_application_status. The member id is re-read from the
   // application row at execute time (never trusted from args). Idempotent —

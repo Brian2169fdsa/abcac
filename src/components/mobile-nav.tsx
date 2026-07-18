@@ -106,11 +106,21 @@ export function MobileNav({ open, onClose, onPortalOpen }: MobileNavProps) {
                       const external = link.href.startsWith("http");
                       const inner = (
                         <>
-                          {link.image && (
+                          {link.image && (link.imagePosition ? (
+                            <span
+                              aria-hidden
+                              className="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-bg bg-no-repeat"
+                              style={{
+                                backgroundImage: `url(${link.image})`,
+                                backgroundPosition: link.imagePosition,
+                                backgroundSize: "300% 300%",
+                              }}
+                            />
+                          ) : (
                             <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-bg">
                               <Image src={link.image} alt="" fill sizes="44px" className="object-cover" />
                             </span>
-                          )}
+                          ))}
                           <span className="min-w-0 flex-1">
                             <span className="block text-base font-semibold text-ink">{link.label}</span>
                             {link.desc && <span className="mt-0.5 block text-xs text-muted">{link.desc}</span>}

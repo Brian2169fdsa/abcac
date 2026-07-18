@@ -1,6 +1,6 @@
 // ABCAC — cert_sync deterministic rule (zero-model).
 //
-// Certification Sync today: a member subscribes ($15/mo) and the Stripe webhook
+// Certification Sync today: a member pays $15 for each month moved forward and the Stripe webhook
 // flips `certifications.sync_enabled = true` for the member; admins can also
 // toggle the flag per-cert on the member-detail page (cert-actions.ts). A
 // cert_sync APPLICATION is the paperwork side of that flow — what a human admin

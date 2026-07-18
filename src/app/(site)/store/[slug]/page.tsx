@@ -16,9 +16,19 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   return { title: product.name, description: product.short };
 }
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
+export default function ProductPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams?: { quantity?: string };
+}) {
   const product = getProductBySlug(params.slug);
   if (!product) notFound();
+  const requestedQuantity = Number(searchParams?.quantity);
+  const initialQuantity = Number.isFinite(requestedQuantity)
+    ? Math.min(120, Math.max(1, Math.trunc(requestedQuantity)))
+    : 1;
 
   return (
     <div className="mx-auto w-full max-w-content px-5 py-12 md:px-8 md:py-16">
@@ -51,7 +61,13 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         </div>
 
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <CheckoutForm slug={product.slug} category={product.category} examMode={product.examMode} />
+          <CheckoutForm
+            slug={product.slug}
+            category={product.category}
+            examMode={product.examMode}
+            unitPrice={product.price}
+            initialQuantity={initialQuantity}
+          />
         </div>
       </div>
     </div>

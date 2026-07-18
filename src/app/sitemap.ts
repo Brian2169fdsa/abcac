@@ -7,6 +7,7 @@ const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const staticPrimaryRoutes = [
   "initial-certification",
   "certification-renewal",
+  "certification-payment",
   "ceu",
   "ic-rc",
   "reciprocity",
@@ -17,7 +18,6 @@ const staticPrimaryRoutes = [
 
 const staticSecondaryRoutes = [
   "remote-or-inperson",
-  "initial-or-renewal",
   "blog",
   "store",
 ];

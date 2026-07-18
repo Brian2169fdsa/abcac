@@ -18,6 +18,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
 import { isAdminRole } from "@/lib/auth/roles";
+import { agentWorkspaceEnabled } from "@/lib/feature-flags";
 
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
@@ -387,10 +388,11 @@ export default async function AccountPage() {
         <NextSteps steps={planSteps} />
       </Section>
 
-      {/* Certification Insights — CEU analytics + recommended actions */}
-      <Section title="Your Certification Insights" compact>
-        <MemberAgentPanel />
-      </Section>
+      {agentWorkspaceEnabled && (
+        <Section title="Your Certification Insights" compact>
+          <MemberAgentPanel />
+        </Section>
+      )}
 
       {/* Tasks assigned to you by ABCAC (read-only) */}
       <Section title="Tasks for You" compact>
@@ -575,13 +577,13 @@ export default async function AccountPage() {
       {/* Certification Sync */}
       <Section surface title="Certification Sync" compact>
         <p className="text-muted">
-          {syncOn ? "Certification Sync is active on your account." : "Align all your renewal dates into one cycle for $15/month."}
+          {syncOn ? "Certification Sync has been applied to your account." : "Align multiple renewal dates into one cycle with a one-time $15 fee per month moved forward."}
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {syncOn ? (
-            <CtaButton href="/api/stripe/portal" variant="outline">Manage Subscription</CtaButton>
+            <CtaButton href="/certification-sync" variant="outline">View Sync Details</CtaButton>
           ) : (
-            <CtaButton href="/store/certification-sync" variant="accent">Start Certification Sync</CtaButton>
+            <CtaButton href="/certification-sync" variant="accent">Start Certification Sync</CtaButton>
           )}
         </div>
       </Section>

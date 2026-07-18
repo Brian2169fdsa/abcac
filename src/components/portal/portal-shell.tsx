@@ -10,7 +10,7 @@ import type { Notification } from "@/lib/notifications";
 /**
  * Portal chrome: maroon top bar + white brand bar, a fixed ~280px left sidebar
  * on desktop, and a slide-in drawer on mobile. Page content renders unchanged
- * in the main area. Mirrors the static portal (public/portal/index.html).
+ * in the main area.
  */
 export function PortalShell({
   memberName,

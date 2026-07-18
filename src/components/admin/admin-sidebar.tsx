@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { AdminNav, type AdminCounts } from "@/components/admin/admin-nav";
 import { Sparkles } from "lucide-react";
+import { agentWorkspaceEnabled } from "@/lib/feature-flags";
 
 /**
  * Light left sidebar for the admin console — matches the member-portal sidebar
@@ -39,17 +40,18 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
           <span className="text-[10px] uppercase tracking-wider text-muted">Admin Console</span>
         </Link>
 
-        {/* AI Agent CTA */}
-        <div className="border-b border-line px-4 py-3">
-          <Link
-            href="/admin/agent"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-600"
-          >
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            AI Agent
-          </Link>
-        </div>
+        {agentWorkspaceEnabled && (
+          <div className="border-b border-line px-4 py-3">
+            <Link
+              href="/admin/agent"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-600"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              AI Agent
+            </Link>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto py-3">
           <AdminNav counts={counts} onNavigate={() => setOpen(false)} />

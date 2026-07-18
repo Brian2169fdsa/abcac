@@ -1,5 +1,5 @@
 // Grouped sidebar navigation for the member portal, mirroring the static
-// portal (public/portal/index.html). Each static "page" is mapped to its real
+// portal. Each navigation item is mapped to its real
 // Next.js /account/* route.
 
 export type PortalNavItem = {

@@ -20,7 +20,7 @@ import {
   Waypoints,
 } from "lucide-react";
 import { CtaButton } from "@/components/cta-button";
-import { FaqAccordion } from "@/components/faq-accordion";
+import { FaqSection } from "@/components/faq-section";
 import { PriceTag } from "@/components/price-tag";
 import { getProductBySlug } from "@/lib/catalog";
 import { siteConfig } from "@/lib/site-config";
@@ -314,16 +314,12 @@ export default function ReciprocityPage() {
         </div>
       </section>
 
-      <section className="bg-surface">
-        <div className="mx-auto w-full max-w-[80rem] px-5 py-14 sm:px-8 sm:py-16 lg:px-10 lg:py-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Reciprocity FAQ</p>
-            <h2 className="mt-3 text-3xl sm:text-4xl">Answers before you transfer</h2>
-            <p className="mt-4 text-lg text-muted">Review eligibility, timing, fees, and what the destination board controls.</p>
-          </div>
-          <div className="mt-10"><FaqAccordion items={reciprocityFaqs} /></div>
-        </div>
-      </section>
+      <FaqSection
+        eyebrow="Reciprocity FAQ"
+        title="Answers before you transfer"
+        intro="Review eligibility, timing, fees, and what the destination board controls."
+        items={reciprocityFaqs}
+      />
 
       <section className="relative overflow-hidden bg-info text-white">
         <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full bg-brand/30 blur-3xl" aria-hidden />

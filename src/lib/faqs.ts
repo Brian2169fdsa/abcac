@@ -34,8 +34,8 @@ export const FAQS: Faq[] = [
 // Additional practical FAQs (process specifics) shown on the FAQ page.
 export const EXTRA_FAQS: Faq[] = [
   { q: "How often do ABCAC credentials renew?", a: "All ABCAC credentials renew every two years. Renewal requires completing your continuing education hours and paying the $150 renewal fee." },
-  { q: "What does the IC&RC exam look like?", a: "It's Computer-Based Testing at IQT centers: 150 multiple-choice questions (125 scored + 25 pretest) with a 3-hour limit. If needed, you may retake after a minimum of 90 days (may be longer per member board)." },
-  { q: "Can I take the exam remotely?", a: "Yes. You can choose a remote-proctored exam via Prometric's ProProctor platform, or test in person at an authorized Arizona center. See the Testing page to register." },
+  { q: "What does the IC&RC exam look like?", a: "IC&RC exams are computer-based and use multiple-choice questions, but the length varies by designation. ADC, AADC, CS, and PS are 150 questions in 3 hours; CCJP is 60 questions in 1.5 hours; and PR is 75 questions in 2 hours. A 90-day waiting period applies before a retake." },
+  { q: "Can I take the exam remotely?", a: "Yes. ABCAC offers in-person testing and a remote-proctored option through Prometric's ProProctor platform. Remote candidates must pass the system-readiness check and meet strict room, equipment, identification, and security requirements." },
   { q: "How do I move my credential to or from Arizona?", a: "First contact the destination IC&RC member board to confirm its requirements. Then request the official reciprocity application from the board where you are currently credentialed. The IC&RC fee is $150 per credential, and the destination board may charge additional fees." },
   { q: "How long does CEU workshop endorsement take?", a: "Standard review turnaround is 4 weeks. Submit your workshop materials to abcac@abcac.org and pay the fee tier matching your total contact hours." },
   { q: "Will I receive a paper certificate?", a: "ABCAC issues official digital certificates upon approval or renewal. A printed copy can be requested for a $25 processing and mailing fee." },

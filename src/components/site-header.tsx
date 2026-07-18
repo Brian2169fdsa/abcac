@@ -48,7 +48,7 @@ export function SiteHeader() {
     <>
       <header className={cn("sticky top-0 z-40 border-b border-line/80 bg-surface/95 backdrop-blur-xl transition-all", scrolled && "shadow-[0_10px_35px_-24px_rgba(13,34,63,0.45)]")}>
         <div className="mx-auto flex h-20 w-full max-w-[94rem] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="shrink-0 overflow-hidden rounded-md bg-info" aria-label={`${siteConfig.shortName} home`}>
+          <Link href="/" className="shrink-0" aria-label={`${siteConfig.shortName} home`}>
             <BrandLogo priority className="h-12 sm:h-14" />
           </Link>
 

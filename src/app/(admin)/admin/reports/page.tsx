@@ -1,4 +1,5 @@
 import { ReportsDashboard } from "@/components/admin/reports-dashboard";
+import { adminReportsDashboardEnabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,23 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      <ReportsDashboard />
+      {adminReportsDashboardEnabled ? (
+        <ReportsDashboard />
+      ) : (
+        <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm md:p-8">
+          <div className="max-w-2xl">
+            <span className="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-brand">
+              Live dashboard in preparation
+            </span>
+            <h2 className="mt-4 font-display text-2xl font-bold text-ink">
+              Verified exports are available now
+            </h2>
+            <p className="mt-2 leading-7 text-muted">
+              The visual analytics workspace stays hidden until every chart is connected to production data. Use the CSV exports above for current member, payment, and expiration records.
+            </p>
+          </div>
+        </section>
+      )}
     </>
   );
 }

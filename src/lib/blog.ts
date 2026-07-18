@@ -29,7 +29,7 @@ export const POSTS: Post[] = [
       "Hold multiple ABCAC credentials? Align them into a single, unified renewal cycle for $15/month forward.",
     body: [
       "If you hold multiple ABCAC certifications — such as CADAC, CCJP, or AADC — you can now align their renewal dates into one easy, unified cycle.",
-      "For just $15 per month forward, Certification Sync eliminates staggered renewals so you can manage all your certifications together, saving time and staying compliant.",
+      "Certification Sync costs a one-time $15 for each month moved forward. It eliminates staggered renewal dates so you can manage all your certifications together, save time, and stay compliant.",
       "Start your sync from the member portal: count the months needed to align your certifications, complete payment securely online, and upload your sync form to finalize your request.",
     ],
   },

@@ -10,13 +10,17 @@ interface CheckoutFormProps {
   slug: string;
   category: string;
   examMode: string | null;
+  unitPrice?: number;
+  initialQuantity?: number;
 }
 
-export function CheckoutForm({ slug, category, examMode }: CheckoutFormProps) {
+export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQuantity = 1 }: CheckoutFormProps) {
   const needsCredential = category === "Certification" || category === "Testing";
   const isCeu = category === "CEU Endorsement";
+  const isCertificationSync = slug === "certification-sync";
 
   const [credentialLevel, setCredentialLevel] = useState("");
+  const [quantity, setQuantity] = useState(Math.min(120, Math.max(1, Math.trunc(initialQuantity))));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +35,12 @@ export function CheckoutForm({ slug, category, examMode }: CheckoutFormProps) {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, credentialLevel: credentialLevel || undefined, examMode: examMode || undefined }),
+        body: JSON.stringify({
+          slug,
+          credentialLevel: credentialLevel || undefined,
+          examMode: examMode || undefined,
+          quantity: isCertificationSync ? quantity : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
@@ -77,6 +86,33 @@ export function CheckoutForm({ slug, category, examMode }: CheckoutFormProps) {
         <p className="mb-4 text-sm text-muted">
           Exam mode: <span className="font-semibold text-ink">{examMode}</span>
         </p>
+      )}
+
+      {isCertificationSync && (
+        <div className="mb-5 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
+          <label htmlFor="syncQuantity" className="block text-sm font-semibold text-ink">
+            Months to move forward
+          </label>
+          <p className="mt-1 text-xs leading-relaxed text-muted">Each month is a one-time $15 adjustment. This is not a monthly subscription.</p>
+          <div className="mt-3 flex items-center gap-4">
+            <input
+              id="syncQuantity"
+              type="number"
+              min={1}
+              max={120}
+              step={1}
+              value={quantity}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                setQuantity(Number.isFinite(next) ? Math.min(120, Math.max(1, Math.trunc(next))) : 1);
+              }}
+              className="h-11 w-28 rounded-lg border border-line bg-surface px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            />
+            <p className="text-sm text-muted">
+              One-time total: <span className="text-lg font-bold text-brand">${(unitPrice * quantity).toFixed(2)}</span>
+            </p>
+          </div>
+        </div>
       )}
 
       {isCeu && (

@@ -249,10 +249,10 @@ describe("POST /api/stripe/webhook", () => {
         object: {
           id: "cs_sync",
           client_reference_id: "user-1",
-          amount_total: 1000,
+          amount_total: 9000,
           currency: "usd",
-          mode: "subscription",
-          metadata: { slug: "certification-sync", member_id: "user-1" },
+          mode: "payment",
+          metadata: { slug: "certification-sync", member_id: "user-1", sync_months: "6" },
         },
       },
     });
@@ -275,7 +275,7 @@ describe("POST /api/stripe/webhook", () => {
           customer: "cus_5",
           amount_paid: 1200,
           currency: "usd",
-          lines: { data: [{ description: "Certification Sync renewal" }] },
+          lines: { data: [{ description: "Annual provider fee renewal" }] },
         },
       },
     });
@@ -287,7 +287,7 @@ describe("POST /api/stripe/webhook", () => {
       member_id: "user-5",
       stripe_session_id: "in_1",
       stripe_event_id: "evt_renew",
-      product_name: "Certification Sync renewal",
+      product_name: "Annual provider fee renewal",
       amount_cents: 1200,
       mode: "subscription",
       status: "paid",

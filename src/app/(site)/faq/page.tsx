@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { PageHero } from "@/components/page-hero";
-import { Section } from "@/components/section";
 import { FAQS, EXTRA_FAQS } from "@/lib/faqs";
-import { FaqAccordion } from "@/components/faq-accordion";
+import { FaqSection } from "@/components/faq-section";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -12,11 +10,10 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   const all = [...FAQS, ...EXTRA_FAQS];
   return (
-    <>
-      <PageHero eyebrow="Help" title="Frequently Asked Questions" />
-      <Section>
-        <FaqAccordion items={all} />
-      </Section>
-    </>
+    <FaqSection
+      eyebrow="ABCAC Help Center"
+      intro="Clear guidance for certification, renewal, testing, reciprocity, continuing education, and account access."
+      items={all}
+    />
   );
 }

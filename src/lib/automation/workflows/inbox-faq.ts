@@ -137,12 +137,12 @@ export const INBOX_FAQ_PACK: readonly FaqEntry[] = [
   {
     id: "exam_format",
     q: "What does the IC&RC exam look like?",
-    a: "Computer-based testing at IQT centers: 150 multiple-choice questions (125 scored + 25 pretest) with a 3-hour limit. Retakes are allowed after a minimum of 90 days.",
+    a: "IC&RC exams are computer-based and use multiple-choice questions, but the format varies by designation. ADC, AADC, CS, and PS are 150 questions in 3 hours; CCJP is 60 questions in 1.5 hours; and PR is 75 questions in 2 hours. Retakes require a 90-day waiting period.",
   },
   {
     id: "remote_testing",
     q: "Can I take the exam remotely?",
-    a: "Yes — choose a remote-proctored exam via Prometric's ProProctor platform (a $50 remote-proctoring fee applies in addition to the exam cost), or test in person at an authorized Arizona center. Register on the Testing page.",
+    a: "Yes. ABCAC offers in-person testing and a remote-proctored option through Prometric's ProProctor platform. Remote candidates must meet the current system, room, identification, and security requirements. Use the Testing page to compare current catalog prices and register.",
   },
   {
     id: "ceu_workshop_endorsement",

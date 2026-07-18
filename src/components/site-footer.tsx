@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 import { BrandLogo } from "@/components/brand-logo";
 
 const quickLinks = [
-  { label: "Sync Your Certs", href: "/store/certification-sync" },
+  { label: "Sync Your Certs", href: "/certification-sync" },
   { label: "Verify a Certification", href: "/verify" },
   { label: "Counselor Directory", href: "/directory" },
   { label: "FAQ", href: "/faq" },
@@ -56,7 +56,14 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 bg-black/10">
-        <div className="mx-auto w-full max-w-[90rem] px-4 py-6 text-xs text-white/50 sm:px-6 md:px-8">{siteConfig.legal}</div>
+        <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-4 px-4 py-6 text-xs text-white/50 sm:px-6 md:flex-row md:items-center md:justify-between md:px-8">
+          <span>{siteConfig.legal}</span>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/terms" className="transition-colors hover:text-white">Terms</Link>
+            <Link href="/privacy" className="transition-colors hover:text-white">Privacy</Link>
+            <Link href="/code-of-ethics" className="transition-colors hover:text-white">Code of Ethics</Link>
+          </nav>
+        </div>
       </div>
     </footer>
   );

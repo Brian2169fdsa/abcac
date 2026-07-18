@@ -163,7 +163,12 @@ export default function SignupPage() {
           <label className="block"><span className={labelCls}>Confirm *</span><input name="pw2" type="password" className={field} required autoComplete="new-password" /></label>
         </div>
         <label className="flex items-start gap-2 text-sm text-muted">
-          <input name="terms" type="checkbox" className="mt-1 h-4 w-4" /> I agree to the ABCAC Code of Ethics and Terms of Use.
+          <input name="terms" type="checkbox" className="mt-1 h-4 w-4" />
+          <span>
+            I agree to the ABCAC <Link href="/code-of-ethics" target="_blank" className="font-semibold text-brand hover:underline">Code of Ethics</Link>,{" "}
+            <Link href="/terms" target="_blank" className="font-semibold text-brand hover:underline">Terms of Use</Link>, and{" "}
+            <Link href="/privacy" target="_blank" className="font-semibold text-brand hover:underline">Privacy Policy</Link>.
+          </span>
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button type="submit" disabled={loading} className="w-full" size="lg">
