@@ -31,7 +31,8 @@ export const PORTAL_NAV: PortalNavGroup[] = [
   {
     heading: "Certification",
     items: [
-      { label: "Apply for Certification", href: "/account/apply" },
+      { label: "Digital Forms Center", href: "/account/forms" },
+      { label: "Apply for Certification", href: "/account/forms" },
       { label: "Document Upload", href: "/account/documents" },
       { label: "Continuing Education Unit Tracker", href: "/account/ceus" },
       { label: "Certification Renewal", href: "/account/renew" },

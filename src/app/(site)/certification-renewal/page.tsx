@@ -63,6 +63,7 @@ const renewalTracks = [
     title: "Counselor Recertification",
     description: "For Certified Addiction Counselor, Certified Alcohol & Drug Abuse Counselor, and Advanced Alcohol & Drug Counselor credentials.",
     formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-150-Re-Certification-Fee-Re-Certification-Packet.pdf",
+    workflowKey: "renewal:counselor",
     tone: "bg-info",
   },
   {
@@ -70,6 +71,7 @@ const renewalTracks = [
     title: "Prevention Specialist Recertification",
     description: "For professionals renewing the Certified Prevention Specialist credential and prevention-focused continuing education.",
     formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Prevention-Specialist-150-Re-Certification-Fee-Re-Certification-Packet-Fillable-vrxrup.pdf",
+    workflowKey: "renewal:cps",
     tone: "bg-success",
   },
   {
@@ -77,6 +79,7 @@ const renewalTracks = [
     title: "Clinical Supervisor Recertification",
     description: "For Certified Clinical Supervisors maintaining advanced supervision, ethics, and professional-development requirements.",
     formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Clinical-Supervisor-150-Re-Certification-Fee-Re-Certification-Packet-430yed-1-ac9ed310.pdf",
+    workflowKey: "renewal:ccs",
     tone: "bg-brand",
   },
   {
@@ -84,6 +87,7 @@ const renewalTracks = [
     title: "Criminal Justice Professional Recertification",
     description: "For professionals renewing a credential focused on addiction services in criminal-justice and community-supervision settings.",
     formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Criminal-Justice-Addictions-Professional-150-Re-Certification-Fee-oxaayt.pdf",
+    workflowKey: "renewal:ccjp",
     tone: "bg-[#6B2A91]",
   },
   {
@@ -91,6 +95,7 @@ const renewalTracks = [
     title: "Peer Recovery Specialist Recertification",
     description: "For Certified Peer Recovery Specialists documenting continued education in peer support, advocacy, ethics, and recovery services.",
     formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Peer-Recovery-Specialist-Recet.pdf",
+    workflowKey: "renewal:cprs",
     tone: "bg-[#A24922]",
   },
 ];
@@ -143,7 +148,7 @@ export default function CertificationRenewalPage() {
               Maintain your ABCAC credential with a clear renewal path for continuing education, documentation, secure payment, and final review.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <CtaButton href="/account/renew" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">
+              <CtaButton href="#renewal-tracks" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">
                 Start Your Renewal <ArrowRight className="h-4 w-4" aria-hidden />
               </CtaButton>
               <CtaButton href="#renewal-requirements" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Review Requirements</CtaButton>
@@ -195,7 +200,7 @@ export default function CertificationRenewalPage() {
         </div>
       </section>
 
-      <section className="bg-surface">
+      <section id="renewal-tracks" className="scroll-mt-24 bg-surface">
         <div className="mx-auto w-full max-w-[90rem] px-5 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Renewal Process</p>
@@ -273,7 +278,8 @@ export default function CertificationRenewalPage() {
                   </div>
                   <h3 className="mt-4 text-xl">{track.title}</h3>
                   <p className="mt-3 flex-1 text-sm leading-relaxed text-muted">{track.description}</p>
-                  <CtaButton href={track.formHref} variant="outline" className="mt-5 w-full">Download Form <FileCheck2 className="h-4 w-4" aria-hidden /></CtaButton>
+                  <CtaButton href={`/account/forms?workflow=${encodeURIComponent(track.workflowKey)}`} className="mt-5 w-full">Complete Digitally <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
+                  <CtaButton href={track.formHref} variant="outline" className="mt-3 w-full">Download Paper Form <FileCheck2 className="h-4 w-4" aria-hidden /></CtaButton>
                 </div>
               </article>
             ))}
@@ -295,7 +301,7 @@ export default function CertificationRenewalPage() {
               <li><strong className="text-white">3. Certification number:</strong> Enter your current certification number so the team can identify your record.</li>
             </ol>
             <p className="mt-5 leading-relaxed text-white/70">Once every field is complete, submit the form to send your documents to ABCAC. Questions? Email <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a>.</p>
-            <CtaButton href="/account/renew" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Upload Renewal Documents</CtaButton>
+            <CtaButton href="/account/forms" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Open Digital Forms Center</CtaButton>
           </div>
 
           <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8">

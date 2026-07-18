@@ -278,7 +278,8 @@ export default function CeuPage() {
             <h2 className="mt-6 text-3xl text-white">Submit your application materials</h2>
             <p className="mt-4 leading-relaxed text-white/70">Send the completed workshop endorsement application and supporting materials to ABCAC before paying the selected review tier. Include the provider contact, workshop title, total contact hours, and all required review documents.</p>
             <p className="mt-4 leading-relaxed text-white/70">Email submissions to <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a>. Online provider submissions can move into the member portal as that workflow becomes available.</p>
-            <CtaButton href="/contact" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Contact the CEU Team</CtaButton>
+            <CtaButton href="/account/forms?workflow=ceu%3Aworkshop" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Complete Workshop Form Digitally</CtaButton>
+            <CtaButton href="/forms/library/ceu-workshop.pdf" variant="outline" size="lg" className="mt-3 w-full border-white text-white hover:bg-white hover:text-info sm:w-auto">Download Paper Form</CtaButton>
           </div>
 
           <div className="rounded-3xl border border-line bg-bg p-7 sm:p-9">

@@ -1,4 +1,5 @@
 import { AppStatusControl } from "@/components/admin/app-status-control";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,14 @@ function syncDetails(notes: string | null) {
   try {
     const details = JSON.parse(notes) as { requestKind?: string; submissionMode?: string; credentials?: unknown[]; monthsForward?: number; totalAmountCents?: number; paperFileName?: string | null };
     return details.requestKind === "certification_sync" ? details : null;
+  } catch { return null; }
+}
+
+function digitalDetails(notes: string | null) {
+  if (!notes) return null;
+  try {
+    const details = JSON.parse(notes) as { requestKind?: string; workflowTitle?: string; submissionMode?: string; documents?: Array<{ annotations?: unknown[] }>; paperFileName?: string | null };
+    return details.requestKind === "digital_application_packet" ? details : null;
   } catch { return null; }
 }
 
@@ -35,12 +44,14 @@ export default async function AdminApplications() {
               <tr><td colSpan={6} className="px-5 py-8 text-center text-muted">No applications.</td></tr>
             ) : rows.map((a: any) => {
               const sync = a.app_type === "cert_sync" ? syncDetails(a.member_notes) : null;
+              const digital = digitalDetails(a.member_notes);
               return <tr key={a.id} className="border-b border-line last:border-0">
-                <td className="px-5 py-3">{[a.profiles?.first_name, a.profiles?.last_name].filter(Boolean).join(" ") || a.profiles?.email || "—"}</td>
+                <td className="px-5 py-3">{digital ? <Link href={`/admin/applications/${a.id}`} className="font-semibold text-brand hover:underline">{[a.profiles?.first_name, a.profiles?.last_name].filter(Boolean).join(" ") || a.profiles?.email || "—"}</Link> : ([a.profiles?.first_name, a.profiles?.last_name].filter(Boolean).join(" ") || a.profiles?.email || "—")}</td>
                 <td className="px-5 py-3 text-muted">{title(a.app_type)}</td>
                 <td className="px-5 py-3 text-muted">
                   <div>{a.cert_type ?? "—"}</div>
                   {sync && <div className="mt-1 text-xs">{sync.credentials?.length ?? 0} credential(s) · {sync.monthsForward ?? 0} month(s) · ${((sync.totalAmountCents ?? 0) / 100).toFixed(2)} · {title(sync.submissionMode ?? "digital")}{sync.paperFileName ? ` · ${sync.paperFileName}` : ""}</div>}
+                  {digital && <div className="mt-1 text-xs">{digital.workflowTitle} · {title(digital.submissionMode ?? "digital")} · {digital.documents?.reduce((total, document) => total + (document.annotations?.length ?? 0), 0) ?? 0} mark(s){digital.paperFileName ? ` · ${digital.paperFileName}` : ""}</div>}
                 </td>
                 <td className="px-5 py-3 text-muted">{a.signature_name ? `✓ ${a.signature_name}` : "—"}</td>
                 <td className="px-5 py-3 text-muted">{fmt(a.submitted_at)}</td>

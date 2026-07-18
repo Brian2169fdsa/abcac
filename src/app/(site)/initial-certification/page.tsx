@@ -322,6 +322,7 @@ export default function InitialCertificationPage() {
                       <p className="mt-1 leading-relaxed text-muted">{credential.application}</p>
                     </div>
                     <div className="flex flex-wrap gap-2 pt-1">
+                      <CtaButton href={`/account/forms?workflow=initial%3A${credential.code.toLowerCase()}`} className="w-full justify-center">Start Digital Application <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
                       {credential.forms.map((form) => (
                         <a
                           key={form.href}
@@ -371,7 +372,7 @@ export default function InitialCertificationPage() {
             <p className="mt-4 leading-relaxed text-white/70">
               You may also email documents to <a href={siteConfig.contact.emailHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.email}</a>. Include your full name and credential in the subject line. Questions? Call <a href={siteConfig.contact.phoneHref} className="font-semibold text-white underline underline-offset-4">{siteConfig.contact.phone}</a>.
             </p>
-            <CtaButton href="/account/apply" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Upload Documents &amp; Apply</CtaButton>
+            <CtaButton href="/account/forms" size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">Choose Digital or Paper Application</CtaButton>
             <CtaButton href="#payment-options" variant="outline" size="lg" className="mt-3 w-full border-white text-white hover:bg-white hover:text-info sm:w-auto">View Secure Payment Options</CtaButton>
           </div>
 
@@ -439,7 +440,7 @@ export default function InitialCertificationPage() {
             <p className="mt-2 text-white/70">Create your application, upload your documents, and let ABCAC guide the next step.</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <CtaButton href="/account/apply" size="lg" className="w-full sm:w-auto">Begin Your Application</CtaButton>
+            <CtaButton href="/account/forms" size="lg" className="w-full sm:w-auto">Begin Your Application</CtaButton>
             <CtaButton href="/contact" variant="outline" size="lg" className="w-full border-white text-white hover:bg-white hover:text-info sm:w-auto"><Mail className="h-4 w-4" aria-hidden /> Contact ABCAC</CtaButton>
           </div>
         </div>

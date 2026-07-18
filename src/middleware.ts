@@ -20,7 +20,7 @@ import { PORTAL_PREVIEW_COOKIE, isValidPortalPreviewToken } from "@/lib/portal-p
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  const isPublicPortalFeature = path === "/account/certification-sync";
+  const isPublicPortalFeature = path === "/account/certification-sync" || path === "/account/forms";
 
   if (path.startsWith("/account") && !isPublicPortalFeature) {
     const previewToken = request.cookies.get(PORTAL_PREVIEW_COOKIE)?.value;
