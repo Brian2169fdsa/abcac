@@ -1,5 +1,6 @@
 import catalog from "@/data/products.json";
-import priceMap from "@/data/stripe-price-map.json";
+import testPriceMap from "@/data/stripe-price-map.test.json";
+import livePriceMap from "@/data/stripe-price-map.live.json";
 
 export type BillingInterval = "month" | "year";
 export type CheckoutMode = "payment" | "subscription";
@@ -67,8 +68,19 @@ export function getCategories(): string[] {
   return Array.from(new Set(PRODUCTS.map((p) => p.category)));
 }
 
-/** Stripe price id for a slug, written by scripts/seed-stripe.ts. */
-export function getPriceId(slug: string): string | undefined {
+export type StripeMode = "test" | "live";
+
+export function getStripeMode(key = process.env.STRIPE_SECRET_KEY): StripeMode | undefined {
+  if (key?.startsWith("sk_test_") || key?.startsWith("rk_test_")) return "test";
+  if (key?.startsWith("sk_live_") || key?.startsWith("rk_live_")) return "live";
+  return undefined;
+}
+
+/** Stripe price id for a slug, selected from the map matching the active key. */
+export function getPriceId(slug: string, key = process.env.STRIPE_SECRET_KEY): string | undefined {
+  const mode = getStripeMode(key);
+  if (!mode) return undefined;
+  const priceMap = mode === "live" ? livePriceMap : testPriceMap;
   return (priceMap as Record<string, string>)[slug];
 }
 

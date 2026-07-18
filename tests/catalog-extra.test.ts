@@ -4,6 +4,7 @@ import {
   getProductBySlug,
   getCategories,
   getPriceId,
+  getStripeMode,
   formatPrice,
 } from "@/lib/catalog";
 
@@ -60,7 +61,33 @@ describe("formatPrice", () => {
 });
 
 describe("getPriceId", () => {
+  it("uses the test map for test keys", () => {
+    expect(
+      getPriceId("initial-certification-full-application-exam-fee", "sk_test_example"),
+    ).toMatch(/^price_/);
+  });
+
+  it("does not fall back to test prices for live keys", () => {
+    expect(
+      getPriceId("initial-certification-full-application-exam-fee", "sk_live_example"),
+    ).toBeUndefined();
+  });
+
   it("returns undefined for a slug that does not exist in the price map", () => {
-    expect(getPriceId("nope-not-real")).toBeUndefined();
+    expect(getPriceId("nope-not-real", "sk_test_example")).toBeUndefined();
+  });
+});
+
+describe("getStripeMode", () => {
+  it("recognizes secret and restricted keys", () => {
+    expect(getStripeMode("sk_test_example")).toBe("test");
+    expect(getStripeMode("rk_test_example")).toBe("test");
+    expect(getStripeMode("sk_live_example")).toBe("live");
+    expect(getStripeMode("rk_live_example")).toBe("live");
+  });
+
+  it("rejects missing and unrecognized keys", () => {
+    expect(getStripeMode(undefined)).toBeUndefined();
+    expect(getStripeMode("not-a-stripe-key")).toBeUndefined();
   });
 });

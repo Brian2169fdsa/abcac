@@ -1,6 +1,6 @@
 /**
  * Idempotently create a Stripe Product + Price for every catalog item and
- * write the resulting price ids to src/data/stripe-price-map.json.
+ * write the resulting price ids to the matching test or live map.
  *
  * Usage:
  *   STRIPE_SECRET_KEY=sk_test_... npx tsx scripts/seed-stripe.ts
@@ -20,6 +20,15 @@ if (!key) {
   console.error("STRIPE_SECRET_KEY is required.");
   process.exit(1);
 }
+const mode = key.startsWith("sk_test_") || key.startsWith("rk_test_")
+  ? "test"
+  : key.startsWith("sk_live_") || key.startsWith("rk_live_")
+    ? "live"
+    : null;
+if (!mode) {
+  console.error("STRIPE_SECRET_KEY must be a test or live Stripe key.");
+  process.exit(1);
+}
 const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
 
 interface RawProduct {
@@ -31,7 +40,7 @@ interface RawProduct {
 }
 
 const dataPath = resolve(process.cwd(), "src/data/products.json");
-const mapPath = resolve(process.cwd(), "src/data/stripe-price-map.json");
+const mapPath = resolve(process.cwd(), `src/data/stripe-price-map.${mode}.json`);
 const catalog = JSON.parse(readFileSync(dataPath, "utf8")) as { products: RawProduct[] };
 
 async function findProductBySlug(slug: string): Promise<Stripe.Product | null> {
