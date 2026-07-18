@@ -76,7 +76,7 @@ export function MegaMenu() {
                 <div className="absolute -bottom-20 -left-14 -z-10 h-52 w-52 rounded-full bg-brand/45 blur-3xl" aria-hidden />
                 <div className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-brand/35 to-transparent" aria-hidden />
                 <div className="mb-8 rounded-2xl border border-white/15 bg-white/[0.08] p-5 shadow-inner">
-                  <BrandLogo className="h-14" />
+                  <BrandLogo className="h-14 brightness-0 invert" />
                   <div className="mt-5 grid grid-cols-5 gap-1" aria-hidden>
                     {[0, 1, 2, 3, 4].map((bar) => (
                       <span key={bar} className="h-1 rounded-full bg-white/25 group-hover:bg-accent/80" />
