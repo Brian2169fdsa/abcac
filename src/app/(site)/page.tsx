@@ -62,31 +62,32 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative isolate overflow-hidden border-b border-line bg-surface">
-        <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.06]" aria-hidden />
-        <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.07] blur-3xl" aria-hidden />
-        <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
-        <div className="mx-auto grid w-full max-w-[80rem] items-center gap-10 px-5 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 md:grid-cols-[0.9fr_1.1fr] md:gap-14 md:px-10 lg:px-12 lg:py-28">
+      <section className="bg-bg px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <div className="relative isolate mx-auto w-full max-w-[84rem] overflow-hidden rounded-[2rem] border border-brand/10 bg-surface shadow-[0_32px_90px_-55px_rgba(13,34,63,0.5)]">
+          <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.07]" aria-hidden />
+          <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.08] blur-3xl" aria-hidden />
+          <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
+          <div className="grid items-center gap-10 px-6 py-10 sm:px-8 sm:py-12 md:grid-cols-[1.05fr_0.95fr] md:gap-12 lg:px-14 lg:py-16 xl:px-16">
           {/* Left: copy */}
           <div className="relative z-10">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
               <Sparkles className="h-4 w-4" aria-hidden />
               {siteConfig.trustLine}
             </div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong">
               Certification &amp; Testing Support
             </p>
-            <h1 className="max-w-[13ch] text-[clamp(2.55rem,4.4vw,4.35rem)] tracking-[-0.035em]">{siteConfig.tagline}</h1>
-            <p className="mt-5 max-w-xl text-base text-muted sm:text-lg">
+            <h1 className="max-w-[16ch] text-[clamp(2.5rem,3.6vw,3.85rem)] tracking-[-0.035em]">{siteConfig.tagline}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
               Apply for initial certification, renew your credentials, register for IC&amp;RC exams, earn
               CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <CtaButton href="/choose-your-cert-path" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">Choose Your Cert Path</CtaButton>
               <CtaButton href="/store" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Visit the Store</CtaButton>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-ink">
+            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
                 <li key={item} className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 fill-brand/10 text-brand" aria-hidden />
@@ -97,13 +98,13 @@ export default function HomePage() {
           </div>
 
           {/* Right: hero image with maroon arc accent */}
-          <div className="relative mx-auto w-full max-w-3xl">
+          <div className="relative mx-auto w-full max-w-2xl md:pr-3">
             {/* Decorative maroon arc, top-right of the image */}
             <div
               aria-hidden
               className="pointer-events-none absolute -right-5 -top-7 h-28 w-28 rounded-full border-[8px] border-brand/15 md:-right-8 md:h-40 md:w-40"
             />
-            <div className="absolute -bottom-5 -left-5 h-24 w-24 rounded-3xl bg-info shadow-xl" aria-hidden />
+            <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-3xl bg-info shadow-xl" aria-hidden />
             <div className="relative aspect-[16/9] overflow-hidden rounded-3xl border border-white/80 bg-info shadow-[0_32px_75px_-30px_rgba(13,34,63,0.5)] ring-1 ring-info/10">
               <Image
                 src="/brand/hero-v2.png"
@@ -114,7 +115,7 @@ export default function HomePage() {
                 className="object-cover"
               />
             </div>
-            <div className="absolute -bottom-5 right-5 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-xl backdrop-blur sm:right-8">
+            <div className="absolute -bottom-4 right-3 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-xl backdrop-blur sm:right-8">
               <ShieldCheck className="h-6 w-6 text-brand" aria-hidden />
               <div>
                 <div className="text-sm font-semibold text-ink">IC&amp;RC Member Board</div>
@@ -122,11 +123,12 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       </section>
 
       {/* Stat band */}
-      <section className="relative z-10 -mt-8 px-4 pb-14 sm:px-6 lg:px-8">
+      <section className="px-4 pb-14 pt-4 sm:px-6 sm:pt-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-content gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((s) => (
             <StatCard key={s.label} {...s} />
