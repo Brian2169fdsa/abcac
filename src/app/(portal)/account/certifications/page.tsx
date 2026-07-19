@@ -1,4 +1,5 @@
 import { requireUserId } from "@/lib/auth/current-user";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
@@ -13,6 +14,16 @@ export const dynamic = "force-dynamic";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+}
+
+/** Label/value pair used by the stacked mobile card layout. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm text-muted">{children}</dd>
+    </div>
+  );
 }
 
 export default async function CertificationsPage() {
@@ -54,7 +65,8 @@ export default async function CertificationsPage() {
               a downloadable PDF certificate and wallet card.
             </p>
           ) : (
-            <table className="mt-2 w-full text-sm">
+            <>
+            <table className="mt-2 hidden w-full text-sm md:table">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3">Certification</th>
@@ -80,6 +92,26 @@ export default async function CertificationsPage() {
                 ))}
               </tbody>
             </table>
+            <ul className="space-y-3 px-4 pb-4 pt-2 md:hidden">
+              {rows.map((c) => (
+                <li key={c.id} className="rounded-xl border border-line bg-bg p-4">
+                  <div className="text-sm font-semibold text-ink">{c.cert_type ?? "—"}</div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                    <Field label="Number">{c.cert_number ?? "—"}</Field>
+                    <Field label="IC&amp;RC Level">{c.ic_rc_level ?? "—"}</Field>
+                    <Field label="Date Issued">{fmt(c.issued_date)}</Field>
+                    <Field label="Expiration">{fmt(c.expiration_date)}</Field>
+                  </dl>
+                  <div className="mt-3 border-t border-line pt-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted">Downloads</div>
+                    <div className="mt-2">
+                      {c.status === "active" ? <CertificateActions cert={c} memberName={memberName} /> : <span className="text-sm text-muted">—</span>}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            </>
           )}
         </div>
 
@@ -97,7 +129,8 @@ export default async function CertificationsPage() {
           {external.length === 0 ? (
             <p className="px-4 pb-5 pt-3 text-sm text-muted">No outside certifications stored yet.</p>
           ) : (
-            <table className="mt-3 w-full text-sm">
+            <>
+            <table className="mt-3 hidden w-full text-sm md:table">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3">Credential</th>
@@ -125,6 +158,28 @@ export default async function CertificationsPage() {
                 ))}
               </tbody>
             </table>
+            <ul className="space-y-3 px-4 pb-4 pt-3 md:hidden">
+              {external.map((c) => (
+                <li key={c.id} className="rounded-xl border border-line bg-bg p-4">
+                  <div className="text-sm font-semibold text-ink">{c.credential_title ?? "—"}</div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                    <Field label="Number">{c.credential_number ?? "—"}</Field>
+                    <Field label="Issuing Board">{c.issuing_board ?? "—"}</Field>
+                    <Field label="Issued">{fmt(c.issued_date)}</Field>
+                    <Field label="Expires">{fmt(c.expiration_date)}</Field>
+                  </dl>
+                  <div className="mt-3 border-t border-line pt-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted">Certificate</div>
+                    <div className="mt-2">
+                      {c.doc_path
+                        ? <ViewFileButton bucket="member-documents" path={c.doc_path} label="View Certificate" />
+                        : <span className="text-sm text-muted">No file uploaded</span>}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            </>
           )}
         </div>
 

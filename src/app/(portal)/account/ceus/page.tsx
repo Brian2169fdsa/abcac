@@ -1,4 +1,5 @@
 import { requireUserId } from "@/lib/auth/current-user";
+import type { ReactNode } from "react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CeuSubmitForm } from "@/components/ceu-submit-form";
@@ -15,6 +16,16 @@ interface Ceu {
 }
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+}
+
+/** Label/value pair used by the stacked mobile card layout. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm text-muted">{children}</dd>
+    </div>
+  );
 }
 
 export default async function CeusPage() {
@@ -123,7 +134,8 @@ export default async function CeusPage() {
         {records.length === 0 ? (
           <p className="text-muted">No CEU records yet. Use “Log CEU Hours” above to add your first entry.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+          <>
+          <div className="hidden overflow-x-auto rounded-xl border border-line bg-surface md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
@@ -145,6 +157,21 @@ export default async function CeusPage() {
               </tbody>
             </table>
           </div>
+          <ul className="space-y-3 md:hidden">
+            {records.map((r) => (
+              <li key={r.id} className="rounded-xl border border-line bg-surface p-4">
+                <div className="text-sm font-semibold text-ink">{r.course_name ?? "—"}</div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                  <Field label="Provider">{r.provider ?? "—"}</Field>
+                  <Field label="Hours">{r.hours ?? "—"}</Field>
+                  <Field label="Category">{r.category ?? "—"}</Field>
+                  <Field label="Completed">{fmt(r.completion_date)}</Field>
+                  <Field label="Status"><span className="capitalize">{r.status ?? "—"}</span></Field>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          </>
         )}
       </Section>
     </>
