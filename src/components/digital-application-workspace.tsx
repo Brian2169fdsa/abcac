@@ -7,6 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
 import { hasCompletedEntry, isDigitalFormComplete, isDigitalPacketComplete } from "@/lib/digital-form-progress";
+import { getWorkflowFees } from "@/lib/form-library";
 import { getNativeFormSchema, getNativeSignatureFields, missingRequiredNativeFields } from "@/lib/native-form-schemas";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
 import { NativeFormEditor } from "@/components/native-form-editor";
@@ -204,6 +205,19 @@ export function DigitalApplicationWorkspace({
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div>}
       {message && <div className="rounded-xl border border-success/20 bg-success/10 p-4 text-sm font-semibold text-success">{message}</div>}
+      {locked && getWorkflowFees(workflowKey).length > 0 && (
+        <div className="rounded-2xl border border-brand/20 bg-brand/[0.05] p-5 sm:p-6">
+          <h3 className="text-lg font-bold text-ink">Final step: pay your fee</h3>
+          <p className="mt-1 text-sm text-muted">Your packet is submitted. Complete the matching payment so ABCAC can begin review — it is attached to your account automatically.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {getWorkflowFees(workflowKey).map((fee) => (
+              <Link key={fee.slug} href={`/account/payments?product=${encodeURIComponent(fee.slug)}`} className={buttonVariants({})}>
+                {fee.label} <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
       {locked ? <div className="sticky bottom-4 z-20 rounded-2xl border border-success/20 bg-success/95 p-4 text-center text-sm font-semibold text-white shadow-lg backdrop-blur">This packet has been submitted and is locked for ABCAC review. Outside signers may still complete invited sections.</div> : <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur"><div className="text-sm"><p className="font-semibold">{mode === "paper" || digitalPacketComplete ? "Your packet is ready to submit." : `${completedForms} of ${packet.length} required forms confirmed`}</p>{mode === "digital" && !digitalPacketComplete && <p className="mt-1 text-xs text-muted">Complete and confirm every form before submitting.</p>}</div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" size="lg" onClick={() => save("draft")} disabled={busy !== null}>{busy === "save" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save draft"}</Button><Button type="button" size="lg" onClick={() => save("submitted")} disabled={busy !== null || (mode === "digital" && !digitalPacketComplete)}>{busy === "submit" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit complete packet"}</Button></div></div>}
     </div>
   );

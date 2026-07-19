@@ -33,7 +33,7 @@ export default function RemoteOrInPersonPage() {
               need flexibility or are far from a testing center.
             </p>
             {remote && (
-              <CtaButton href={`/store/${remote.slug}`} className="mt-6 w-full sm:w-auto sm:self-start">
+              <CtaButton href="/account/testing?mode=remote" className="mt-6 w-full sm:w-auto sm:self-start">
                 Pay Now — <PriceTag product={remote} className="ml-1 text-white" />
               </CtaButton>
             )}
@@ -47,7 +47,7 @@ export default function RemoteOrInPersonPage() {
               environment or have limited internet access.
             </p>
             {inPerson && (
-              <CtaButton href={`/store/${inPerson.slug}`} className="mt-6 w-full sm:w-auto sm:self-start">
+              <CtaButton href="/account/testing?mode=in_person" className="mt-6 w-full sm:w-auto sm:self-start">
                 Pay Now — <PriceTag product={inPerson} className="ml-1 text-white" />
               </CtaButton>
             )}

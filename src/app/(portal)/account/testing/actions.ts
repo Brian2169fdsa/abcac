@@ -24,6 +24,7 @@ export type TestingRequestInput = {
   testerAddress: string;
   testerDateOfBirth: string;
   accommodationsRequested: boolean;
+  accommodationsDetail?: string[];
 };
 
 type Result = { ok: true; id: string } | { ok: false; error: string };
@@ -91,6 +92,9 @@ export async function createTestingRequest(input: TestingRequestInput): Promise<
     tester_address: tester.address,
     tester_date_of_birth: tester.dob,
     accommodations_requested: input.accommodationsRequested,
+    accommodations_detail: input.accommodationsRequested && input.accommodationsDetail?.length
+      ? input.accommodationsDetail.map((item) => clean(item)).filter(Boolean).slice(0, 20).join("; ")
+      : null,
   }).select("id").single();
 
   if (error || !data) return { ok: false, error: error?.message ?? "Could not save your request." };

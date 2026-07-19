@@ -86,6 +86,37 @@ export function getFormWorkflow(key: string) {
   return FORM_WORKFLOWS.find((workflow) => workflow.key === key);
 }
 
+/**
+ * Fee products due at the END of each application workflow. After the packet
+ * is submitted, the workspace shows these as the final "pay your fee" step,
+ * deep-linking into the portal Payments page. Workflows without an entry
+ * (board, testing accommodations) carry no fee.
+ */
+export const WORKFLOW_FEES: Record<string, Array<{ slug: string; label: string }>> = {
+  "initial:cac": [
+    { slug: "initial-certification-full-application-exam-fee", label: "Application + in-person exam fee" },
+    { slug: "initial-certification-full-application-exam-fee-remote-proctored-exam", label: "Application + remote-proctored exam fee" },
+    { slug: "certification-certification-only-fee-already-passed-icrc-exam", label: "Certification-only fee (already passed the IC&RC exam)" },
+  ],
+  "renewal:counselor": [{ slug: "certification-renewal-2-year-credential-renewal-fee", label: "Two-year recertification fee" }],
+  "ceu:workshop": [
+    { slug: "ceu-workshop-endorsement-up-to-8-contact-hours", label: "Workshop of 8 contact hours or less" },
+    { slug: "ceu-workshop-endorsement-9-15-contact-hours", label: "Workshop of 9–15 contact hours" },
+    { slug: "ceu-workshop-endorsement-more-than-15-contact-hours", label: "Workshop over 15 contact hours" },
+  ],
+};
+// The other initial credentials and recert packets share the same fee products.
+for (const key of ["initial:cadac", "initial:aadc", "initial:ccs", "initial:ccjp", "initial:cprs", "initial:cps"]) {
+  WORKFLOW_FEES[key] = WORKFLOW_FEES["initial:cac"];
+}
+for (const key of ["renewal:cps", "renewal:ccs", "renewal:ccjp", "renewal:cprs"]) {
+  WORKFLOW_FEES[key] = WORKFLOW_FEES["renewal:counselor"];
+}
+
+export function getWorkflowFees(workflowKey: string) {
+  return WORKFLOW_FEES[workflowKey] ?? [];
+}
+
 export function getWorkflowForms(workflow: FormWorkflow) {
   return workflow.formKeys.map(getFormDefinition).filter((form): form is FormDefinition => Boolean(form));
 }
