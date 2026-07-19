@@ -14,16 +14,32 @@ export interface OnboardingProfile {
   first_name: string | null; last_name: string | null; phone: string | null; date_of_birth: string | null;
   address_line1: string | null; city: string | null; state: string | null; zip_code: string | null;
   account_status: string | null; account_submitted_at: string | null; account_review_notes: string | null;
+  submitted_cert_numbers?: string | null;
 }
 
 interface CertRow { cert_type: string; cert_number: string; }
+
+/** Parse "CAC 12345, CADAC 9876" back into editable rows. */
+export function parseSubmittedCerts(raw: string | null | undefined): CertRow[] {
+  const rows = (raw ?? "")
+    .split(/[,;\n]+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => {
+      const [first, ...rest] = token.split(/\s+/);
+      return CREDENTIALS.includes(first?.toUpperCase() ?? "")
+        ? { cert_type: first.toUpperCase(), cert_number: rest.join(" ") }
+        : { cert_type: "", cert_number: token };
+    });
+  return rows.length ? rows : [{ cert_type: "", cert_number: "" }];
+}
 
 export function OnboardingFlow({ profile }: { profile: OnboardingProfile }) {
   const router = useRouter();
   const submittedPending = profile.account_status === "pending" && profile.account_submitted_at;
   const rejected = profile.account_status === "rejected";
 
-  const [certs, setCerts] = useState<CertRow[]>([{ cert_type: "", cert_number: "" }]);
+  const [certs, setCerts] = useState<CertRow[]>(() => parseSubmittedCerts(profile.submitted_cert_numbers));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,26 +77,22 @@ export function OnboardingFlow({ profile }: { profile: OnboardingProfile }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setError("Session expired — please sign in again."); setLoading(false); return; }
 
-      // Save profile details + mark submitted for review.
+      // Save profile details + mark submitted for review. Self-reported
+      // credentials go to profiles.submitted_cert_numbers (migration 021) —
+      // members cannot write the certifications table (013, member SELECT-only);
+      // ABCAC staff verify the numbers and issue the official rows on approval.
       const { error: pErr } = await supabase.from("profiles").update({
         first_name: g("first"), last_name: g("last"), phone: g("phone") || null,
         date_of_birth: g("dob") || null, address_line1: g("address") || null,
         city: g("city") || null, state: g("state") || null, zip_code: g("zip") || null,
+        submitted_cert_numbers: validCerts.length
+          ? validCerts.map((c) => [c.cert_type, c.cert_number].filter(Boolean).join(" ")).join(", ")
+          : null,
         account_status: "pending",
         account_submitted_at: new Date().toISOString(),
         account_review_notes: null,
       }).eq("id", user.id);
       if (pErr) throw pErr;
-
-      // Replace any prior self-reported (pending) certs, then insert the current list.
-      await supabase.from("certifications").delete().eq("member_id", user.id).eq("status", "pending");
-      if (validCerts.length) {
-        const rows = validCerts.map((c) => ({
-          member_id: user.id, cert_type: c.cert_type, cert_number: c.cert_number || null, status: "pending",
-        }));
-        const { error: cErr } = await supabase.from("certifications").insert(rows);
-        if (cErr) throw cErr;
-      }
 
       router.refresh();
       // Re-enable the form in case the refreshed view still renders it

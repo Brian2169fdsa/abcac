@@ -1,8 +1,7 @@
 import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
-import { AddEmploymentForm, EditEmploymentForm, AddOtherCertForm, AddSupervisionForm } from "@/components/portal-forms";
-import { ViewFileButton } from "@/components/view-file-button";
+import { AddEmploymentForm, EditEmploymentForm, AddSupervisionForm } from "@/components/portal-forms";
 import { SectionCard } from "@/components/account/section-card";
 import { DataTable } from "@/components/account/data-table";
 import { StatusChip } from "@/components/account/status-chip";
@@ -33,9 +32,8 @@ export default async function ExperiencePage() {
     if (!error) supervisedBy = data ?? [];
   } catch { /* migration 023 not applied — leave empty */ }
 
-  const [{ data: emp }, { data: certs }, { data: sup }] = await Promise.all([
+  const [{ data: emp }, { data: sup }] = await Promise.all([
     supabase.from("employment_records").select("*").eq("member_id", uid).order("start_date", { ascending: false }),
-    supabase.from("other_certifications").select("*").eq("member_id", uid).order("issued_date", { ascending: false }),
     supabase.from("supervision_records").select("*").eq("supervisor_id", uid).order("start_date", { ascending: false }),
   ]);
 
@@ -50,7 +48,7 @@ export default async function ExperiencePage() {
 
   return (
     <>
-      <PageHero eyebrow="Member Portal" title="Experience & Credentials" intro="Record your work history, other certifications, and any clinical supervision you provide." />
+      <PageHero eyebrow="Member Portal" title="Experience & Credentials" intro="Record your work history and any clinical supervision you provide. Certifications from other organizations now live on the Certificate & Wallet Card page." />
 
       <Section compact title="Employment History">
         <SectionCard title="Employment records" action={<AddEmploymentForm />}>
@@ -61,19 +59,6 @@ export default async function ExperiencePage() {
               <EditEmploymentForm key="edit" record={{ id: e.id, employer_name: e.employer_name, position_title: e.position_title, start_date: e.start_date, end_date: e.end_date, is_current: e.is_current }} />,
             ])}
             empty="No employment records yet. Add your work history to support your application."
-          />
-        </SectionCard>
-      </Section>
-
-      <Section compact title="Other Certifications">
-        <SectionCard title="Other certifications" action={<AddOtherCertForm />}>
-          <DataTable
-            head={["Credential", "Number", "Issuing Board", "Issued", "Expires", "Document"]}
-            rows={(certs ?? []).map((c) => [
-              c.credential_title, c.credential_number, c.issuing_board, fmt(c.issued_date), fmt(c.expiration_date),
-              c.doc_path ? <ViewFileButton bucket="member-documents" path={c.doc_path} label="View" /> : "—",
-            ])}
-            empty="No other certifications recorded."
           />
         </SectionCard>
       </Section>
