@@ -10,6 +10,7 @@ export type AdminCounts = {
   documents: number;
   ceus: number;
   requests: number;
+  testing: number;
 };
 
 type CountKey = keyof AdminCounts;
@@ -23,6 +24,7 @@ const ITEMS: { label: string; href: string; count?: CountKey }[] = [
   { label: "Documents", href: "/admin/documents", count: "documents" },
   { label: "CEU Review", href: "/admin/ceus", count: "ceus" },
   { label: "Applications", href: "/admin/applications" },
+  { label: "Exam Registration", href: "/admin/testing", count: "testing" },
   { label: "Requests", href: "/admin/requests", count: "requests" },
   { label: "Members", href: "/admin/members" },
   { label: "Messaging", href: "/admin/messaging" },

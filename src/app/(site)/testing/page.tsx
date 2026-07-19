@@ -303,7 +303,7 @@ export default function TestingPage() {
                       <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> {item}</li>
                     ))}
                   </ul>
-                  <CtaButton href={`/store/${inPerson.slug}`} size="lg" className="mt-7 w-full">Register for In-Person Testing</CtaButton>
+                  <CtaButton href="/account/testing?mode=in_person" size="lg" className="mt-7 w-full">Start In-Person Pre-Registration</CtaButton>
                 </div>
               </article>
             )}
@@ -324,12 +324,12 @@ export default function TestingPage() {
                       <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> {item}</li>
                     ))}
                   </ul>
-                  <CtaButton href={`/store/${remote.slug}`} size="lg" className="mt-7 w-full">Register for Remote Testing</CtaButton>
+                  <CtaButton href="/account/testing?mode=remote" size="lg" className="mt-7 w-full">Start Remote Pre-Registration</CtaButton>
                 </div>
               </article>
             )}
           </div>
-          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-muted">Registration is not complete until payment is submitted. Scheduling availability is provided after pre-registration.</p>
+          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-muted">Create or sign in to your ABCAC account to save the request. After payment, ABCAC completes SMT pre-registration and notifies you in the portal and by email.</p>
         </div>
       </section>
 
@@ -406,7 +406,10 @@ export default function TestingPage() {
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Provide documentation that supports the request under current guidelines.</li>
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Wait for approval before scheduling your examination.</li>
             </ul>
-            <CtaButton href={`${siteConfig.contact.emailHref}?subject=Testing%20Accommodation%20Request`} size="lg" className="mt-7 w-full sm:w-auto">Email ABCAC About Accommodations</CtaButton>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <CtaButton href="/account/forms?workflow=testing%3Aaccommodations" size="lg" className="w-full sm:w-auto">Complete Digital Form</CtaButton>
+              <CtaButton href="/forms/library/testing-special-accommodations.pdf" variant="outline" size="lg" className="w-full sm:w-auto">Download Paper Form</CtaButton>
+            </div>
           </article>
 
           <article className="rounded-3xl border border-line bg-bg p-7 sm:p-9">

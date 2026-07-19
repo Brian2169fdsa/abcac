@@ -74,6 +74,35 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     }
   }
 
+  if (meta.payment_type === "testing" && meta.testing_request_id && memberId) {
+    try {
+      const now = new Date().toISOString();
+      await admin.from("testing_requests").update({
+        payment_status: "paid",
+        status: "paid",
+        paid_at: now,
+        stripe_session_id: session.id,
+      }).eq("id", meta.testing_request_id).eq("member_id", memberId).eq("status", "awaiting_payment");
+      await admin.from("member_tasks").insert({
+        member_id: memberId,
+        title: `Pre-register ${meta.exam_code || "IC&RC"} exam candidate with SMT`,
+        detail: `Payment received. Review testing request ${meta.testing_request_id}, complete SMT pre-registration, then mark the request complete.`,
+        status: "open",
+        priority: "high",
+        visible_to_member: false,
+      });
+      await admin.from("notifications").insert({
+        member_id: memberId,
+        category: "application",
+        title: "Exam registration payment received",
+        body: "ABCAC received your payment and your request is ready for staff pre-registration with SMT.",
+        link: "/account/testing",
+      });
+    } catch (err) {
+      console.error("testing request payment reconciliation skipped:", err);
+    }
+  }
+
   // If this checkout was paying an admin-issued invoice, mark it paid.
   if (meta.invoice_id) {
     try {

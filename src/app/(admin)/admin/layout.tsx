@@ -23,15 +23,16 @@ async function countOf(sb: Sb, table: string, build?: (q: any) => any) {
 }
 
 async function queueCounts(sb: Sb): Promise<AdminCounts> {
-  const [approvals, documents, ceus, ncReq, verReq, recReq] = await Promise.all([
+  const [approvals, documents, ceus, ncReq, verReq, recReq, testing] = await Promise.all([
     countOf(sb, "profiles", (q) => q.eq("account_status", "pending").not("account_submitted_at", "is", null)),
     countOf(sb, "documents", (q) => q.eq("status", "pending")),
     countOf(sb, "ceu_records", (q) => q.eq("status", "pending")),
     countOf(sb, "name_change_requests", (q) => q.eq("status", "pending")),
     countOf(sb, "verification_requests", (q) => q.eq("status", "pending")),
     countOf(sb, "reciprocity_requests", (q) => q.eq("status", "pending")),
+    countOf(sb, "testing_requests", (q) => q.in("status", ["paid", "processing", "on_hold"])),
   ]);
-  return { approvals, documents, ceus, requests: ncReq + verReq + recReq };
+  return { approvals, documents, ceus, requests: ncReq + verReq + recReq, testing };
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

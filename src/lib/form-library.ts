@@ -1,4 +1,4 @@
-export type FormCategory = "initial" | "renewal" | "board" | "ceu";
+export type FormCategory = "initial" | "renewal" | "board" | "ceu" | "testing";
 
 export type FormDefinition = {
   key: string;
@@ -35,6 +35,7 @@ export const FORM_LIBRARY: FormDefinition[] = [
   { key: "recert-cprs", title: "Certified Peer Recovery Specialist Recertification Packet", shortTitle: "CPRS Recertification", category: "renewal", href: "/forms/library/recert-cprs.pdf", pages: 5, description: "CPRS recertification application and continuing education record." },
   { key: "board-member", title: "ABCAC Board Member Application", shortTitle: "Board Member Application", category: "board", href: "/forms/library/board-member.pdf", pages: 3, description: "Board candidate background, experience, interests, disclosure, and signature." },
   { key: "ceu-workshop", title: "CEU Workshop Endorsement Application", shortTitle: "CEU Workshop Application", category: "ceu", href: "/forms/library/ceu-workshop.pdf", pages: 5, description: "Workshop provider, program, presenter, objectives, schedule, and endorsement information." },
+  { key: "testing-special-accommodations", title: "Testing Special Accommodations Form", shortTitle: "Testing Accommodations", category: "testing", href: "/forms/library/testing-special-accommodations.pdf", pages: 2, description: "Request approved testing accommodations while preserving the original ABCAC form and supporting documentation requirements." },
 ];
 
 export const INITIAL_PACKET_FOR_CREDENTIAL: Record<string, string[]> = {
@@ -55,6 +56,7 @@ const STANDALONE_WORKFLOWS: FormWorkflow[] = [
   { key: "renewal:cprs", title: "Certified Peer Recovery Specialist Recertification", shortTitle: "CPRS Recertification", appType: "renewal", certType: "CPRS", category: "renewal", formKeys: ["recert-cprs"] },
   { key: "board:member", title: "ABCAC Board Member Application", shortTitle: "Board Application", appType: "board_member", certType: "Board Member", category: "board", formKeys: ["board-member"] },
   { key: "ceu:workshop", title: "CEU Workshop Endorsement Application", shortTitle: "CEU Workshop", appType: "ceu_workshop", certType: "Workshop Endorsement", category: "ceu", formKeys: ["ceu-workshop"] },
+  { key: "testing:accommodations", title: "Testing Special Accommodations Request", shortTitle: "Testing Accommodations", appType: "testing_accommodations", certType: "IC&RC Exam", category: "testing", formKeys: ["testing-special-accommodations"] },
 ];
 
 export const FORM_WORKFLOWS: FormWorkflow[] = [

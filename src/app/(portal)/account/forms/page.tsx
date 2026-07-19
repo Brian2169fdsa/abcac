@@ -26,6 +26,7 @@ export default async function FormsPage({ searchParams }: { searchParams: { cred
       { title: "Initial certification", workflows: FORM_WORKFLOWS.filter((item) => item.category === "initial") },
       { title: "Certification renewal", workflows: FORM_WORKFLOWS.filter((item) => item.category === "renewal") },
       { title: "Organization and board forms", workflows: FORM_WORKFLOWS.filter((item) => item.category === "board" || item.category === "ceu") },
+      { title: "Testing forms", workflows: FORM_WORKFLOWS.filter((item) => item.category === "testing") },
     ];
     return <><PageHero eyebrow="Member Portal" title="ABCAC Digital Forms Center" intro="Complete the original ABCAC forms online, save your work, return later, or download and upload the paper packet." /><Section><div className="space-y-10">{groups.map((group) => <div key={group.title}><h2 className="mb-4 text-2xl">{group.title}</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{group.workflows.map((item) => <Link key={item.key} href={`/account/forms?workflow=${encodeURIComponent(item.key)}`} className="group rounded-2xl border border-line bg-surface p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md"><FileText className="h-8 w-8 text-brand" /><h3 className="mt-4 text-xl">{item.shortTitle}</h3><p className="mt-2 text-sm text-muted">Open the exact {item.title} packet and save your work as you go.</p><span className="mt-5 inline-block text-sm font-semibold text-brand">Start form →</span></Link>)}</div></div>)}</div></Section></>;
   }

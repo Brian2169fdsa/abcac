@@ -40,14 +40,15 @@ function req(body: unknown): Request {
 function fakeProfileClient(opts: {
   user: { id: string; email?: string } | null;
   profile?: { stripe_customer_id?: string | null } | null;
+  testingRequest?: Record<string, unknown> | null;
 }) {
   return {
     auth: { getUser: async () => ({ data: { user: opts.user } }) },
-    from() {
+    from(table: string) {
       const builder: Record<string, unknown> = {};
       builder.select = () => builder;
       builder.eq = () => builder;
-      builder.maybeSingle = async () => ({ data: opts.profile ?? null });
+      builder.maybeSingle = async () => ({ data: table === "testing_requests" ? opts.testingRequest ?? null : opts.profile ?? null });
       return builder;
     },
   };
@@ -182,6 +183,22 @@ describe("POST /api/stripe/checkout", () => {
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.metadata.reciprocity_request_id).toBe("rr-9");
     expect(arg.metadata.payment_type).toBe("reciprocity");
+  });
+
+  it("builds an authenticated testing workflow checkout with certification add-on", async () => {
+    serverClient = fakeProfileClient({
+      user: { id: "user-test", email: "tester@example.com" },
+      profile: { stripe_customer_id: null },
+      testingRequest: { id: "tr-1", member_id: "user-test", exam_code: "ADC", testing_mode: "remote", seeks_abcac_credential: true, credential_level: "CAC", status: "awaiting_payment" },
+    });
+    getProductBySlug.mockReturnValue({ ...PRODUCT, slug: "testing-for-licensure-with-azbbhe-remote-proctored-exam", name: "Remote testing", category: "Testing" });
+    getPriceId.mockImplementation((slug: string) => slug.includes("certification-only") ? "price_cert" : "price_test");
+    const res = await POST(req({ testingRequestId: "tr-1" }));
+    expect(res.status).toBe(200);
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.line_items).toEqual([{ price: "price_test", quantity: 1 }, { price: "price_cert", quantity: 1 }]);
+    expect(arg.cancel_url).toBe("http://localhost:3000/account/testing");
+    expect(arg.metadata).toMatchObject({ payment_type: "testing", testing_request_id: "tr-1", exam_code: "ADC", credential_level: "CAC", exam_mode: "remote", member_id: "user-test" });
   });
 
   it("coerces caller-supplied metadata to strings", async () => {

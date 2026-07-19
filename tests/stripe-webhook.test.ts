@@ -241,6 +241,18 @@ describe("POST /api/stripe/webhook", () => {
     expect(update!.payload).toMatchObject({ status: "paid", stripe_payment_intent: "pi_42" });
   });
 
+  it("moves a paid testing request into the SMT staff queue", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_testing",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_testing", client_reference_id: "user-1", amount_total: 22500, currency: "usd", mode: "payment", metadata: { payment_type: "testing", testing_request_id: "tr-1", exam_code: "ADC", member_id: "user-1" } } },
+    });
+    await POST(req());
+    expect(adminClient.calls.find((c) => c.table === "testing_requests" && c.op === "update")?.payload).toMatchObject({ payment_status: "paid", status: "paid", stripe_session_id: "cs_testing" });
+    expect(adminClient.calls.find((c) => c.table === "member_tasks" && c.op === "insert")?.payload).toMatchObject({ title: "Pre-register ADC exam candidate with SMT", priority: "high" });
+    expect(adminClient.calls.find((c) => c.table === "notifications" && c.op === "insert")?.payload).toMatchObject({ link: "/account/testing" });
+  });
+
   it("moves a paid certification sync request into admin review", async () => {
     constructEvent.mockReturnValue({
       id: "evt_sync",
