@@ -16,9 +16,9 @@ const CERTIFICATIONS = ["CADAC", "CCJP", "AADC", "CCS", "CPS", "CPRS"] as const;
 
 function Fieldset({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-xl border border-line bg-surface p-4 sm:p-6">
-      <legend className="px-2 font-display text-lg font-semibold text-ink">{title}</legend>
-      <div className="mt-2 space-y-4">{children}</div>
+    <fieldset className="border-0 p-0">
+      <legend className="mb-3 px-1 font-display text-lg font-semibold text-ink">{title}</legend>
+      <div className="space-y-4 rounded-xl border border-line bg-surface p-4 sm:p-6">{children}</div>
     </fieldset>
   );
 }
