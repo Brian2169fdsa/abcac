@@ -57,7 +57,7 @@ export function DigitalPdfEditor({
   const [constructPathOperator, setConstructPathOperator] = useState<number | null>(null);
   const [smartFields, setSmartFields] = useState<SmartFormField[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
-  const [tool, setTool] = useState<AnnotationType>("text");
+  const [tool, setTool] = useState<AnnotationType | null>(null);
   const [loading, setLoading] = useState(true);
   const pageAnnotations = annotations.filter((annotation) => annotation.page === pageNumber);
   const pageFields = smartFields.filter((field) => field.page === pageNumber);
@@ -135,7 +135,7 @@ export function DigitalPdfEditor({
   }, [pageNumber, pdfDocument]);
 
   function addAnnotation(event: React.MouseEvent<HTMLDivElement>) {
-    if (readOnly) return;
+    if (readOnly || !tool) return;
     if ((event.target as HTMLElement).closest("[data-annotation]")) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const value = tool === "check" ? "✓" : tool === "date" ? new Date().toLocaleDateString("en-US") : tool === "signature" ? signatureName.trim() : "";
@@ -185,8 +185,9 @@ export function DigitalPdfEditor({
       {!readOnly && <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-line bg-bg p-3">
         {tools.map((item) => {
           const Icon = item.icon;
-          return <Button key={item.type} type="button" size="sm" variant={tool === item.type ? "primary" : "outline"} onClick={() => setTool(item.type)}><Icon className="h-4 w-4" aria-hidden />{item.label}</Button>;
+          return <Button key={item.type} type="button" size="sm" variant={tool === item.type ? "primary" : "outline"} aria-pressed={tool === item.type} onClick={() => setTool((current) => current === item.type ? null : item.type)}><Icon className="h-4 w-4" aria-hidden />{item.label}</Button>;
         })}
+        <p className="w-full text-xs text-muted">{tool ? `${tools.find((item) => item.type === tool)?.label} selected. Click a blank area on the form to place it.` : "No add tool selected. Choose a tool only when the original form does not already provide a field."}</p>
         <label className="min-w-[220px] flex-1"><span className="mb-1 block text-xs font-semibold text-muted">Typed signature name</span><input value={signatureName} onChange={(event) => onSignatureNameChange(event.target.value)} className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm" placeholder="Full legal name" /></label>
       </div>}
 
@@ -197,7 +198,7 @@ export function DigitalPdfEditor({
       </div>
 
       <div className="overflow-auto rounded-xl border border-line bg-[#d7d9dc] p-3 sm:p-5">
-        <div className="relative mx-auto w-fit max-w-full bg-white shadow-xl" onClick={addAnnotation}>
+        <div className={cn("relative mx-auto w-fit max-w-full bg-white shadow-xl", tool && !readOnly && "cursor-crosshair")} onClick={addAnnotation}>
           <canvas ref={canvasRef} className={cn("block h-auto max-w-full", loading && "min-h-[560px] min-w-[420px] animate-pulse bg-line")} />
           <div className="pointer-events-none absolute inset-0">
             {pageFields.map((field) => {
