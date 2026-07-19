@@ -3,7 +3,27 @@
 import { useState } from "react";
 import { Zap, CheckCircle2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MOCK_TASKS, type MockTask, type TaskPriority } from "@/lib/mock/agent-data";
+import { MOCK_TASKS, type TaskPriority } from "@/lib/mock/agent-data";
+
+// ── Task shape ───────────────────────────────────────────────────────────────
+
+/**
+ * A rail task. Real member_tasks rows map to the required fields (title,
+ * detail, priority, status); the optional action/automation fields only exist
+ * on the admin demo queue and simply don't render when absent.
+ */
+export interface RailTask {
+  id: string;
+  title: string;
+  detail: string;
+  priority: TaskPriority;
+  status?: string;
+  member?: string;
+  due?: string;
+  action?: string;
+  secondary?: string;
+  automatable?: boolean;
+}
 
 // ── Priority dot colours ─────────────────────────────────────────────────────
 
@@ -21,7 +41,7 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 
 // ── Single task card ─────────────────────────────────────────────────────────
 
-function TaskCard({ task }: { task: MockTask }) {
+function TaskCard({ task }: { task: RailTask }) {
   const [done, setDone] = useState(false);
 
   if (done) {
@@ -49,16 +69,20 @@ function TaskCard({ task }: { task: MockTask }) {
         />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold leading-snug text-ink">{task.title}</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{task.detail}</p>
+          {task.detail && (
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{task.detail}</p>
+          )}
         </div>
       </div>
 
       {/* Meta row */}
-      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
-        <span className="font-medium text-ink/70">{task.member}</span>
-        <span aria-hidden>·</span>
-        <span>{task.due}</span>
-      </div>
+      {(task.member || task.due) && (
+        <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+          {task.member && <span className="font-medium text-ink/70">{task.member}</span>}
+          {task.member && task.due && <span aria-hidden>·</span>}
+          {task.due && <span>{task.due}</span>}
+        </div>
+      )}
 
       {/* Automatable affordance */}
       {task.automatable && (
@@ -68,47 +92,56 @@ function TaskCard({ task }: { task: MockTask }) {
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setDone(true)}
-          className="rounded-lg bg-ink px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-ink/80"
-        >
-          {task.action}
-        </button>
+      {/* Action buttons (admin demo queue only — real member tasks are read-only) */}
+      {(task.action || task.secondary || task.automatable) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {task.action && (
+            <button
+              type="button"
+              onClick={() => setDone(true)}
+              className="rounded-lg bg-ink px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-ink/80"
+            >
+              {task.action}
+            </button>
+          )}
 
-        {task.secondary && (
-          <button
-            type="button"
-            onClick={() => setDone(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium text-ink/75 transition-colors hover:border-ink/40 hover:text-ink"
-          >
-            {task.secondary}
-            <ChevronRight className="h-3 w-3" aria-hidden />
-          </button>
-        )}
+          {task.secondary && (
+            <button
+              type="button"
+              onClick={() => setDone(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium text-ink/75 transition-colors hover:border-ink/40 hover:text-ink"
+            >
+              {task.secondary}
+              <ChevronRight className="h-3 w-3" aria-hidden />
+            </button>
+          )}
 
-        {task.automatable && (
-          <button
-            type="button"
-            onClick={() => setDone(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#1F5FA8]/40 bg-[#1F5FA8]/5 px-3 py-1.5 text-[12px] font-medium text-[#1F5FA8] transition-colors hover:bg-[#1F5FA8]/10"
-          >
-            <Zap className="h-3 w-3" aria-hidden />
-            Automate
-          </button>
-        )}
-      </div>
+          {task.automatable && (
+            <button
+              type="button"
+              onClick={() => setDone(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#1F5FA8]/40 bg-[#1F5FA8]/5 px-3 py-1.5 text-[12px] font-medium text-[#1F5FA8] transition-colors hover:bg-[#1F5FA8]/10"
+            >
+              <Zap className="h-3 w-3" aria-hidden />
+              Automate
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── TaskRail ─────────────────────────────────────────────────────────────────
 
-export function TaskRail() {
-  const total = MOCK_TASKS.length;
-  const highCount = MOCK_TASKS.filter((t) => t.priority === "high").length;
+/**
+ * Task queue rail. Pass `tasks` to render real data (the member dashboard maps
+ * its open member_tasks rows in); without the prop it falls back to the demo
+ * queue used by the admin AI-Agent workspace.
+ */
+export function TaskRail({ tasks = MOCK_TASKS }: { tasks?: RailTask[] }) {
+  const total = tasks.length;
+  const highCount = tasks.filter((t) => t.priority === "high").length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -118,17 +151,23 @@ export function TaskRail() {
           Task Queue
         </h2>
         <span className="text-[12px] text-muted">
-          {total} tasks ·{" "}
+          {total} task{total !== 1 ? "s" : ""} ·{" "}
           <span className="font-semibold text-[#C0432F]">{highCount} high priority</span>
         </span>
       </div>
 
       {/* Cards */}
-      <div className="flex flex-col gap-3">
-        {MOCK_TASKS.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
-      </div>
+      {total === 0 ? (
+        <div className="rounded-xl border border-line bg-surface px-4 py-6 text-center text-[13px] text-muted">
+          No open tasks &mdash; you&rsquo;re all caught up.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {tasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
