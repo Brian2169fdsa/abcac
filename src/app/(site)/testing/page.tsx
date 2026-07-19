@@ -140,7 +140,11 @@ export default function TestingPage() {
   const remote = getProductBySlug("testing-for-licensure-with-azbbhe-remote-proctored-exam");
 
   return (
-    <>
+    // overflow-x-clip: decorative absolute elements (hero blur circle, ring
+    // accent) can paint past the 390px viewport edge; clipping horizontally at
+    // the page level prevents mobile horizontal scroll without creating a
+    // scroll container or altering desktop layout.
+    <div className="overflow-x-clip">
       <section className="relative isolate overflow-hidden border-b border-line bg-surface">
         <div className="absolute inset-0 -z-20 bg-gradient-to-br from-surface via-surface to-brand/[0.06]" aria-hidden />
         <div className="absolute -left-44 -top-48 -z-10 h-[34rem] w-[34rem] rounded-full bg-info/[0.07] blur-3xl" aria-hidden />
@@ -533,6 +537,6 @@ export default function TestingPage() {
           <CtaButton href="#exam-options" size="lg" className="w-full sm:w-auto">Choose Your Testing Option <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
         </div>
       </section>
-    </>
+    </div>
   );
 }

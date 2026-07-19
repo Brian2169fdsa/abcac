@@ -1,3 +1,7 @@
+> **Historical planning document — superseded.** This is a point-in-time planning artifact
+> written against a much older code baseline and no longer reflects the shipped platform.
+> See [`docs/LAUNCH-ASSESSMENT.md`](../LAUNCH-ASSESSMENT.md) for the current state.
+
 # ABCAC MASTER PLAN — Single Control Document
 
 > **This is the single source of truth for the ABCAC platform.** It supersedes and

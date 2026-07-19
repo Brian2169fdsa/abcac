@@ -7,10 +7,12 @@ backed by a single Supabase project and Stripe.
 
 ## Source of truth
 
-**See [`MASTER-PLAN.md`](MASTER-PLAN.md)** — the single control document for this project.
-It covers the overview, current build state, the AI Navigator system, the prioritized
-backlog, manual owner steps, the multi-agent execution plan, and key decisions +
-schema pointer. All prior planning/assessment/status docs have been consolidated into it.
+**See [`docs/LAUNCH-ASSESSMENT.md`](docs/LAUNCH-ASSESSMENT.md)** — the current status
+document for the shipped platform. Operational guides live at the repo root:
+[`SETUP-RUNBOOK.md`](SETUP-RUNBOOK.md) (go-live configuration) and
+[`AUTOMATION-RUNBOOK.md`](AUTOMATION-RUNBOOK.md) (automation operations).
+Historical planning documents (MASTER-PLAN, ASSESSMENT, EXECUTION-PLAN,
+PORTAL-PARITY, SHIP-PLAN) are archived in [`docs/archive/`](docs/archive/).
 
 ## Quick start (local)
 
@@ -25,4 +27,4 @@ npm run build   # production build
 npm test        # vitest unit tests
 ```
 
-The schema lives in `supabase/migrations/001..024` (the source of truth for the database).
+The schema lives in `supabase/migrations/001..041` (the source of truth for the database).

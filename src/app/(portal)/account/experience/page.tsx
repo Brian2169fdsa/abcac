@@ -14,6 +14,24 @@ function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
 }
 
+/** Profile fields joined in via `supervisor:supervisor_id(...)`. */
+interface SupervisorProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+/** A supervision_records row, optionally with the supervisor profile join. */
+interface SupervisionRecord {
+  id: string;
+  supervisee_name: string | null;
+  supervisee_credential: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string | null;
+  supervisor?: SupervisorProfile | null;
+}
+
 export default async function ExperiencePage() {
   const supabase = createSupabaseServerClient();
   const __authUserId = await requireUserId();
@@ -22,14 +40,14 @@ export default async function ExperiencePage() {
   // Supervision the member RECEIVES (they are the linked supervisee). Wrapped so
   // a not-yet-applied migration 023 (no supervisee_member_id column / no RLS
   // read policy) degrades to empty instead of breaking the page.
-  let supervisedBy: any[] = [];
+  let supervisedBy: SupervisionRecord[] = [];
   try {
     const { data, error } = await supabase
       .from("supervision_records")
       .select("*, supervisor:supervisor_id(first_name,last_name,email)")
       .eq("supervisee_member_id", uid)
       .order("start_date", { ascending: false });
-    if (!error) supervisedBy = data ?? [];
+    if (!error) supervisedBy = (data as SupervisionRecord[] | null) ?? [];
   } catch { /* migration 023 not applied — leave empty */ }
 
   const [{ data: emp }, { data: sup }] = await Promise.all([
@@ -37,7 +55,7 @@ export default async function ExperiencePage() {
     supabase.from("supervision_records").select("*").eq("supervisor_id", uid).order("start_date", { ascending: false }),
   ]);
 
-  function supervisorName(s: any): string {
+  function supervisorName(s: SupervisionRecord): string {
     const sup = s.supervisor;
     if (sup) {
       const n = [sup.first_name, sup.last_name].filter(Boolean).join(" ");
@@ -71,7 +89,7 @@ export default async function ExperiencePage() {
         >
           <DataTable
             head={["Supervisee", "Credential", "Start", "End", "Status"]}
-            rows={(sup ?? []).map((s) => [
+            rows={((sup ?? []) as SupervisionRecord[]).map((s) => [
               s.supervisee_name,
               s.supervisee_credential,
               fmt(s.start_date),

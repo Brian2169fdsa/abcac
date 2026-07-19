@@ -1,12 +1,51 @@
 import { ReportsDashboard } from "@/components/admin/reports-dashboard";
 import { adminReportsDashboardEnabled } from "@/lib/feature-flags";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getProducts } from "@/lib/catalog";
+import { buildReportsData, type CertRow, type PaymentRow, type ReportsData } from "@/lib/admin-reports";
 
 export const dynamic = "force-dynamic";
+
+type Sb = ReturnType<typeof createSupabaseServerClient>;
 
 const exportBtn =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-brand bg-transparent px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-white";
 
-export default function AdminReportsPage() {
+async function countOf(sb: Sb, table: string, build?: (q: any) => any) {
+  try {
+    let q = sb.from(table).select("*", { count: "exact", head: true });
+    if (build) q = build(q);
+    const { count } = await q;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Fetch the raw rows + queue counts and shape them for the dashboard. */
+async function loadReportsData(): Promise<ReportsData> {
+  const sb = createSupabaseServerClient();
+
+  const [certsRes, paymentsRes, totalMembers, approvedMembers, pendingApprovals, pendingCeus] = await Promise.all([
+    sb.from("certifications").select("issued_date,cert_type,status").limit(20000),
+    sb.from("payments").select("created_at,amount_cents,slug,product_name,status").limit(20000),
+    countOf(sb, "profiles"),
+    countOf(sb, "profiles", (q) => q.eq("account_status", "approved")),
+    countOf(sb, "profiles", (q) => q.eq("account_status", "pending").not("account_submitted_at", "is", null)),
+    countOf(sb, "ceu_records", (q) => q.eq("status", "pending")),
+  ]);
+
+  return buildReportsData({
+    certs: (certsRes.data ?? []) as CertRow[],
+    payments: (paymentsRes.data ?? []) as PaymentRow[],
+    products: getProducts(),
+    counts: { totalMembers, approvedMembers, pendingApprovals, pendingCeus },
+  });
+}
+
+export default async function AdminReportsPage() {
+  const data = adminReportsDashboardEnabled ? await loadReportsData() : null;
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -23,8 +62,8 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      {adminReportsDashboardEnabled ? (
-        <ReportsDashboard />
+      {data ? (
+        <ReportsDashboard data={data} />
       ) : (
         <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm md:p-8">
           <div className="max-w-2xl">

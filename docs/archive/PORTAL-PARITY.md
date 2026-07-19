@@ -1,3 +1,7 @@
+> **Historical planning document — superseded.** This is a point-in-time planning artifact
+> written against a much older code baseline and no longer reflects the shipped platform.
+> See [`docs/LAUNCH-ASSESSMENT.md`](../LAUNCH-ASSESSMENT.md) for the current state.
+
 # Portal Parity Audit — Static Portal vs Next.js App
 
 Goal: rebuild the Next.js member/admin portal (`src/app/(portal)` + `src/app/(admin)`) so it **looks and functions like** the original static portal (`public/portal/*`). This document is the read-only audit + build plan. No code was changed.

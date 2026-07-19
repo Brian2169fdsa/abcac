@@ -1,4 +1,5 @@
 import { requireUserId } from "@/lib/auth/current-user";
+import type { ReactNode } from "react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
@@ -37,6 +38,16 @@ function fmt(d: string | null) {
   return d
     ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
     : "—";
+}
+
+/** Label/value pair used by the stacked mobile card layout. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm text-muted">{children}</dd>
+    </div>
+  );
 }
 
 function daysLeft(expiration: string | null): number | null {
@@ -154,7 +165,8 @@ export default async function RenewalsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+            <>
+            <div className="hidden overflow-x-auto rounded-xl border border-line bg-surface md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
@@ -224,6 +236,60 @@ export default async function RenewalsPage() {
                 </tbody>
               </table>
             </div>
+            <ul className="space-y-3 md:hidden">
+              {certs.map((c) => {
+                // Same grace-aware due computation as the desktop table above.
+                const schedule = findScheduleFor(schedules, c.cert_type);
+                const due =
+                  schedule && c.expiration_date
+                    ? computeDueFromExpiration(schedule, c.expiration_date)
+                    : null;
+                const days = due ? due.daysUntilDue : daysLeft(c.expiration_date);
+                const isExpired = due
+                  ? due.lapsed
+                  : days !== null && days < 0;
+                const isSoon = due
+                  ? !due.lapsed && days !== null && days <= 90
+                  : days !== null && days >= 0 && days <= 90;
+                return (
+                  <li key={c.id} className="rounded-xl border border-line bg-surface p-4">
+                    <div className="text-sm font-semibold text-ink">{c.cert_type ?? "—"}</div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                      <Field label="Number">{c.cert_number ?? "—"}</Field>
+                      <Field label="Expires">{fmt(c.expiration_date)}</Field>
+                      <Field label="Days left">
+                        {days === null ? (
+                          <span className="text-muted">—</span>
+                        ) : isExpired ? (
+                          <RenewalCertStatus tone="expired" label="Expired" />
+                        ) : due?.inGracePeriod ? (
+                          <RenewalCertStatus tone="grace" label="In grace" />
+                        ) : isSoon ? (
+                          <RenewalCertStatus tone="soon" label={`${days}d`} />
+                        ) : (
+                          <span className="text-muted">{days}d</span>
+                        )}
+                      </Field>
+                    </dl>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                      <CtaButton
+                        href="/account/payments?product=certification-renewal-2-year-credential-renewal-fee"
+                        size="sm"
+                      >
+                        Renew
+                      </CtaButton>
+                      <Link
+                        href="/account/certification"
+                        className="text-xs font-semibold text-brand hover:underline"
+                      >
+                        Submit recertification
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            </>
           )}
         </div>
       </Section>

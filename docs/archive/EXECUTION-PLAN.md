@@ -1,3 +1,7 @@
+> **Historical planning document — superseded.** This is a point-in-time planning artifact
+> written against a much older code baseline and no longer reflects the shipped platform.
+> See [`docs/LAUNCH-ASSESSMENT.md`](../LAUNCH-ASSESSMENT.md) for the current state.
+
 # ABCAC — Deep Assessment, Red-Team & Execution Plan
 
 _Authored after building the platform end-to-end. Snapshot: `main` is green — `tsc` clean, 462 tests, production build passing, migrations 001–032 applied to the live DB._
