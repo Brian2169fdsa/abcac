@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { AdminNav, type AdminCounts } from "@/components/admin/admin-nav";
+import { BrandLogo } from "@/components/brand-logo";
 import { Sparkles } from "lucide-react";
 import { agentWorkspaceEnabled } from "@/lib/feature-flags";
 
@@ -35,9 +36,11 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
           "md:translate-x-0",
         ].join(" ")}
       >
-        <Link href="/admin" className="flex flex-col gap-0.5 border-b border-line px-5 py-5 leading-none" onClick={() => setOpen(false)}>
-          <span className="font-display text-lg font-bold text-brand">ABCAC</span>
-          <span className="text-[10px] uppercase tracking-wider text-muted">Admin Console</span>
+        <Link href="/admin" className="flex flex-col items-start gap-2 border-b border-line px-5 py-5" onClick={() => setOpen(false)}>
+          <BrandLogo className="h-9" />
+          <span className="inline-flex rounded-full border border-brand/20 bg-brand/[0.06] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
+            Admin Console
+          </span>
         </Link>
 
         {agentWorkspaceEnabled && (
@@ -75,7 +78,7 @@ export function AdminSidebar({ name, counts, children }: { name: string; counts:
       </aside>
 
       <div className="md:pl-60">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-surface px-5 py-3 md:px-8">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line/80 bg-surface/95 px-5 py-3 backdrop-blur-xl md:px-8">
           <button
             type="button"
             aria-label="Open menu"

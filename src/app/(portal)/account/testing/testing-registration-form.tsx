@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { CREDENTIAL_OPTIONS, EXAM_OPTIONS, type TestingMode } from "@/lib/testing-requests";
+import { ACCOMMODATION_OPTIONS, CREDENTIAL_OPTIONS, EXAM_OPTIONS, type TestingMode } from "@/lib/testing-requests";
 import { attachTestingDocuments, createTestingRequest, type TestingRequestInput } from "./actions";
 
 type ProfileDefaults = {
@@ -41,6 +41,7 @@ export function TestingRegistrationForm({ defaults, initialMode }: { defaults: P
       credentialLevel: value("credentialLevel"), azbbheApproved: value("azbbheApproved") === "yes", payingForOther,
       testerFirstName: value("testerFirstName"), testerLastName: value("testerLastName"), testerEmail: value("testerEmail"),
       testerAddress: value("testerAddress"), testerDateOfBirth: value("testerDateOfBirth"), accommodationsRequested: accommodations,
+      accommodationsDetail: data.getAll("accommodationsDetail").map(String),
     };
     const result = await createTestingRequest(input);
     if (!result.ok) { setError(result.error); setLoading(false); return; }
@@ -106,6 +107,7 @@ export function TestingRegistrationForm({ defaults, initialMode }: { defaults: P
         <label className="mt-5 flex items-start gap-3 rounded-2xl border border-line bg-bg p-4"><input type="checkbox" className="mt-1 accent-brand" checked={payingForOther} onChange={(event) => setPayingForOther(event.target.checked)} /><span><strong>I am paying for someone else</strong><span className="mt-1 block text-sm text-muted">Enter the tester’s information exactly as it appears on their ID.</span></span></label>
         {payingForOther && <div className="mt-5 grid gap-5 sm:grid-cols-2"><label className="text-sm font-semibold">Tester first name<input required name="testerFirstName" className={`mt-2 ${field}`} /></label><label className="text-sm font-semibold">Tester last name<input required name="testerLastName" className={`mt-2 ${field}`} /></label><label className="text-sm font-semibold">Tester email<input required type="email" name="testerEmail" className={`mt-2 ${field}`} /></label><label className="text-sm font-semibold">Tester date of birth<input required type="date" name="testerDateOfBirth" className={`mt-2 ${field}`} /></label><label className="text-sm font-semibold sm:col-span-2">Tester address<textarea required name="testerAddress" className={`mt-2 ${textarea}`} /></label></div>}
         <label className="mt-5 flex items-start gap-3 rounded-2xl border border-line bg-bg p-4"><input type="checkbox" className="mt-1 accent-brand" checked={accommodations} onChange={(event) => setAccommodations(event.target.checked)} /><span><strong>Special testing accommodations are requested</strong><span className="mt-1 block text-sm text-muted">The accommodations packet and supporting documentation must be submitted before ABCAC completes pre-registration.</span></span></label>
+        {accommodations && <fieldset className="mt-4 rounded-2xl border border-line bg-bg p-4"><legend className="px-1 text-sm font-semibold">Select the accommodations you need <span className="font-normal text-muted">(approved in advance)</span></legend><div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{ACCOMMODATION_OPTIONS.map((option) => <label key={option} className="flex items-start gap-2 text-sm"><input type="checkbox" name="accommodationsDetail" value={option} className="mt-0.5 accent-brand" /> {option}</label>)}</div></fieldset>}
         {accommodations && <div className="mt-4 flex flex-wrap gap-3"><Link href="/account/forms?workflow=testing%3Aaccommodations" className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white">Complete digitally <ArrowRight className="h-4 w-4" /></Link><a href="/forms/library/testing-special-accommodations.pdf" download className="inline-flex items-center rounded-xl border border-brand px-4 py-2.5 text-sm font-semibold text-brand">Download paper form</a></div>}
         <label className="mt-6 block text-sm font-semibold">Supporting documents <span className="font-normal text-muted">(optional)</span><input type="file" name="supportingDocuments" multiple accept=".pdf,.jpg,.jpeg,.png" className="mt-2 block w-full rounded-xl border border-dashed border-line bg-bg p-4 text-sm font-normal" /><span className="mt-2 block text-xs font-normal text-muted">Upload up to 10 PDF, JPG, or PNG files. Each file must be under 10MB.</span></label>
       </section>

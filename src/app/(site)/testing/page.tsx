@@ -20,6 +20,7 @@ import {
   Upload,
   UserCheck,
 } from "lucide-react";
+import { AzbbheLogo } from "@/components/azbbhe-logo";
 import { CtaButton } from "@/components/cta-button";
 import { FaqSection } from "@/components/faq-section";
 import { PriceTag } from "@/components/price-tag";
@@ -152,7 +153,7 @@ export default function TestingPage() {
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong">Testing &amp; Exam Support</p>
             <h1 className="max-w-[14ch] text-[clamp(2.5rem,4vw,4.25rem)] tracking-[-0.035em]">Your Exam Path, Clearly Mapped.</h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-              Register for the IC&amp;RC exam required for ABCAC certification or Arizona addiction-counseling licensure, with clear guidance from authorization through scheduling.
+              Take your approved examination through the Arizona Board for the Certification of Addiction Counselors — whether pursuing certification with ABCAC and IC&amp;RC or licensure through the Arizona Board of Behavioral Health Examiners, based on your chosen professional path.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <CtaButton href="#exam-options" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">
@@ -219,11 +220,20 @@ export default function TestingPage() {
       <section className="bg-surface">
         <div className="mx-auto grid w-full max-w-[82rem] items-center gap-10 px-5 py-14 sm:px-8 sm:py-16 md:grid-cols-[0.9fr_1.1fr] md:gap-14 lg:px-10 lg:py-24">
           <div className="rounded-3xl bg-gradient-to-br from-info to-[#17365c] p-7 text-white shadow-[0_28px_65px_-45px_rgba(13,34,63,0.7)] sm:p-9">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10"><ShieldCheck className="h-6 w-6" aria-hidden /></span>
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10"><ShieldCheck className="h-6 w-6" aria-hidden /></span>
+              <AzbbheLogo />
+            </div>
             <p className="mt-6 text-sm font-semibold uppercase tracking-[0.14em] text-white/60">AZBBHE Applicants</p>
-            <h2 className="mt-3 text-3xl text-white">Authorization comes before registration</h2>
+            <h2 className="mt-3 text-3xl text-white">Are you AZBBHE-approved?</h2>
             <p className="mt-4 leading-relaxed text-white/75">
-              The Arizona Board of Behavioral Health Examiners notifies addiction-counseling applicants when they are authorized to test. Do not purchase a licensure exam until that authorization is confirmed.
+              If you&apos;ve been approved by the Arizona Board of Behavioral Health Examiners (AZBBHE), you are eligible to
+              test through ABCAC — and you are <strong className="text-white">exempt from the 2,000 supervised hours</strong> typically
+              required for IC&amp;RC certification.
+            </p>
+            <p className="mt-3 leading-relaxed text-white/75">
+              AZBBHE notifies addiction-counseling applicants when they are authorized to test. Do not purchase a
+              licensure exam until that authorization is confirmed.
             </p>
             <CtaButton href={azbbheTesting} size="lg" className="mt-7 w-full bg-white text-info hover:bg-white/90 sm:w-auto">
               Visit AZBBHE Testing Information <ExternalLink className="h-4 w-4" aria-hidden />
@@ -324,12 +334,13 @@ export default function TestingPage() {
                       <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> {item}</li>
                     ))}
                   </ul>
+                  <p className="mt-4 rounded-xl bg-brand/[0.06] px-4 py-3 text-sm font-semibold text-brand">Remote proctoring fee: $50, in addition to the exam cost. Testing partner: Prometric — a global leader in online assessment.</p>
                   <CtaButton href="/account/testing?mode=remote" size="lg" className="mt-7 w-full">Start Remote Pre-Registration</CtaButton>
                 </div>
               </article>
             )}
           </div>
-          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-muted">Create or sign in to your ABCAC account to save the request. After payment, ABCAC completes SMT pre-registration and notifies you in the portal and by email.</p>
+          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-muted">Create or sign in to your ABCAC account to save the request. After payment, ABCAC completes SMT pre-registration and notifies you in the portal and by email. Want an ABCAC professional credential with your exam? Add it for only $150.00 more during pre-registration.</p>
         </div>
       </section>
 
@@ -362,6 +373,27 @@ export default function TestingPage() {
               <CtaButton href={prometricRemote} size="lg" className="w-full bg-white text-info hover:bg-white/90 sm:w-auto">Remote Exam Guide <ExternalLink className="h-4 w-4" aria-hidden /></CtaButton>
               <CtaButton href={prometricSupport} variant="outline" size="lg" className="w-full border-white/30 text-white hover:bg-white/10 sm:w-auto">Prometric Support</CtaButton>
             </div>
+          </div>
+        </div>
+        <div className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 pb-14 sm:px-8 sm:pb-16 lg:grid-cols-2 lg:px-12 lg:pb-24">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-7 sm:p-8">
+            <h3 className="text-2xl text-white">Technical + accommodation support</h3>
+            <ul className="mt-5 space-y-3 text-sm leading-relaxed text-white/80">
+              <li><span className="font-semibold text-white">Prometric accommodations:</span> <a href="tel:1-800-789-9947" className="underline decoration-white/40 underline-offset-2 hover:text-white">1-800-789-9947</a> (Option 3)</li>
+              <li><span className="font-semibold text-white">Schedule / reschedule (U.S. &amp; Canada):</span> <a href="tel:1-800-813-6779" className="underline decoration-white/40 underline-offset-2 hover:text-white">1-800-813-6779</a></li>
+              <li><span className="font-semibold text-white">International:</span> <a href="tel:+14434556299" className="underline decoration-white/40 underline-offset-2 hover:text-white">+1-443-455-6299</a></li>
+              <li><span className="font-semibold text-white">Email:</span> <a href="mailto:pro-proctor@prometric.com" className="underline decoration-white/40 underline-offset-2 hover:text-white">pro-proctor@prometric.com</a></li>
+              <li><span className="font-semibold text-white">Technical support:</span> <a href={prometricSupport} className="underline decoration-white/40 underline-offset-2 hover:text-white">Prometric support page</a></li>
+            </ul>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-7 sm:p-8">
+            <h3 className="text-2xl text-white">Free re-sits (if eligible)</h3>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">Free retakes may be approved in rare cases, such as:</p>
+            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-white/80">
+              <li className="flex gap-3"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden /> Verified technical issues that were not caused by the candidate</li>
+              <li className="flex gap-3"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden /> Serious medical or personal emergencies</li>
+            </ul>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">Documentation is required. Contact ABCAC for review.</p>
           </div>
         </div>
       </section>
@@ -400,7 +432,7 @@ export default function TestingPage() {
             <Upload className="h-8 w-8 text-brand" aria-hidden />
             <p className="mt-5 text-sm font-semibold uppercase tracking-[0.14em] text-brand">Special Accommodations</p>
             <h2 className="mt-3 text-3xl">Request approval before scheduling</h2>
-            <p className="mt-4 leading-relaxed text-muted">Send a written request and official supporting documentation to ABCAC before selecting an exam appointment. ABCAC reviews the request and coordinates approved modifications with the testing provider.</p>
+            <p className="mt-4 leading-relaxed text-muted">If you require special testing accommodations, submit your completed accommodations request to ABCAC at the time you pay for your exam — accommodations cannot be processed after registration is complete. ABCAC reviews the request and coordinates approved modifications with the testing provider.</p>
             <ul className="mt-6 space-y-3 text-sm text-muted">
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Include the specific accommodation requested.</li>
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Provide documentation that supports the request under current guidelines.</li>
@@ -430,15 +462,35 @@ export default function TestingPage() {
       <section className="bg-bg">
         <div className="mx-auto w-full max-w-[86rem] px-5 py-14 sm:px-8 sm:py-16 lg:px-10 lg:py-24">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Why Certification Matters</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Testing for ABCAC Certifications</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl">Test for all seven credentials directly through ABCAC</h2>
+            <p className="mt-4 text-lg text-muted">ABCAC is an IC&amp;RC member board offering internationally recognized credentials in addiction counseling, peer recovery, prevention, clinical supervision, and related fields.</p>
+          </div>
+          <div className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2.5">
+            {[
+              "Certified Addiction Counselor (CAC)",
+              "Certified Alcohol & Drug Abuse Counselor (CADAC)",
+              "Advanced Alcohol and Drug Counselor (AADC)",
+              "Certified Clinical Supervisor (CCS)",
+              "Certified Prevention Specialist (CPS)",
+              "Certified Criminal Justice Professional (CCJP)",
+              "Certified Peer Recovery Specialist (CPRS)",
+            ].map((credential) => (
+              <span key={credential} className="rounded-full border border-brand/15 bg-surface px-4 py-2 text-sm font-semibold text-ink">{credential}</span>
+            ))}
+          </div>
+          <div className="mx-auto mt-14 max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">The Benefits of Becoming Certified</p>
             <h2 className="mt-3 text-3xl sm:text-4xl">A credential built on competency and ethics</h2>
           </div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Sparkles, title: "Professional recognition", text: "Demonstrate verified knowledge and commitment to professional standards." },
-              { icon: GraduationCap, title: "Career advancement", text: "Support professional development with an independently reviewed credential." },
-              { icon: ShieldCheck, title: "Ethical standards", text: "Affirm your responsibility to protect clients and practice with integrity." },
-              { icon: BadgeCheck, title: "Credential mobility", text: "Eligible reciprocal credentials may transfer through the IC&amp;RC member-board network." },
+              { icon: Sparkles, title: "Professional recognition", text: "ABCAC certification is a symbol of expertise and professional integrity, enhancing credibility with employers, peers, and clients." },
+              { icon: GraduationCap, title: "Career advancement", text: "Many organizations prioritize hiring and promoting certified professionals, making certification a valuable tool for career growth." },
+              { icon: BookOpenCheck, title: "Enhanced competence", text: "Certification ensures a robust foundation in addiction counseling through rigorous educational, experiential, and examination requirements." },
+              { icon: ShieldCheck, title: "Ethical standards", text: "Certified professionals commit to ABCAC's Code of Ethics, fostering trust and professionalism with clients and colleagues." },
+              { icon: Headphones, title: "Networking and support", text: "Access a community of certified professionals offering mentorship, collaboration, and continued professional development." },
+              { icon: BadgeCheck, title: "Reciprocity opportunities", text: "Transfer credentials to other IC&RC member boards in the U.S. Reciprocity requirements vary by state — consult ABCAC and the receiving board." },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -450,6 +502,11 @@ export default function TestingPage() {
               );
             })}
           </div>
+          <p className="mx-auto mt-8 max-w-3xl text-center text-muted">
+            Pursuing ABCAC certification reflects your dedication to professional growth, ethical practice, and public
+            trust — with pathways for mobility and advancement in a dynamic, evolving field. For additional information
+            or assistance, contact ABCAC directly.
+          </p>
         </div>
       </section>
 

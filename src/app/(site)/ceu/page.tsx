@@ -204,7 +204,7 @@ export default function CeuPage() {
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Required to maintain active approved-provider status.</li>
               <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden /> Nonpayment may result in removal from the active provider list.</li>
             </ul>
-            {annual && <CtaButton href={`/store/${annual.slug}`} size="lg" className="mt-7 w-full">Submit Annual Provider Fee</CtaButton>}
+            {annual && <CtaButton href={`/account/payments?product=${annual.slug}`} size="lg" className="mt-7 w-full">Submit Annual Provider Fee</CtaButton>}
             <p className="mt-4 text-center text-xs text-muted">Questions? Call {siteConfig.contact.phone} or email {siteConfig.contact.email}.</p>
           </div>
         </div>
@@ -245,7 +245,7 @@ export default function CeuPage() {
                     <h3 className="mt-3 text-xl">{tier.hours}</h3>
                     <PriceTag product={product} className="mt-4 text-3xl font-semibold text-brand" />
                     <p className="mt-3 flex-1 text-sm leading-relaxed text-muted">{tier.description}</p>
-                    <CtaButton href={`/store/${product.slug}`} className="mt-6 w-full">Select This Tier</CtaButton>
+                    <CtaButton href="/account/forms?workflow=ceu%3Aworkshop" className="mt-6 w-full">Apply With This Tier</CtaButton>
                   </div>
                 </article>
               );

@@ -1,10 +1,30 @@
 export const EXAM_OPTIONS = [
-  { value: "ADC", label: "ADC — Alcohol and Drug Counselor", credentials: "CAC / CADAC" },
-  { value: "AADC", label: "AADC — Advanced Alcohol and Drug Counselor", credentials: "AADC / LAAC / LIAC" },
-  { value: "CS", label: "CS — Clinical Supervisor", credentials: "CCS" },
-  { value: "CCJP", label: "CCJP — Criminal Justice Professional", credentials: "CCJP" },
-  { value: "PR", label: "PR — Peer Recovery", credentials: "CPRS" },
-  { value: "PS", label: "PS — Prevention Specialist", credentials: "CPS" },
+  { value: "ADC", label: "ADC — Alcohol and Drug Counselor · LACT (formerly LSAT) · ABCAC CAC / CADAC", credentials: "CAC / CADAC" },
+  { value: "AADC", label: "AADC — Advanced Alcohol and Drug Counselor · LAAC / LIAC (formerly LASAC / LISAC) · ABCAC AADC", credentials: "AADC / LAAC / LIAC" },
+  { value: "CS", label: "CS — Clinical Supervisor · ABCAC CCS", credentials: "CCS" },
+  { value: "CCJP", label: "CCJP — Criminal Justice Professional · ABCAC CCJP", credentials: "CCJP" },
+  { value: "PR", label: "PR — Peer Recovery · ABCAC CPRS", credentials: "CPRS" },
+  { value: "PS", label: "PS — Prevention Specialist · ABCAC CPS", credentials: "CPS" },
+] as const;
+
+/** Specific accommodations from the original ABCAC pre-registration form.
+ *  Special accommodations must be approved in advance. */
+export const ACCOMMODATION_OPTIONS = [
+  "Adjustable Table Height",
+  "Allowed to Turn On/Off Lights in Separate Room",
+  "Allowed to Walk and/or Stretch",
+  "Candidate Supplied Glucose Meter",
+  "Candidate Supplied Multiple Glasses",
+  "Candidate Supplied Sugar Drink",
+  "Candidate's Magnifying Glass",
+  "Extended Scheduled Breaks",
+  "Extended Time",
+  "Flexible Breaks",
+  "Language Interpreter",
+  "Reader Required",
+  "Separate Room",
+  "Sign Language Interpreter",
+  "Special Chair",
 ] as const;
 
 export const CREDENTIAL_OPTIONS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"] as const;
