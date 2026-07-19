@@ -83,7 +83,7 @@ export default async function CertificationsPage() {
           )}
         </div>
 
-        <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-surface">
+        <div id="other-certifications" className="mt-6 scroll-mt-32 overflow-x-auto rounded-xl border border-line bg-surface">
           <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4">
             <div>
               <h2 className="text-base font-semibold text-ink">Certifications From Other Organizations</h2>

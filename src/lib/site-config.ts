@@ -6,7 +6,7 @@ export const siteConfig = {
   name: "Arizona Board for Certification of Addiction Counselors",
   shortName: "ABCAC",
   tagline: "Setting the Standard for Addiction Counselor Certification in Arizona.",
-  trustLine: "Trusted by 1,000+ certified addictions counselors",
+  trustLine: "Trusted by 1,200+ certified addictions counselors",
   contact: {
     org: "ABCAC",
     addressLine: "PO Box 83165",

@@ -158,6 +158,22 @@ describe("POST /api/stripe/checkout", () => {
     expect(adminClient.calls.find((call) => call.table === "payment_submissions" && call.op === "insert")).toBeTruthy();
   });
 
+  it("links an application-packet fee to the application and forwards webhook metadata", async () => {
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      syncApplication: { id: "app-9", app_type: "initial", cert_type: "CAC", status: "submitted" },
+    });
+    const res = await POST(req({ slug: "initial-cert", applicationId: "app-9" }));
+    expect(res.status).toBe(200);
+    const insert = adminClient.calls.find((call) => call.table === "payment_submissions" && call.op === "insert");
+    expect((insert?.payload as any).linked_record_type).toBe("applications");
+    expect((insert?.payload as any).linked_record_id).toBe("app-9");
+    expect((insert?.payload as any).form_type).toBe("application_fee");
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.metadata.payment_type).toBe("application_fee");
+    expect(arg.metadata.application_id).toBe("app-9");
+  });
+
   it("falls back to the member profile when no payment form is posted", async () => {
     serverClient = fakeProfileClient({
       user: { id: "member-1", email: "jamie@example.com" },

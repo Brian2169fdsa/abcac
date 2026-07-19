@@ -266,7 +266,7 @@ export default async function AccountPage() {
 
   const quickActions = [
     { href: "/account/ceus", label: "Log CEU Hours", icon: "📚" },
-    { href: "/account/renew", label: "Renew Certification", icon: "🔄" },
+    { href: "/account/certification", label: "Renew Certification", icon: "🔄" },
     { href: "/account/certifications", label: "View Certificate", icon: "🏅" },
     { href: "/account/documents", label: "Upload Documents", icon: "📄" },
     { href: "/account/requests", label: "IC&RC Transfer", icon: "🌐" },
@@ -563,7 +563,7 @@ export default async function AccountPage() {
                           ? ` · ${d} days left`
                           : ""}
                   </p>
-                  <CtaButton href={`/store/${RENEWAL_SLUG}`} variant="outline" size="sm" className="mt-4">Renew</CtaButton>
+                  <CtaButton href={`/account/payments?product=${RENEWAL_SLUG}`} variant="outline" size="sm" className="mt-4">Renew</CtaButton>
                 </div>
               );
             })}
@@ -581,9 +581,9 @@ export default async function AccountPage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {syncOn ? (
-            <CtaButton href="/certification-sync" variant="outline">View Sync Details</CtaButton>
+            <CtaButton href="/account/certification-sync" variant="outline">View Sync Details</CtaButton>
           ) : (
-            <CtaButton href="/certification-sync" variant="accent">Start Certification Sync</CtaButton>
+            <CtaButton href="/account/certification-sync" variant="accent">Start Certification Sync</CtaButton>
           )}
         </div>
       </Section>

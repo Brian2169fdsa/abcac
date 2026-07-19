@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     reciprocityRequestId?: string;
     testingRequestId?: string;
     syncApplicationId?: string;
+    applicationId?: string;
     paymentForm?: PaymentIntakeInput;
     metadata?: Record<string, unknown>;
   };
@@ -104,6 +105,18 @@ export async function POST(req: Request) {
         phone: profile?.phone || String(details.phone || ""),
       });
       formPayload = { applicationId: data.id, certType: data.cert_type, request: details };
+    } else if (parsed.applicationId) {
+      // Application-packet fee (initial certification, renewal, CEU workshop):
+      // link the charge to the member's application so admin review shows a
+      // fee-paid indicator and the webhook can advance the application.
+      const { data } = await supabase.from("applications").select("id,app_type,cert_type,status")
+        .eq("id", parsed.applicationId).eq("member_id", memberId).maybeSingle();
+      if (data) {
+        formType = "application_fee";
+        linkedRecordType = "applications";
+        linkedRecordId = data.id;
+        formPayload = { applicationId: data.id, appType: data.app_type, certType: data.cert_type };
+      }
     }
   }
 
@@ -168,6 +181,10 @@ export async function POST(req: Request) {
   if (formType === "certification_sync") {
     forwardedMetadata.payment_type = "cert_sync";
     forwardedMetadata.sync_application_id = linkedRecordId!;
+  }
+  if (formType === "application_fee") {
+    forwardedMetadata.payment_type = "application_fee";
+    forwardedMetadata.application_id = linkedRecordId!;
   }
 
   const productName = testingRequest ? `IC&RC ${testingRequest.exam_code} exam pre-registration` : product.name;

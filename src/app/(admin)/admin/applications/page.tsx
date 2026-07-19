@@ -27,6 +27,18 @@ export default async function AdminApplications() {
   const { data } = await sb.from("applications").select("*, profiles(first_name,last_name,email)").neq("status", "draft").order("submitted_at", { ascending: false });
   const rows = data ?? [];
 
+  // Fee-paid indicator: paid payment_submissions linked to these applications.
+  const paidApplicationIds = new Set<string>();
+  if (rows.length) {
+    const { data: paidFees } = await sb
+      .from("payment_submissions")
+      .select("linked_record_id")
+      .eq("linked_record_type", "applications")
+      .eq("status", "paid")
+      .in("linked_record_id", rows.map((a: any) => a.id));
+    for (const fee of paidFees ?? []) if (fee.linked_record_id) paidApplicationIds.add(fee.linked_record_id);
+  }
+
   return (
     <>
       <h1 className="text-2xl font-bold">Applications</h1>
@@ -36,12 +48,12 @@ export default async function AdminApplications() {
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-5 py-3">Member</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Cert / request details</th>
-              <th className="px-5 py-3">Signed</th><th className="px-5 py-3">Submitted</th><th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">Signed</th><th className="px-5 py-3">Fee</th><th className="px-5 py-3">Submitted</th><th className="px-5 py-3">Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-5 py-8 text-center text-muted">No applications.</td></tr>
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-muted">No applications.</td></tr>
             ) : rows.map((a: any) => {
               const sync = a.app_type === "cert_sync" ? syncDetails(a.member_notes) : null;
               const digital = digitalDetails(a.member_notes);
@@ -54,6 +66,7 @@ export default async function AdminApplications() {
                   {digital && <div className="mt-1 text-xs">{digital.workflowTitle} · {title(digital.submissionMode ?? "digital")} · {digital.documents?.reduce((total, document) => total + (document.annotations?.length ?? 0), 0) ?? 0} mark(s){digital.paperFileName ? ` · ${digital.paperFileName}` : ""}</div>}
                 </td>
                 <td className="px-5 py-3 text-muted">{a.signature_name ? `✓ ${a.signature_name}` : "—"}</td>
+                <td className="px-5 py-3">{!["initial", "renewal", "ceu_workshop", "cert_sync"].includes(a.app_type) ? <span className="text-muted">—</span> : paidApplicationIds.has(a.id) ? <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Fee paid</span> : <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Unpaid</span>}</td>
                 <td className="px-5 py-3 text-muted">{fmt(a.submitted_at)}</td>
                 <td className="px-5 py-3"><AppStatusControl id={a.id} status={a.status} /></td>
               </tr>;

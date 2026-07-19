@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -22,7 +23,11 @@ const CERT_STATUS = [
 const NEEDS_CERT_NUMBERS = new Set(["active_holder", "reciprocity_transfer"]);
 type CertEntry = { number: string; type: string };
 
-export default function SignupPage() {
+function SignupForm() {
+  const params = useSearchParams();
+  // Only ever forward same-site paths (prevents open redirects).
+  const rawNext = params.get("next") || "/account";
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/account";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -81,7 +86,7 @@ export default function SignupPage() {
             cert_status: certStatus,
             ...(certNumbersText ? { cert_numbers: certNumbersText } : {}),
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/account`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         },
       });
       if (error) { setError(error.message); setLoading(false); return; }
@@ -179,5 +184,13 @@ export default function SignupPage() {
         Already have an account? <Link href="/login" className="font-semibold text-brand">Sign in</Link>
       </p>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="px-5 py-20 text-center text-muted">Loading…</div>}>
+      <SignupForm />
+    </Suspense>
   );
 }

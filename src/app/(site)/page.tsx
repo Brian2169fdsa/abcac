@@ -48,6 +48,7 @@ const services = [
 
 const credentials = [
   { code: "CAC – Certified Addiction Counselor", desc: "For entry-level professionals working directly with clients in addiction recovery." },
+  { code: "CADAC – Alcohol & Drug Abuse Counselor", desc: "For experienced counselors specializing in alcohol and drug abuse treatment." },
   { code: "AADC – Advanced Counselor", desc: "For master's-level clinicians with advanced practice skills." },
   { code: "CPRS – Peer Recovery", desc: "For individuals in recovery who want to support others as certified peers." },
   { code: "CCJP / CPS / CCS", desc: "Criminal Justice, Prevention, or Supervision tracks." },

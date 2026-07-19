@@ -74,7 +74,7 @@ export default async function RequestsPage() {
     <>
       <PageHero eyebrow="Member Portal" title="Requests" intro="Submit a name change, request a verification of certification, or start an IC&RC reciprocity transfer." />
 
-      <Section compact title="Name Change">
+      <Section compact id="name-change" title="Name Change">
         <div className="rounded-xl border border-line bg-surface p-6">
           <NameChangeForm currentName={currentName} />
           <RequestsHistoryList
@@ -85,7 +85,7 @@ export default async function RequestsPage() {
         </div>
       </Section>
 
-      <Section compact surface title="Verification of Certification">
+      <Section compact surface id="verification" title="Verification of Certification">
         <div className="rounded-xl border border-line bg-surface p-6">
           <VerificationForm certOptions={certOptions} />
           <RequestsHistoryList
@@ -96,7 +96,7 @@ export default async function RequestsPage() {
         </div>
       </Section>
 
-      <Section compact title="IC&RC Reciprocity">
+      <Section compact id="reciprocity" title="IC&RC Reciprocity">
         <div className="rounded-xl border border-line bg-surface p-6">
           <ReciprocityForm />
           <RequestsHistoryList

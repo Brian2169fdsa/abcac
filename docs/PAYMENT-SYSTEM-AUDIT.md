@@ -1,3 +1,9 @@
+> **HISTORICAL DOCUMENT (morning of 2026-07-19).** The root cause described here was fixed the
+> same day (migrations applied, checkout verified live). Several statements no longer match the
+> code: the portal preview gate was removed entirely, guest checkout no longer exists (payments
+> require a member account), and the onboarding bug is fixed. For current status see
+> `docs/LAUNCH-ASSESSMENT.md`.
+
 # Payment System Audit — Why Checkout Is Broken + How the Whole System Fits Together
 
 > Audited 2026-07-19 against the live deployment (abcac.vercel.app) and the live Supabase

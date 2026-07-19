@@ -21,9 +21,11 @@ interface CheckoutFormProps {
   initialQuantity?: number;
   /** Signed-in member details — pre-fills the payer form inside the portal. */
   prefill?: CheckoutPrefill;
+  /** Application row this fee pays for (admin review shows it as paid). */
+  applicationId?: string;
 }
 
-export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQuantity = 1, prefill }: CheckoutFormProps) {
+export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQuantity = 1, prefill, applicationId }: CheckoutFormProps) {
   const needsCredential = category === "Certification" || category === "Testing";
   const isCeu = category === "CEU Endorsement";
   const isCertificationSync = slug === "certification-sync";
@@ -56,6 +58,7 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug,
+          applicationId: applicationId || undefined,
           credentialLevel: credentialLevel || undefined,
           examMode: examMode || undefined,
           quantity: isCertificationSync ? quantity : undefined,

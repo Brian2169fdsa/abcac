@@ -25,26 +25,28 @@ export const PORTAL_NAV: PortalNavGroup[] = [
       { label: "Personal Information", href: "/account/profile" },
       { label: "Employment Information", href: "/account/experience" },
       { label: "Certificate & Wallet Card", href: "/account/certifications" },
-      { label: "Other Certifications", href: "/account/certifications" },
+      { label: "Other Certifications", href: "/account/certifications#other-certifications" },
     ],
   },
   {
     heading: "Certification",
     items: [
       { label: "Certification", href: "/account/certification" },
+      { label: "Application Status", href: "/account/applications" },
+      { label: "Renewals", href: "/account/renewals" },
       { label: "Exam Registration", href: "/account/testing" },
       { label: "Document Upload", href: "/account/documents" },
       { label: "Continuing Education Unit Tracker", href: "/account/ceus" },
       { label: "Certification Sync", href: "/account/certification-sync" },
-      { label: "Authorizations: Clinical Supervision", href: "/account/experience" },
+      { label: "Clinical Supervision", href: "/account/experience#supervision" },
     ],
   },
   {
     heading: "Requests",
     items: [
-      { label: "Name Change Request", href: "/account/requests" },
-      { label: "Verification of Certification", href: "/account/requests" },
-      { label: "IC&RC Reciprocity Request", href: "/account/requests" },
+      { label: "Name Change Request", href: "/account/requests#name-change" },
+      { label: "Verification of Certification", href: "/account/requests#verification" },
+      { label: "IC&RC Reciprocity Request", href: "/account/requests#reciprocity" },
     ],
   },
   {
