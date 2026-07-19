@@ -39,7 +39,11 @@ export async function POST(req: Request) {
       profile = data;
       existingStripeCustomerId = data?.stripe_customer_id ?? null;
     }
-  } catch { /* guest checkout is permitted only with a complete payment form */ }
+  } catch { /* fall through to the explicit authentication check below */ }
+
+  // All payments happen inside the member portal — checkout requires a signed-in
+  // member so every charge is attributed to an account they can manage it from.
+  if (!memberId) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
 
   let slug = parsed.slug;
   let credentialLevel = parsed.credentialLevel;
@@ -103,6 +107,15 @@ export async function POST(req: Request) {
     }
   }
 
+  // Members with a complete profile don't need to retype payer details.
+  if (!intake && profile) {
+    intake = normalizePaymentIntake({
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      email: profile.email ?? authEmail,
+      phone: profile.phone,
+    });
+  }
   if (!intake) return NextResponse.json({ error: "payment_form_required" }, { status: 400 });
   if (typeof slug !== "string" || !slug) return NextResponse.json({ error: "missing_slug" }, { status: 400 });
   const product = getProductBySlug(slug);

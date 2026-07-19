@@ -21,7 +21,7 @@ vi.mock("@/lib/catalog", () => ({
   getPriceId: (s: string) => getPriceId(s),
 }));
 
-// Supabase server client — by default, a guest (no user).
+// Supabase server client — by default, a signed-in member (checkout requires auth).
 let serverClient: unknown;
 let adminClient: ReturnType<typeof fakeAdminClient>;
 vi.mock("@/lib/supabase/server", () => ({
@@ -89,7 +89,7 @@ const PRODUCT = {
 beforeEach(() => {
   vi.clearAllMocks();
   stripeConfigured = true;
-  serverClient = fakeProfileClient({ user: null });
+  serverClient = fakeProfileClient({ user: { id: "member-1", email: "jamie@example.com" }, profile: null });
   adminClient = fakeAdminClient();
   getProductBySlug.mockReturnValue(PRODUCT);
   getPriceId.mockReturnValue("price_123");
@@ -132,7 +132,15 @@ describe("POST /api/stripe/checkout", () => {
     expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
-  it("builds a guest session with the right price and urls", async () => {
+  it("rejects guest checkout — payments require a member account", async () => {
+    serverClient = fakeProfileClient({ user: null });
+    const res = await POST(req({ slug: "initial-cert" }));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "authentication_required" });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it("builds a member session with the right price and urls", async () => {
     const res = await POST(req({ slug: "initial-cert" }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: "https://stripe.test/session" });
@@ -142,17 +150,25 @@ describe("POST /api/stripe/checkout", () => {
     expect(arg.line_items).toEqual([{ price: "price_123", quantity: 1 }]);
     expect(arg.success_url).toContain("/checkout/success?session_id={CHECKOUT_SESSION_ID}");
     expect(arg.cancel_url).toContain("/checkout/cancel");
-    // No user -> payer email from the required payment form.
-    expect(arg.customer).toBeUndefined();
     expect(arg.customer_email).toBe("jamie@example.com");
-    expect(arg.client_reference_id).toBeUndefined();
+    expect(arg.client_reference_id).toBe("member-1");
     expect(arg.metadata.slug).toBe("initial-cert");
-    expect(arg.metadata.member_id).toBe("");
+    expect(arg.metadata.member_id).toBe("member-1");
     expect(arg.metadata.payment_submission_id).toBe("ps-1");
     expect(adminClient.calls.find((call) => call.table === "payment_submissions" && call.op === "insert")).toBeTruthy();
   });
 
-  it("rejects a generic checkout without an attached payment form", async () => {
+  it("falls back to the member profile when no payment form is posted", async () => {
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      profile: { stripe_customer_id: null, first_name: "Jamie", last_name: "Counselor", email: "jamie@example.com", phone: "480-555-1212" },
+    });
+    const res = await POST(req({ slug: "initial-cert", paymentForm: null }));
+    expect(res.status).toBe(200);
+    expect(sessionsCreate).toHaveBeenCalled();
+  });
+
+  it("rejects a checkout without a payment form when the profile is incomplete", async () => {
     const res = await POST(req({ slug: "initial-cert", paymentForm: null }));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "payment_form_required" });

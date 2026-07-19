@@ -6,24 +6,33 @@ import { Button } from "@/components/ui/button";
 
 const CREDENTIAL_LEVELS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"];
 
+export interface CheckoutPrefill {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 interface CheckoutFormProps {
   slug: string;
   category: string;
   examMode: string | null;
   unitPrice?: number;
   initialQuantity?: number;
+  /** Signed-in member details — pre-fills the payer form inside the portal. */
+  prefill?: CheckoutPrefill;
 }
 
-export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQuantity = 1 }: CheckoutFormProps) {
+export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQuantity = 1, prefill }: CheckoutFormProps) {
   const needsCredential = category === "Certification" || category === "Testing";
   const isCeu = category === "CEU Endorsement";
   const isCertificationSync = slug === "certification-sync";
 
   const [credentialLevel, setCredentialLevel] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState(prefill?.firstName ?? "");
+  const [lastName, setLastName] = useState(prefill?.lastName ?? "");
+  const [email, setEmail] = useState(prefill?.email ?? "");
+  const [phone, setPhone] = useState(prefill?.phone ?? "");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState(Math.min(120, Math.max(1, Math.trunc(initialQuantity))));
@@ -63,7 +72,9 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
       const data = await res.json();
       if (!res.ok || !data.url) {
         setError(
-          data.error === "payments_not_configured"
+          data.error === "authentication_required"
+            ? "Please sign in to your member account to complete this payment."
+            : data.error === "payments_not_configured"
             ? "Online payment isn't enabled yet. Please contact ABCAC to complete this payment."
             : data.error === "price_not_found"
               ? "This item isn't available for checkout yet. Please contact ABCAC."

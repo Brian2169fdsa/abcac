@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Check, ArrowLeft } from "lucide-react";
 import { getProductBySlug, getProducts } from "@/lib/catalog";
 import { PriceTag } from "@/components/price-tag";
-import { CheckoutForm } from "@/components/checkout-form";
+import { SignInToPay } from "@/components/signin-to-pay";
 
 export function generateStaticParams() {
   return getProducts().map((p) => ({ slug: p.slug }));
@@ -18,17 +18,11 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
 
 export default function ProductPage({
   params,
-  searchParams,
 }: {
   params: { slug: string };
-  searchParams?: { quantity?: string };
 }) {
   const product = getProductBySlug(params.slug);
   if (!product) notFound();
-  const requestedQuantity = Number(searchParams?.quantity);
-  const initialQuantity = Number.isFinite(requestedQuantity)
-    ? Math.min(120, Math.max(1, Math.trunc(requestedQuantity)))
-    : 1;
 
   return (
     <div className="mx-auto w-full max-w-content px-5 py-12 md:px-8 md:py-16">
@@ -61,13 +55,7 @@ export default function ProductPage({
         </div>
 
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <CheckoutForm
-            slug={product.slug}
-            category={product.category}
-            examMode={product.examMode}
-            unitPrice={product.price}
-            initialQuantity={initialQuantity}
-          />
+          <SignInToPay slug={product.slug} />
         </div>
       </div>
     </div>
