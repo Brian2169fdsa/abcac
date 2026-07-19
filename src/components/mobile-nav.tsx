@@ -7,14 +7,12 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 import { HOME_LINK, MENU, MENU_LINKS, HEADER_CTA } from "@/lib/nav";
 import { CtaButton } from "@/components/cta-button";
-import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
   open: boolean;
   onClose: () => void;
-  onPortalOpen: () => void;
 }
 
 /**
@@ -22,7 +20,7 @@ interface MobileNavProps {
  * accordions, the simple MENU_LINKS, and the Member Portal / Book an Audit
  * CTAs near the bottom. Desktop uses <MegaMenu /> instead.
  */
-export function MobileNav({ open, onClose, onPortalOpen }: MobileNavProps) {
+export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
   // First group expanded by default; keeps the drawer feeling alive but tidy.
   const [expanded, setExpanded] = useState<number | null>(0);
@@ -178,7 +176,7 @@ export function MobileNav({ open, onClose, onPortalOpen }: MobileNavProps) {
 
         {/* Sticky CTAs near the bottom (thumb-reachable) */}
         <div className="border-t border-line bg-surface px-4 py-4">
-          <Button type="button" className="w-full" onClick={onPortalOpen}>Member Portal</Button>
+          <CtaButton href="/account" className="w-full">Member Portal</CtaButton>
           <CtaButton href={HEADER_CTA.href} variant="outline" className="mt-3 w-full">
             {HEADER_CTA.label}
           </CtaButton>
