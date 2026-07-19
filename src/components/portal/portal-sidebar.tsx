@@ -50,10 +50,10 @@ function NavLink({
       className={cn(
         "block border-l-[3px] border-transparent transition-colors",
         variant === "home"
-          ? "px-6 py-2.5 text-[15px] font-medium text-ink/80"
+          ? "px-6 py-2.5 text-[15px] font-semibold text-ink/85"
           : "py-2.5 pl-7 pr-6 text-sm leading-snug text-muted",
-        "hover:bg-bg hover:text-brand",
-        active && "border-accent bg-accent/10 font-semibold text-brand",
+        "hover:bg-brand/[0.05] hover:text-brand",
+        active && "border-brand bg-brand/[0.07] font-semibold text-brand",
       )}
     >
       {item.label}
@@ -98,7 +98,7 @@ export function PortalSidebar({
       {PORTAL_NAV.map((group, gi) => (
         <div key={gi} className={cn(group.divider && "mt-2 border-t border-line pt-2")}>
           {group.heading && (
-            <div className="px-6 pb-2 pt-5 text-[13px] font-semibold tracking-wide text-brand">
+            <div className="px-6 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-strong">
               {group.heading}
             </div>
           )}

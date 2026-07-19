@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminRole } from "@/lib/auth/roles";
-import { PORTAL_PREVIEW_COOKIE, isPortalPreviewGateDisabled, isValidPortalPreviewToken } from "@/lib/portal-preview";
 
 // Single source of auth truth for the portal/admin areas.
 //
@@ -21,17 +20,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const isPublicPortalFeature = path === "/account/certification-sync" || path === "/account/forms";
-
-  if (path.startsWith("/account") && !isPublicPortalFeature && !isPortalPreviewGateDisabled()) {
-    const previewToken = request.cookies.get(PORTAL_PREVIEW_COOKIE)?.value;
-    if (!(await isValidPortalPreviewToken(previewToken))) {
-      const previewUrl = request.nextUrl.clone();
-      previewUrl.pathname = "/";
-      previewUrl.search = "";
-      previewUrl.searchParams.set("portal", "coming-soon");
-      return NextResponse.redirect(previewUrl);
-    }
-  }
 
   const requestHeaders = new Headers(request.headers);
   // Strip any client-supplied spoof of our trusted header.

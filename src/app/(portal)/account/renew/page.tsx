@@ -29,7 +29,7 @@ export default async function RenewPage() {
         <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
           <div className="text-muted">
             <p>Recertification requires your Ethics and Cultural Diversity hours plus continuing education in your field.</p>
-            <p className="mt-3">Need to pay the $150 renewal fee? <Link href="/store/certification-renewal-2-year-credential-renewal-fee" className="font-semibold text-brand">Pay it here</Link>, then submit this form.</p>
+            <p className="mt-3">Need to pay the $150 renewal fee? <Link href="/account/payments?product=certification-renewal-2-year-credential-renewal-fee" className="font-semibold text-brand">Pay it here</Link>, then submit this form.</p>
           </div>
           <MemberApplicationForm mode="renewal" prefillName={name} />
         </div>
