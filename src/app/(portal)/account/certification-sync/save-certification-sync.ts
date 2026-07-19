@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { pushTaskToClickUp } from "@/lib/clickup";
 import { requireUserId } from "@/lib/auth/current-user";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -102,6 +103,12 @@ export async function saveCertificationSync(input: CertificationSyncInput): Prom
       priority: "high",
       status: "open",
       visible_to_member: true,
+    });
+    void pushTaskToClickUp({
+      title: "Review certification sync request",
+      detail: `${credentials.length} credential(s); ${monthsForward} month(s) forward; ${submissionMode} submission.`,
+      priority: "high",
+      adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/applications`,
     });
   }
 

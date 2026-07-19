@@ -3,6 +3,7 @@
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/auth/current-user";
+import { pushTaskToClickUp } from "@/lib/clickup";
 import { sendEmail } from "@/lib/email";
 import { getFormDefinition, getFormWorkflow, getWorkflowForms } from "@/lib/form-library";
 import { isDigitalPacketComplete } from "@/lib/digital-form-progress";
@@ -114,6 +115,12 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
       priority: "high",
       status: "open",
       visible_to_member: true,
+    });
+    void pushTaskToClickUp({
+      title: `Review ${workflow.title}`,
+      detail: `${submissionMode === "digital" ? "Digital" : "Uploaded paper"} application packet submitted.`,
+      priority: "high",
+      adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/applications/${data.id}`,
     });
   }
 
