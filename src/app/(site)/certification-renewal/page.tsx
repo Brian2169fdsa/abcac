@@ -321,7 +321,7 @@ export default function CertificationRenewalPage() {
                     <PriceTag product={renewal} className="mt-2 text-3xl font-semibold text-brand" />
                     <p className="mt-2 max-w-xl text-sm text-muted">Includes renewal application processing, CE-document review, and issuance of a new two-year credential when approved.</p>
                   </div>
-                  <CtaButton href={`/store/${renewal.slug}`} size="lg" className="w-full shrink-0 sm:w-auto">Pay Renewal Fee</CtaButton>
+                  <CtaButton href="/account/certification" size="lg" className="w-full shrink-0 sm:w-auto">Pay Renewal Fee</CtaButton>
                 </div>
               </div>
             )}

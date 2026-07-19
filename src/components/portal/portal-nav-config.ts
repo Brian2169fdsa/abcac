@@ -31,11 +31,10 @@ export const PORTAL_NAV: PortalNavGroup[] = [
   {
     heading: "Certification",
     items: [
-      { label: "Initial Certification", href: "/account/forms" },
+      { label: "Certification", href: "/account/certification" },
       { label: "Exam Registration", href: "/account/testing" },
       { label: "Document Upload", href: "/account/documents" },
       { label: "Continuing Education Unit Tracker", href: "/account/ceus" },
-      { label: "Certification Renewal", href: "/account/renew" },
       { label: "Certification Sync", href: "/account/certification-sync" },
       { label: "Authorizations: Clinical Supervision", href: "/account/experience" },
     ],

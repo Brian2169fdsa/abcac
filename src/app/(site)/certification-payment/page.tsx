@@ -100,7 +100,7 @@ export default function CertificationPaymentPage() {
                     </li>
                   ))}
                 </ul>
-                <CtaButton href={`/store/${product!.slug}`} size="lg" className="mt-7 w-full justify-center">{button}</CtaButton>
+                <CtaButton href="/account/certification" size="lg" className="mt-7 w-full justify-center">{button}</CtaButton>
               </article>
             ))}
           </div>

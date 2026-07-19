@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Mail, Menu, LogOut, ArrowLeft, Shield } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NotificationBell } from "@/components/portal/notification-bell";
@@ -96,8 +96,9 @@ export function PortalTopbar({
         </div>
       </div>
 
-      {/* White brand bar */}
-      <div className="flex items-center gap-3 border-b border-line bg-surface px-3 py-2.5 md:gap-4 md:px-6">
+      {/* Brand bar — mirrors the main site header: maroon wordmark on a
+          translucent cream surface with the same backdrop blur. */}
+      <div className="flex items-center gap-3 border-b border-line/80 bg-surface/95 px-3 py-2.5 backdrop-blur-xl md:gap-4 md:px-6">
         <button
           type="button"
           onClick={onMenuToggle}
@@ -106,21 +107,15 @@ export function PortalTopbar({
         >
           <Menu className="h-6 w-6" aria-hidden />
         </button>
-        <Image
-          src="/brand/abcac-logo.jpg"
-          alt="ABCAC logo"
-          width={48}
-          height={48}
-          className="h-9 w-9 flex-shrink-0 rounded-lg object-contain md:h-12 md:w-12"
-        />
-        <div className="leading-tight">
-          <h1 className="font-display text-[13px] font-semibold text-brand md:text-[18px]">
-            Arizona Board for Certification of Addiction Counselors
-          </h1>
-          <p className="text-[10px] tracking-wide text-muted md:text-[11px]">
-            IC&amp;RC Member Board — Member Portal
-          </p>
-        </div>
+        <Link href="/account" aria-label="Member portal home" className="shrink-0">
+          <BrandLogo className="h-9 md:h-12" />
+        </Link>
+        <span className="hidden rounded-full border border-brand/20 bg-brand/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand sm:inline-block">
+          Member Portal
+        </span>
+        <p className="ml-auto hidden text-[11px] tracking-wide text-muted md:block">
+          IC&amp;RC Member Board — Phoenix, Arizona
+        </p>
       </div>
     </>
   );
