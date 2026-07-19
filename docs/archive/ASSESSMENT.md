@@ -1,3 +1,7 @@
+> **Historical planning document — superseded.** This is a point-in-time planning artifact
+> written against a much older code baseline and no longer reflects the shipped platform.
+> See [`docs/LAUNCH-ASSESSMENT.md`](../LAUNCH-ASSESSMENT.md) for the current state.
+
 # ABCAC Platform — Pre-Launch Assessment (2026-06-09)
 
 Consolidated gap report from a 6-agent read-only audit: member↔admin parity, end-to-end

@@ -120,7 +120,8 @@ receipts. Without it, email is a **silent no-op** (nothing sends, nothing breaks
 ## 5. After setting keys — smoke test
 1. Redeploy in Vercel.
 2. Open the site → chat widget should respond (AI on).
-3. `/store` → start a checkout → should reach Stripe (payments on).
+3. Sign in as a member, then `/store` → start a checkout → should reach Stripe
+   (payments on). Checkout is portal-only — unauthenticated checkout returns 401.
 4. Trigger a verification/contact email → arrives (email on).
 5. Sign in as `brianreinhart3617@gmail.com` → `/admin` loads (superadmin),
    member detail → create a task, mark a CEU reviewed, send a message.
@@ -128,8 +129,8 @@ receipts. Without it, email is a **silent no-op** (nothing sends, nothing breaks
 ---
 
 ## Account facts (current)
-- Live DB: migrations **001–027 applied**, RLS on **100%** of tables.
+- Live DB: migrations **001–041 applied**, RLS on **100%** of tables.
 - God account: **brianreinhart3617@gmail.com** = `superadmin` (full access).
 - Member Portal button points to the unified **`/account`** app. The legacy
-  static `/portal` remains as a fallback until you confirm cutover — then it can
-  be removed.
+  static `/portal` entry points are retired — `/portal` and `/portal/admin`
+  permanently redirect to `/account` and `/admin`.
