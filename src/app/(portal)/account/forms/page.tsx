@@ -35,7 +35,7 @@ export default async function FormsPage({ searchParams }: { searchParams: { cred
   const { data: applications } = await admin.from("applications").select("id,status,member_notes").eq("member_id", memberId).eq("app_type", workflow.appType).eq("cert_type", workflow.certType).in("status", ["draft", "submitted"]).order("submitted_at", { ascending: false }).limit(5);
   const application = (applications ?? []).find((row) => parseDetails(row.member_notes));
   const details = parseDetails(application?.member_notes ?? null);
-  const { data: signers } = application?.id ? await admin.from("application_signer_requests").select("id,form_key,signer_role,signer_name,signer_email,status,signed_at").eq("application_id", application.id).order("created_at") : { data: [] };
+  const { data: signers } = application?.id ? await admin.from("application_signer_requests").select("id,form_key,signer_role,signer_name,signer_email,status,signed_at,annotations").eq("application_id", application.id).order("created_at") : { data: [] };
   const packet = getWorkflowForms(workflow);
 
   return <><PageHero eyebrow="Digital application" title={workflow.title} intro="Complete the unchanged ABCAC forms online, save your draft, return later, and invite supervisors or attestors when their signatures are required." /><Section><DigitalApplicationWorkspace workflowKey={workflow.key} workflowTitle={workflow.title} certType={workflow.certType} packet={packet} applicationId={application?.id ?? null} initialMode={details?.submissionMode ?? "digital"} initialStatus={application?.status ?? null} initialDocuments={details?.documents ?? []} initialPaperPath={details?.paperDocumentPath ?? null} initialPaperName={details?.paperFileName ?? null} signerRequests={signers ?? []} /></Section></>;

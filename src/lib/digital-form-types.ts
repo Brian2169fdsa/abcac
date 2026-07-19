@@ -2,12 +2,27 @@ export type AnnotationType = "text" | "check" | "date" | "signature";
 
 export type FormAnnotation = {
   id: string;
+  fieldId?: string;
   page: number;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
+  label?: string;
   value: string;
   type: AnnotationType;
   author: "applicant" | "signer";
+};
+
+export type SmartFormField = {
+  id: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  type: AnnotationType;
+  label: string;
 };
 
 export type DigitalFormDocument = {

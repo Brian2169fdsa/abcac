@@ -2,17 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, Check, PenLine, Type, X } from "lucide-react";
-import type { FormAnnotation, AnnotationType } from "@/lib/digital-form-types";
+import type { FormAnnotation, AnnotationType, SmartFormField } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
+import { detectSmartFormFields } from "@/lib/pdf-smart-fields";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+type PdfPage = {
+  getViewport: (options: { scale: number }) => {
+    width: number;
+    height: number;
+    convertToViewportRectangle: (rectangle: [number, number, number, number]) => number[];
+  };
+  getOperatorList: () => Promise<{ fnArray: number[]; argsArray: unknown[] }>;
+  getTextContent: () => Promise<{ items: Array<{ str?: string; width?: number; height?: number; transform?: number[] }> }>;
+  render: (options: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void>; cancel: () => void };
+};
+
 type PdfDocument = {
   numPages: number;
-  getPage: (pageNumber: number) => Promise<{
-    getViewport: (options: { scale: number }) => { width: number; height: number };
-    render: (options: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void>; cancel: () => void };
-  }>;
+  getPage: (pageNumber: number) => Promise<PdfPage>;
   destroy: () => Promise<void>;
 };
 
@@ -30,6 +39,7 @@ export function DigitalPdfEditor({
   author = "applicant",
   signatureName,
   onSignatureNameChange,
+  onFieldsDetected,
   readOnly = false,
 }: {
   form: FormDefinition;
@@ -38,14 +48,23 @@ export function DigitalPdfEditor({
   author?: "applicant" | "signer";
   signatureName: string;
   onSignatureNameChange: (value: string) => void;
+  onFieldsDetected?: (fields: SmartFormField[]) => void;
   readOnly?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const onFieldsDetectedRef = useRef(onFieldsDetected);
   const [pdfDocument, setPdfDocument] = useState<PdfDocument | null>(null);
+  const [constructPathOperator, setConstructPathOperator] = useState<number | null>(null);
+  const [smartFields, setSmartFields] = useState<SmartFormField[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [tool, setTool] = useState<AnnotationType>("text");
   const [loading, setLoading] = useState(true);
   const pageAnnotations = annotations.filter((annotation) => annotation.page === pageNumber);
+  const pageFields = smartFields.filter((field) => field.page === pageNumber);
+
+  useEffect(() => {
+    onFieldsDetectedRef.current = onFieldsDetected;
+  }, [onFieldsDetected]);
 
   useEffect(() => {
     let active = true;
@@ -54,6 +73,7 @@ export function DigitalPdfEditor({
     setPageNumber(1);
     import("pdfjs-dist").then(async (pdfjs) => {
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      setConstructPathOperator(pdfjs.OPS.constructPath);
       loaded = await pdfjs.getDocument(form.href).promise as unknown as PdfDocument;
       if (active) {
         setPdfDocument(loaded);
@@ -67,6 +87,31 @@ export function DigitalPdfEditor({
       if (loaded) void loaded.destroy();
     };
   }, [form.href]);
+
+  useEffect(() => {
+    if (!pdfDocument || constructPathOperator === null) return;
+    let active = true;
+    void Promise.all(Array.from({ length: pdfDocument.numPages }, async (_, index) => {
+      const page = await pdfDocument.getPage(index + 1);
+      const [operatorList, textContent] = await Promise.all([page.getOperatorList(), page.getTextContent()]);
+      return detectSmartFormFields({
+        pageNumber: index + 1,
+        viewport: page.getViewport({ scale: 1 }),
+        operatorFunctions: operatorList.fnArray,
+        operatorArguments: operatorList.argsArray,
+        constructPathOperator,
+        textItems: textContent.items,
+      });
+    })).then((detected) => {
+      if (!active) return;
+      const fields = detected.flat();
+      setSmartFields(fields);
+      onFieldsDetectedRef.current?.(fields);
+    }).catch(() => {
+      if (active) setSmartFields([]);
+    });
+    return () => { active = false; };
+  }, [constructPathOperator, pdfDocument]);
 
   useEffect(() => {
     if (!pdfDocument || !canvasRef.current) return;
@@ -114,6 +159,27 @@ export function DigitalPdfEditor({
     onChange(annotations.filter((annotation) => annotation.id !== id));
   }
 
+  function setSmartFieldValue(field: SmartFormField, value: string) {
+    const existing = annotations.find((annotation) => annotation.fieldId === field.id);
+    if (existing) {
+      updateAnnotation(existing.id, value);
+      return;
+    }
+    onChange([...annotations, {
+      id: crypto.randomUUID(),
+      fieldId: field.id,
+      page: field.page,
+      x: field.x,
+      y: field.y,
+      width: field.width,
+      height: field.height,
+      label: field.label,
+      value,
+      type: field.type,
+      author,
+    }]);
+  }
+
   return (
     <div>
       {!readOnly && <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-line bg-bg p-3">
@@ -133,28 +199,49 @@ export function DigitalPdfEditor({
       <div className="overflow-auto rounded-xl border border-line bg-[#d7d9dc] p-3 sm:p-5">
         <div className="relative mx-auto w-fit max-w-full bg-white shadow-xl" onClick={addAnnotation}>
           <canvas ref={canvasRef} className={cn("block h-auto max-w-full", loading && "min-h-[560px] min-w-[420px] animate-pulse bg-line")} />
-          <div className="absolute inset-0">
-            {pageAnnotations.map((annotation) => (
+          <div className="pointer-events-none absolute inset-0">
+            {pageFields.map((field) => {
+              const annotation = pageAnnotations.find((item) => item.fieldId === field.id);
+              const style = { left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%` };
+              if (field.type === "check") {
+                return <button key={field.id} type="button" data-annotation disabled={readOnly} aria-label={field.label} aria-pressed={Boolean(annotation?.value)} onClick={() => setSmartFieldValue(field, annotation?.value ? "" : "✓")} className={cn("pointer-events-auto absolute flex items-center justify-center border border-info/35 bg-info/[0.04] text-sm font-bold text-brand transition hover:bg-info/15", annotation?.value && "bg-white/80")} style={style}>{annotation?.value ? "✓" : ""}</button>;
+              }
+              return <input
+                key={field.id}
+                data-annotation
+                value={annotation?.value ?? ""}
+                disabled={readOnly}
+                onChange={(event) => {
+                  setSmartFieldValue(field, event.target.value);
+                  if (field.type === "signature" && event.target.value && !signatureName) onSignatureNameChange(event.target.value);
+                }}
+                className={cn("pointer-events-auto absolute border-0 border-b border-info/45 bg-info/[0.035] px-1 text-[clamp(8px,1.15vw,14px)] text-ink outline-none transition hover:bg-info/10 focus:bg-white/90 focus:ring-1 focus:ring-info", field.type === "signature" && "font-serif italic")}
+                style={style}
+                placeholder={field.type === "signature" ? "Signature" : ""}
+                aria-label={field.label}
+              />;
+            })}
+            {pageAnnotations.filter((annotation) => !annotation.fieldId).map((annotation) => (
               <div key={annotation.id} data-annotation className="group absolute min-w-[30px]" style={{ left: `${annotation.x * 100}%`, top: `${annotation.y * 100}%`, transform: "translateY(-50%)" }}>
                 {annotation.type === "check" ? (
-                  <button type="button" disabled={readOnly} className="rounded bg-white/80 px-1 text-xl font-bold text-brand" onClick={() => removeAnnotation(annotation.id)}>✓</button>
+                  <button type="button" disabled={readOnly} className="pointer-events-auto rounded bg-white/80 px-1 text-xl font-bold text-brand" onClick={() => removeAnnotation(annotation.id)}>✓</button>
                 ) : (
                   <input
                     autoFocus={!annotation.value}
                     value={annotation.value}
                     disabled={readOnly}
                     onChange={(event) => updateAnnotation(annotation.id, event.target.value)}
-                    className={cn("min-w-[130px] border-0 border-b border-dashed border-brand bg-white/80 px-1 py-0.5 text-sm text-ink outline-none", annotation.type === "signature" && "font-serif italic")}
+                    className={cn("pointer-events-auto min-w-[130px] border-0 border-b border-dashed border-brand bg-white/80 px-1 py-0.5 text-sm text-ink outline-none", annotation.type === "signature" && "font-serif italic")}
                     aria-label={`${annotation.type} annotation`}
                   />
                 )}
-                {!readOnly && <button type="button" onClick={() => removeAnnotation(annotation.id)} className="absolute -right-2.5 -top-2.5 hidden h-5 w-5 items-center justify-center rounded-full bg-brand text-white group-hover:flex" aria-label="Remove field"><X className="h-3 w-3" /></button>}
+                {!readOnly && <button type="button" onClick={() => removeAnnotation(annotation.id)} className="pointer-events-auto absolute -right-2.5 -top-2.5 hidden h-5 w-5 items-center justify-center rounded-full bg-brand text-white group-hover:flex" aria-label="Remove field"><X className="h-3 w-3" /></button>}
               </div>
             ))}
           </div>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted">{readOnly ? "Read-only review of marks placed on the unchanged ABCAC form." : "Choose a tool, then click the exact blank or checkbox on the original form. Every mark is saved to your account and remains tied to this unchanged PDF page."}</p>
+      <p className="mt-3 text-xs text-muted">{readOnly ? "Read-only review of marks placed on the unchanged ABCAC form." : "Printed blanks, checkboxes, dates, and signature lines are directly fillable. Use the tools above only when you need to add something the original form did not provide."}</p>
     </div>
   );
 }

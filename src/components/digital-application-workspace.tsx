@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileDown, Loader2, Send, Upload } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { DigitalFormDocument } from "@/lib/digital-form-types";
+import type { DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { inviteApplicationSigner, saveDigitalApplication } from "@/app/(portal)/account/forms/actions";
 
-type SignerRequest = { id: string; form_key: string; signer_role: string; signer_name: string; signer_email: string; status: string; signed_at: string | null };
+type SignerRequest = { id: string; form_key: string; signer_role: string; signer_name: string; signer_email: string; status: string; signed_at: string | null; annotations?: FormAnnotation[] | null };
 
 export function DigitalApplicationWorkspace({
   workflowKey,
@@ -51,11 +51,22 @@ export function DigitalApplicationWorkspace({
   const [signerName, setSignerName] = useState("");
   const [signerEmail, setSignerEmail] = useState("");
   const [signerRole, setSignerRole] = useState("Supervisor / Attestor");
-  const [signerFormKey, setSignerFormKey] = useState(packet[packet.length - 1]?.key ?? "");
+  const [signerFormKey, setSignerFormKey] = useState(packet[0]?.key ?? "");
+  const [signerRequestsState, setSignerRequestsState] = useState(signerRequests);
+  const [detectedFields, setDetectedFields] = useState<Record<string, SmartFormField[]>>({});
+  const [signatureFieldId, setSignatureFieldId] = useState("");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const locked = initialStatus === "submitted";
   const activeForm = packet.find((form) => form.key === activeFormKey) ?? packet[0];
   const activeDocument = documents.find((document) => document.formKey === activeFormKey) ?? { formKey: activeFormKey, annotations: [] };
+  const usedSignatureFieldIds = new Set(signerRequestsState.flatMap((request) => request.annotations ?? []).map((annotation) => annotation.fieldId).filter(Boolean));
+  const availableSignatureFields = (detectedFields[signerFormKey] ?? []).filter((field) => field.type === "signature" && !usedSignatureFieldIds.has(field.id));
+
+  useEffect(() => {
+    if (!availableSignatureFields.some((field) => field.id === signatureFieldId)) {
+      setSignatureFieldId(availableSignatureFields[0]?.id ?? "");
+    }
+  }, [availableSignatureFields, signatureFieldId]);
 
   function setActiveAnnotations(annotations: DigitalFormDocument["annotations"]) {
     setDocuments((current) => current.map((document) => document.formKey === activeFormKey ? { ...document, annotations } : document));
@@ -90,10 +101,17 @@ export function DigitalApplicationWorkspace({
       if (!saved.ok) { setError(saved.error); return; }
       savedId = saved.id; setApplicationId(saved.id);
     }
+    const signatureField = availableSignatureFields.find((field) => field.id === signatureFieldId);
+    if (!signatureField) { setError("Open this form and choose an available signature line before inviting the signer."); return; }
     setBusy("invite");
-    const result = await inviteApplicationSigner({ applicationId: savedId, formKey: signerFormKey, signerRole, signerName, signerEmail });
+    const result = await inviteApplicationSigner({ applicationId: savedId, formKey: signerFormKey, signerRole, signerName, signerEmail, signatureField });
     if (!result.ok) setError(result.error);
-    else { setMessage(result.message ?? "Signer invited."); setShareUrl(result.shareUrl ?? null); setSignerName(""); setSignerEmail(""); }
+    else {
+      setMessage(result.message ?? "Signer invited.");
+      setShareUrl(result.shareUrl ?? null);
+      setSignerRequestsState((current) => [...current, { id: result.id, form_key: signerFormKey, signer_role: signerRole, signer_name: signerName, signer_email: signerEmail, status: "pending", signed_at: null, annotations: [{ id: result.id, fieldId: signatureField.id, page: signatureField.page, x: signatureField.x, y: signatureField.y, width: signatureField.width, height: signatureField.height, label: signatureField.label, value: "", type: "signature", author: "signer" }] }]);
+      setSignerName(""); setSignerEmail("");
+    }
     setBusy(null);
   }
 
@@ -110,12 +128,12 @@ export function DigitalApplicationWorkspace({
         <>
           <div className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
             <div className="mb-5 flex flex-wrap gap-2">{packet.map((form) => <button key={form.key} type="button" onClick={() => setActiveFormKey(form.key)} className={`rounded-full px-4 py-2 text-sm font-semibold ${activeFormKey === form.key ? "bg-info text-white" : "border border-line bg-bg text-ink"}`}>{form.shortTitle} · {documents.find((document) => document.formKey === form.key)?.annotations.length ?? 0} fields</button>)}</div>
-            {activeForm && <DigitalPdfEditor form={activeForm} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} readOnly={locked} />}
+            {activeForm && <DigitalPdfEditor form={activeForm} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} onFieldsDetected={(fields) => setDetectedFields((current) => ({ ...current, [activeForm.key]: fields }))} readOnly={locked} />}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-2xl border border-line bg-surface p-5"><h3>Need someone else to complete or sign a section?</h3><p className="mt-2 text-sm text-muted">Invite a supervisor, evaluator, colleague, or attestor. They receive a private link to complete their part of the unchanged form and sign it later.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><input value={signerName} onChange={(event) => setSignerName(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Signer name" /><input value={signerEmail} onChange={(event) => setSignerEmail(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Signer email" type="email" /><input value={signerRole} onChange={(event) => setSignerRole(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Role" /><select value={signerFormKey} onChange={(event) => setSignerFormKey(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm">{packet.map((form) => <option key={form.key} value={form.key}>{form.shortTitle}</option>)}</select></div><Button type="button" className="mt-4" onClick={inviteSigner} disabled={busy !== null}>{busy === "invite" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Invite signer</Button>{shareUrl && <div className="mt-4 rounded-lg bg-bg p-3 text-xs"><p className="font-semibold">Secure signer link</p><p className="mt-1 break-all text-muted">{shareUrl}</p></div>}</div>
-            <div className="rounded-2xl border border-line bg-surface p-5"><h3>Signer status</h3><div className="mt-3 space-y-3">{signerRequests.length ? signerRequests.map((request) => <div key={request.id} className="rounded-lg border border-line p-3 text-sm"><div className="font-semibold">{request.signer_name} · {request.signer_role}</div><div className="text-muted">{request.signer_email} · {request.status}</div></div>) : <p className="text-sm text-muted">No outside signers invited yet.</p>}</div></div>
+            <div className="rounded-2xl border border-line bg-surface p-5"><h3>Need someone else to complete or sign a section?</h3><p className="mt-2 text-sm text-muted">Invite a supervisor, evaluator, colleague, or attestor. Their private form opens with the selected signature space already prepared.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><input value={signerName} onChange={(event) => setSignerName(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Signer name" /><input value={signerEmail} onChange={(event) => setSignerEmail(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Signer email" type="email" /><input value={signerRole} onChange={(event) => setSignerRole(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm" placeholder="Role" /><select value={signerFormKey} onChange={(event) => { setSignerFormKey(event.target.value); setActiveFormKey(event.target.value); }} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm">{packet.map((form) => <option key={form.key} value={form.key}>{form.shortTitle}</option>)}</select><select value={signatureFieldId} onChange={(event) => setSignatureFieldId(event.target.value)} className="h-11 rounded-lg border border-line bg-bg px-3 text-sm sm:col-span-2" disabled={!availableSignatureFields.length}><option value="">{availableSignatureFields.length ? "Choose signature space" : "No unassigned signature spaces found"}</option>{availableSignatureFields.map((field, index) => <option key={field.id} value={field.id}>Signature space {index + 1} · page {field.page} · {field.label}</option>)}</select></div><Button type="button" className="mt-4" onClick={inviteSigner} disabled={busy !== null || !signatureFieldId}>{busy === "invite" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Invite signer</Button>{shareUrl && <div className="mt-4 rounded-lg bg-bg p-3 text-xs"><p className="font-semibold">Secure signer link</p><p className="mt-1 break-all text-muted">{shareUrl}</p></div>}</div>
+            <div className="rounded-2xl border border-line bg-surface p-5"><h3>Signer status</h3><div className="mt-3 space-y-3">{signerRequestsState.length ? signerRequestsState.map((request) => <div key={request.id} className="rounded-lg border border-line p-3 text-sm"><div className="font-semibold">{request.signer_name} · {request.signer_role}</div><div className="text-muted">{request.signer_email} · {request.status}</div><div className="mt-1 text-xs text-muted">{request.annotations?.find((annotation) => annotation.type === "signature")?.label ?? "Signature space reserved"}</div></div>) : <p className="text-sm text-muted">No outside signers invited yet.</p>}</div></div>
           </div>
         </>
       ) : (

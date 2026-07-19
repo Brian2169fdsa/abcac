@@ -14,9 +14,13 @@ function clean(value: unknown, max = 500) {
 function sanitizeAnnotations(value: FormAnnotation[]) {
   return (value ?? []).slice(0, 800).map((annotation) => ({
     id: clean(annotation.id, 80),
+    fieldId: annotation.fieldId ? clean(annotation.fieldId, 120) : undefined,
     page: Math.max(1, Math.trunc(Number(annotation.page) || 1)),
     x: Math.max(0, Math.min(1, Number(annotation.x) || 0)),
     y: Math.max(0, Math.min(1, Number(annotation.y) || 0)),
+    width: annotation.width === undefined ? undefined : Math.max(0.01, Math.min(1, Number(annotation.width) || 0.01)),
+    height: annotation.height === undefined ? undefined : Math.max(0.01, Math.min(1, Number(annotation.height) || 0.01)),
+    label: annotation.label ? clean(annotation.label, 240) : undefined,
     value: clean(annotation.value, 2000),
     type: ["text", "check", "date", "signature"].includes(annotation.type) ? annotation.type : "text",
     author: "signer" as const,

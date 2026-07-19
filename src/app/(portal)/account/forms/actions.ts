@@ -1,11 +1,11 @@
 "use server";
 
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/auth/current-user";
 import { sendEmail } from "@/lib/email";
 import { getFormDefinition, getFormWorkflow, getWorkflowForms } from "@/lib/form-library";
-import type { DigitalApplicationDetails, DigitalFormDocument, FormAnnotation } from "@/lib/digital-form-types";
+import type { DigitalApplicationDetails, DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export type SaveDigitalApplicationInput = {
@@ -31,9 +31,13 @@ function escapeHtml(value: string) {
 function sanitizeAnnotations(value: FormAnnotation[]) {
   return (value ?? []).slice(0, 800).map((annotation) => ({
     id: clean(annotation.id, 80),
+    fieldId: annotation.fieldId ? clean(annotation.fieldId, 120) : undefined,
     page: Math.max(1, Math.trunc(Number(annotation.page) || 1)),
     x: Math.max(0, Math.min(1, Number(annotation.x) || 0)),
     y: Math.max(0, Math.min(1, Number(annotation.y) || 0)),
+    width: annotation.width === undefined ? undefined : Math.max(0.01, Math.min(1, Number(annotation.width) || 0.01)),
+    height: annotation.height === undefined ? undefined : Math.max(0.01, Math.min(1, Number(annotation.height) || 0.01)),
+    label: annotation.label ? clean(annotation.label, 240) : undefined,
     value: clean(annotation.value, 2000),
     type: ["text", "check", "date", "signature"].includes(annotation.type) ? annotation.type : "text",
     author: annotation.author === "signer" ? "signer" : "applicant",
@@ -119,6 +123,7 @@ export async function inviteApplicationSigner(input: {
   signerRole: string;
   signerName: string;
   signerEmail: string;
+  signatureField?: SmartFormField | null;
 }): Promise<ActionResult> {
   const memberId = await requireUserId();
   const admin = createSupabaseAdminClient();
@@ -135,6 +140,24 @@ export async function inviteApplicationSigner(input: {
   const signerRole = clean(input.signerRole, 120);
   if (!signerName || !signerRole || !/^\S+@\S+\.\S+$/.test(signerEmail)) return { ok: false, error: "Enter the signer's name, role, and email." };
 
+  const field = input.signatureField;
+  if (!field || field.type !== "signature" || field.page < 1) {
+    return { ok: false, error: "Choose an available signature line for this signer." };
+  }
+  const reservedSignature: FormAnnotation = {
+    id: randomUUID(),
+    fieldId: clean(field.id, 120),
+    page: Math.trunc(field.page),
+    x: Math.max(0, Math.min(1, Number(field.x) || 0)),
+    y: Math.max(0, Math.min(1, Number(field.y) || 0)),
+    width: Math.max(0.01, Math.min(1, Number(field.width) || 0.1)),
+    height: Math.max(0.01, Math.min(1, Number(field.height) || 0.03)),
+    label: clean(field.label || "Signature", 240),
+    value: "",
+    type: "signature",
+    author: "signer",
+  };
+
   const token = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const { data, error } = await admin.from("application_signer_requests").insert({
@@ -145,6 +168,7 @@ export async function inviteApplicationSigner(input: {
     signer_name: signerName,
     signer_email: signerEmail,
     token_hash: tokenHash,
+    annotations: [reservedSignature],
   }).select("id").single();
   if (error || !data?.id) return { ok: false, error: error?.message || "Unable to create the signer request." };
 
