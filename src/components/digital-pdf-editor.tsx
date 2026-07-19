@@ -119,10 +119,15 @@ export function DigitalPdfEditor({
     let renderTask: { promise: Promise<void>; cancel: () => void } | null = null;
     void pdfDocument.getPage(pageNumber).then((page) => {
       if (cancelled || !canvasRef.current) return;
-      const viewport = page.getViewport({ scale: 1.45 });
+      // Render at device-pixel resolution but display at the base size so the
+      // form text stays crisp instead of blurring when the canvas is downscaled.
+      const outputScale = Math.min(3, Math.max(1.5, window.devicePixelRatio || 1) * 1.45);
+      const baseViewport = page.getViewport({ scale: 1.45 });
+      const viewport = page.getViewport({ scale: outputScale });
       const canvas = canvasRef.current;
       canvas.width = viewport.width;
       canvas.height = viewport.height;
+      canvas.style.width = `${Math.round(baseViewport.width)}px`;
       const context = canvas.getContext("2d");
       if (!context) return;
       renderTask = page.render({ canvasContext: context, viewport });
@@ -205,7 +210,7 @@ export function DigitalPdfEditor({
               const annotation = pageAnnotations.find((item) => item.fieldId === field.id);
               const style = { left: `${field.x * 100}%`, top: `${field.y * 100}%`, width: `${field.width * 100}%`, height: `${field.height * 100}%` };
               if (field.type === "check") {
-                return <button key={field.id} type="button" data-annotation disabled={readOnly} aria-label={field.label} aria-pressed={Boolean(annotation?.value)} onClick={() => setSmartFieldValue(field, annotation?.value ? "" : "✓")} className={cn("pointer-events-auto absolute flex items-center justify-center border border-info/35 bg-info/[0.04] text-sm font-bold text-brand transition hover:bg-info/15", annotation?.value && "bg-white/80")} style={style}>{annotation?.value ? "✓" : ""}</button>;
+                return <button key={field.id} type="button" data-annotation disabled={readOnly} aria-label={field.label} aria-pressed={Boolean(annotation?.value)} onClick={() => setSmartFieldValue(field, annotation?.value ? "" : "✓")} className="pointer-events-auto absolute flex items-center justify-center border border-info/40 bg-transparent text-sm font-bold text-brand transition hover:border-info hover:shadow-[0_0_0_2px_rgba(59,130,246,0.25)]" style={style}>{annotation?.value ? "✓" : ""}</button>;
               }
               return <input
                 key={field.id}
@@ -216,7 +221,7 @@ export function DigitalPdfEditor({
                   setSmartFieldValue(field, event.target.value);
                   if (field.type === "signature" && event.target.value && !signatureName) onSignatureNameChange(event.target.value);
                 }}
-                className={cn("pointer-events-auto absolute border-0 border-b border-info/45 bg-info/[0.035] px-1 text-[clamp(8px,1.15vw,14px)] text-ink outline-none transition hover:bg-info/10 focus:bg-white/90 focus:ring-1 focus:ring-info", field.type === "signature" && "font-serif italic")}
+                className={cn("pointer-events-auto absolute border-0 border-b-2 border-info/50 bg-transparent px-1 text-[clamp(8px,1.15vw,14px)] font-semibold text-blue-900 outline-none transition hover:border-info focus:border-info focus:shadow-[0_0_0_2px_rgba(59,130,246,0.25)]", field.type === "signature" && "font-serif italic")}
                 style={style}
                 placeholder={field.type === "signature" ? "Signature" : ""}
                 aria-label={field.label}

@@ -7,7 +7,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
 import { hasCompletedEntry, isDigitalFormComplete, isDigitalPacketComplete } from "@/lib/digital-form-progress";
+import { getNativeFormSchema, getNativeSignatureFields, missingRequiredNativeFields } from "@/lib/native-form-schemas";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
+import { NativeFormEditor } from "@/components/native-form-editor";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { inviteApplicationSigner, saveDigitalApplication } from "@/app/(portal)/account/forms/actions";
 
@@ -65,7 +67,24 @@ export function DigitalApplicationWorkspace({
   const completedForms = documents.filter(isDigitalFormComplete).length;
   const digitalPacketComplete = isDigitalPacketComplete(documents, packet.map((form) => form.key));
   const usedSignatureFieldIds = new Set(signerRequestsState.flatMap((request) => request.annotations ?? []).map((annotation) => annotation.fieldId).filter(Boolean));
+  const activeNativeSchema = activeForm ? getNativeFormSchema(activeForm.key) : undefined;
   const availableSignatureFields = (detectedFields[signerFormKey] ?? []).filter((field) => field.type === "signature" && !usedSignatureFieldIds.has(field.id));
+
+  // Native (HTML) forms know their signature fields up front — no PDF scan needed.
+  useEffect(() => {
+    setDetectedFields((current) => {
+      const seeded = { ...current };
+      let changed = false;
+      for (const form of packet) {
+        const schema = getNativeFormSchema(form.key);
+        if (schema && !seeded[form.key]?.length) {
+          seeded[form.key] = getNativeSignatureFields(schema);
+          changed = true;
+        }
+      }
+      return changed ? seeded : current;
+    });
+  }, [packet]);
 
   useEffect(() => {
     if (!availableSignatureFields.some((field) => field.id === signatureFieldId)) {
@@ -81,6 +100,13 @@ export function DigitalApplicationWorkspace({
     if (!hasCompletedEntry(activeDocument)) {
       setError("Fill at least one field in this form before marking your section complete.");
       return;
+    }
+    if (activeNativeSchema && !isDigitalFormComplete(activeDocument)) {
+      const missing = missingRequiredNativeFields(activeNativeSchema, activeDocument.annotations);
+      if (missing.length) {
+        setError(`Complete the required fields before confirming this form: ${missing.slice(0, 5).join("; ")}${missing.length > 5 ? ` — and ${missing.length - 5} more` : ""}.`);
+        return;
+      }
     }
     setError(null);
     const completed = !isDigitalFormComplete(activeDocument);
@@ -160,8 +186,10 @@ export function DigitalApplicationWorkspace({
           </div>
 
           <div className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">Required part {activeFormIndex + 1} of {packet.length}</p><h2 className="mt-1 text-xl">{activeForm?.title}</h2><p className="mt-1 text-sm text-muted">Complete your portion directly on the original ABCAC form. Your work saves to this packet.</p></div><span className="rounded-full bg-bg px-3 py-1.5 text-xs font-semibold text-muted">{activeDocument.annotations.length} fields entered</span></div>
-            {activeForm && <DigitalPdfEditor form={activeForm} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} onFieldsDetected={(fields) => setDetectedFields((current) => ({ ...current, [activeForm.key]: fields }))} readOnly={locked} />}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">Required part {activeFormIndex + 1} of {packet.length}</p><h2 className="mt-1 text-xl">{activeForm?.title}</h2><p className="mt-1 text-sm text-muted">{activeNativeSchema ? "This is the digital version of the ABCAC form — every field is a real input. Your work saves to this packet." : "Complete your portion directly on the original ABCAC form. Your work saves to this packet."}</p></div><span className="rounded-full bg-bg px-3 py-1.5 text-xs font-semibold text-muted">{activeDocument.annotations.filter((annotation) => annotation.value.trim()).length} fields entered</span></div>
+            {activeForm && (activeNativeSchema
+              ? <NativeFormEditor schema={activeNativeSchema} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} readOnly={locked} />
+              : <DigitalPdfEditor form={activeForm} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} onFieldsDetected={(fields) => setDetectedFields((current) => ({ ...current, [activeForm.key]: fields }))} readOnly={locked} />)}
             {!locked && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-bg p-4"><div><p className="text-sm font-semibold">Finished your portion of this form?</p><p className="mt-1 text-xs text-muted">Confirm it here. You can reopen it before submitting the full packet.</p></div><Button type="button" variant={isDigitalFormComplete(activeDocument) ? "outline" : "primary"} onClick={toggleActiveFormComplete}>{isDigitalFormComplete(activeDocument) ? "Reopen this form" : <>Confirm this form <ArrowRight className="h-4 w-4" /></>}</Button></div>}
           </div>
 
