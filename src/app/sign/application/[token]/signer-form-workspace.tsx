@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
+import { NativeFormEditor } from "@/components/native-form-editor";
 import { Button } from "@/components/ui/button";
 import type { FormAnnotation } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
+import { getNativeFormSchema } from "@/lib/native-form-schemas";
 import { saveSignerForm } from "./actions";
 
 export function SignerFormWorkspace({
@@ -51,7 +53,12 @@ export function SignerFormWorkspace({
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-line bg-surface p-5"><p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Private signer request</p><h1 className="mt-1 text-3xl">{form.title}</h1><p className="mt-2 text-muted">Complete only the sections assigned to you as <strong>{signerRole}</strong>. Your marks are saved separately from the applicant&apos;s work.</p></div>
-      <DigitalPdfEditor form={form} annotations={annotations} onChange={setAnnotations} author="signer" signatureName={signatureName} onSignatureNameChange={setSignatureName} />
+      {(() => {
+        const schema = getNativeFormSchema(form.key);
+        return schema
+          ? <NativeFormEditor schema={schema} annotations={annotations} onChange={setAnnotations} author="signer" signatureName={signatureName} onSignatureNameChange={setSignatureName} />
+          : <DigitalPdfEditor form={form} annotations={annotations} onChange={setAnnotations} author="signer" signatureName={signatureName} onSignatureNameChange={setSignatureName} />;
+      })()}
       <label className="flex gap-3 rounded-xl border border-line bg-surface p-4 text-sm"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 h-4 w-4" /><span>I, <strong>{signatureName || signerName}</strong>, confirm that the information I entered is true and that typing and placing my name on this form is my electronic signature.</span></label>
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div>}
       {message && <div className="rounded-xl border border-success/20 bg-success/10 p-4 text-sm font-semibold text-success">{message}</div>}
