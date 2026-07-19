@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileDown, Loader2, Send, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, FileDown, Loader2, Send, Upload } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import type { FormDefinition } from "@/lib/form-library";
+import { hasCompletedEntry, isDigitalFormComplete, isDigitalPacketComplete } from "@/lib/digital-form-progress";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { inviteApplicationSigner, saveDigitalApplication } from "@/app/(portal)/account/forms/actions";
@@ -38,6 +39,7 @@ export function DigitalApplicationWorkspace({
   signerRequests: SignerRequest[];
 }) {
   const [applicationId, setApplicationId] = useState(initialApplicationId);
+  const [status, setStatus] = useState(initialStatus);
   const [mode, setMode] = useState(initialMode);
   const [documents, setDocuments] = useState<DigitalFormDocument[]>(packet.map((form) => initialDocuments.find((document) => document.formKey === form.key) ?? { formKey: form.key, annotations: [] }));
   const [activeFormKey, setActiveFormKey] = useState(packet[0]?.key ?? "");
@@ -56,9 +58,12 @@ export function DigitalApplicationWorkspace({
   const [detectedFields, setDetectedFields] = useState<Record<string, SmartFormField[]>>({});
   const [signatureFieldId, setSignatureFieldId] = useState("");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const locked = initialStatus === "submitted";
+  const locked = status === "submitted";
   const activeForm = packet.find((form) => form.key === activeFormKey) ?? packet[0];
-  const activeDocument = documents.find((document) => document.formKey === activeFormKey) ?? { formKey: activeFormKey, annotations: [] };
+  const activeDocument = documents.find((document) => document.formKey === activeFormKey) ?? { formKey: activeFormKey, annotations: [], completed: false };
+  const activeFormIndex = packet.findIndex((form) => form.key === activeFormKey);
+  const completedForms = documents.filter(isDigitalFormComplete).length;
+  const digitalPacketComplete = isDigitalPacketComplete(documents, packet.map((form) => form.key));
   const usedSignatureFieldIds = new Set(signerRequestsState.flatMap((request) => request.annotations ?? []).map((annotation) => annotation.fieldId).filter(Boolean));
   const availableSignatureFields = (detectedFields[signerFormKey] ?? []).filter((field) => field.type === "signature" && !usedSignatureFieldIds.has(field.id));
 
@@ -69,7 +74,18 @@ export function DigitalApplicationWorkspace({
   }, [availableSignatureFields, signatureFieldId]);
 
   function setActiveAnnotations(annotations: DigitalFormDocument["annotations"]) {
-    setDocuments((current) => current.map((document) => document.formKey === activeFormKey ? { ...document, annotations } : document));
+    setDocuments((current) => current.map((document) => document.formKey === activeFormKey ? { ...document, annotations, completed: false, completedAt: null } : document));
+  }
+
+  function toggleActiveFormComplete() {
+    if (!hasCompletedEntry(activeDocument)) {
+      setError("Fill at least one field in this form before marking your section complete.");
+      return;
+    }
+    setError(null);
+    const completed = !isDigitalFormComplete(activeDocument);
+    setDocuments((current) => current.map((document) => document.formKey === activeFormKey ? { ...document, completed, completedAt: completed ? new Date().toISOString() : null } : document));
+    if (completed && activeFormIndex >= 0 && activeFormIndex < packet.length - 1) setActiveFormKey(packet[activeFormIndex + 1].key);
   }
 
   async function uploadPaper() {
@@ -89,7 +105,7 @@ export function DigitalApplicationWorkspace({
     setBusy(status === "draft" ? "save" : "submit"); setError(null); setMessage(null);
     const result = await saveDigitalApplication({ id: applicationId, workflowKey, submissionMode: mode, status, documents, paperDocumentPath: paperPath, paperFileName: paperName });
     if (!result.ok) setError(result.error);
-    else { setApplicationId(result.id); setMessage(status === "draft" ? "Draft saved. You can safely leave and return later." : "Application submitted to ABCAC for review."); }
+    else { setApplicationId(result.id); setStatus(status); setMessage(status === "draft" ? "Draft saved. You can safely leave and return later." : "Application submitted to ABCAC for review."); }
     setBusy(null);
   }
 
@@ -126,9 +142,27 @@ export function DigitalApplicationWorkspace({
 
       {mode === "digital" ? (
         <>
+          <div className="rounded-2xl border border-brand/15 bg-gradient-to-br from-brand/[0.07] via-surface to-info/[0.05] p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div><p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Your required application packet</p><h2 className="mt-1 text-2xl">Complete every form below</h2><p className="mt-2 max-w-2xl text-sm text-muted">This application has {packet.length} required {packet.length === 1 ? "form" : "forms"}. We keep them together, save your progress, and guide you from one to the next.</p></div>
+              <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm">{completedForms} of {packet.length} confirmed</div>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {packet.map((form, index) => {
+                const document = documents.find((item) => item.formKey === form.key) ?? { formKey: form.key, annotations: [] };
+                const complete = isDigitalFormComplete(document);
+                const active = activeFormKey === form.key;
+                return <button key={form.key} type="button" onClick={() => setActiveFormKey(form.key)} className={`rounded-xl border p-4 text-left transition ${active ? "border-info bg-white shadow-md ring-2 ring-info/10" : "border-line bg-white/70 hover:border-brand/30 hover:bg-white"}`}>
+                  <div className="flex items-start gap-3">{complete ? <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-success" /> : <Circle className="mt-0.5 h-6 w-6 shrink-0 text-muted/50" />}<div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Part {index + 1} of {packet.length} · Required</p><h3 className="mt-1 text-base">{form.shortTitle}</h3><p className="mt-1 text-xs text-muted">{form.pages} pages · {document.annotations.length} fields entered</p><p className={`mt-2 text-xs font-semibold ${complete ? "text-success" : active ? "text-info" : "text-brand"}`}>{complete ? "Your section is confirmed" : active ? "Currently working here" : "Still needs your attention"}</p></div></div>
+                </button>;
+              })}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <div className="mb-5 flex flex-wrap gap-2">{packet.map((form) => <button key={form.key} type="button" onClick={() => setActiveFormKey(form.key)} className={`rounded-full px-4 py-2 text-sm font-semibold ${activeFormKey === form.key ? "bg-info text-white" : "border border-line bg-bg text-ink"}`}>{form.shortTitle} · {documents.find((document) => document.formKey === form.key)?.annotations.length ?? 0} fields</button>)}</div>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">Required part {activeFormIndex + 1} of {packet.length}</p><h2 className="mt-1 text-xl">{activeForm?.title}</h2><p className="mt-1 text-sm text-muted">Complete your portion directly on the original ABCAC form. Your work saves to this packet.</p></div><span className="rounded-full bg-bg px-3 py-1.5 text-xs font-semibold text-muted">{activeDocument.annotations.length} fields entered</span></div>
             {activeForm && <DigitalPdfEditor form={activeForm} annotations={activeDocument.annotations} onChange={setActiveAnnotations} signatureName={signatureName} onSignatureNameChange={setSignatureName} onFieldsDetected={(fields) => setDetectedFields((current) => ({ ...current, [activeForm.key]: fields }))} readOnly={locked} />}
+            {!locked && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-bg p-4"><div><p className="text-sm font-semibold">Finished your portion of this form?</p><p className="mt-1 text-xs text-muted">Confirm it here. You can reopen it before submitting the full packet.</p></div><Button type="button" variant={isDigitalFormComplete(activeDocument) ? "outline" : "primary"} onClick={toggleActiveFormComplete}>{isDigitalFormComplete(activeDocument) ? "Reopen this form" : <>Confirm this form <ArrowRight className="h-4 w-4" /></>}</Button></div>}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -142,7 +176,7 @@ export function DigitalApplicationWorkspace({
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div>}
       {message && <div className="rounded-xl border border-success/20 bg-success/10 p-4 text-sm font-semibold text-success">{message}</div>}
-      {locked ? <div className="sticky bottom-4 z-20 rounded-2xl border border-success/20 bg-success/95 p-4 text-center text-sm font-semibold text-white shadow-lg backdrop-blur">This packet has been submitted and is locked for ABCAC review. Outside signers may still complete invited sections.</div> : <div className="sticky bottom-4 z-20 flex flex-wrap justify-end gap-3 rounded-2xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur"><Button type="button" variant="outline" size="lg" onClick={() => save("draft")} disabled={busy !== null}>{busy === "save" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save draft"}</Button><Button type="button" size="lg" onClick={() => save("submitted")} disabled={busy !== null}>{busy === "submit" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit to ABCAC"}</Button></div>}
+      {locked ? <div className="sticky bottom-4 z-20 rounded-2xl border border-success/20 bg-success/95 p-4 text-center text-sm font-semibold text-white shadow-lg backdrop-blur">This packet has been submitted and is locked for ABCAC review. Outside signers may still complete invited sections.</div> : <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur"><div className="text-sm"><p className="font-semibold">{mode === "paper" || digitalPacketComplete ? "Your packet is ready to submit." : `${completedForms} of ${packet.length} required forms confirmed`}</p>{mode === "digital" && !digitalPacketComplete && <p className="mt-1 text-xs text-muted">Complete and confirm every form before submitting.</p>}</div><div className="flex flex-wrap gap-3"><Button type="button" variant="outline" size="lg" onClick={() => save("draft")} disabled={busy !== null}>{busy === "save" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save draft"}</Button><Button type="button" size="lg" onClick={() => save("submitted")} disabled={busy !== null || (mode === "digital" && !digitalPacketComplete)}>{busy === "submit" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit complete packet"}</Button></div></div>}
     </div>
   );
 }

@@ -28,6 +28,8 @@ export type SmartFormField = {
 export type DigitalFormDocument = {
   formKey: string;
   annotations: FormAnnotation[];
+  completed?: boolean;
+  completedAt?: string | null;
 };
 
 export type DigitalApplicationDetails = {

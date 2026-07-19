@@ -18,6 +18,12 @@ describe("digital ABCAC form library", () => {
     }
   });
 
+  it("requires both the general and supplemental forms for counselor credentials", () => {
+    expect(getFormWorkflow("initial:cac")?.formKeys).toEqual(["initial-general", "initial-cac-supplement"]);
+    expect(getFormWorkflow("initial:cadac")?.formKeys).toEqual(["initial-general", "initial-cadac-aadc-supplement"]);
+    expect(getFormWorkflow("initial:aadc")?.formKeys).toEqual(["initial-general", "initial-cadac-aadc-supplement"]);
+  });
+
   it("provides every renewal, board, and CEU workflow", () => {
     const keys = ["renewal:counselor", "renewal:cps", "renewal:ccs", "renewal:ccjp", "renewal:cprs", "board:member", "ceu:workshop", "testing:accommodations"];
     expect(FORM_WORKFLOWS).toHaveLength(15);

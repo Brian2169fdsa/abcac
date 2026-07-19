@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/auth/current-user";
 import { sendEmail } from "@/lib/email";
 import { getFormDefinition, getFormWorkflow, getWorkflowForms } from "@/lib/form-library";
+import { isDigitalPacketComplete } from "@/lib/digital-form-progress";
 import type { DigitalApplicationDetails, DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -53,10 +54,15 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
 
   const documents = (input.documents ?? [])
     .filter((document) => allowedKeys.has(document.formKey))
-    .map((document) => ({ formKey: document.formKey, annotations: sanitizeAnnotations(document.annotations) }));
+    .map((document) => ({
+      formKey: document.formKey,
+      annotations: sanitizeAnnotations(document.annotations),
+      completed: document.completed === true,
+      completedAt: document.completed === true ? clean(document.completedAt || new Date().toISOString(), 40) : null,
+    }));
   const submissionMode = input.submissionMode === "paper" ? "paper" : "digital";
-  if (input.status === "submitted" && submissionMode === "digital" && !documents.some((document) => document.annotations.length > 0)) {
-    return { ok: false, error: "Complete the digital packet before submitting it." };
+  if (input.status === "submitted" && submissionMode === "digital" && !isDigitalPacketComplete(documents, workflow.formKeys)) {
+    return { ok: false, error: `Complete and confirm all ${workflow.formKeys.length} required form${workflow.formKeys.length === 1 ? "" : "s"} before submitting this packet.` };
   }
   if (input.status === "submitted" && submissionMode === "paper" && !input.paperDocumentPath) {
     return { ok: false, error: "Upload your completed paper packet before submitting it." };
