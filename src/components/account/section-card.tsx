@@ -20,7 +20,7 @@ export function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
       {(title || action) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div>

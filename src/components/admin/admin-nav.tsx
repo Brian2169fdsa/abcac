@@ -64,8 +64,8 @@ export function AdminNav({ counts, onNavigate }: { counts: AdminCounts; onNaviga
             className={cn(
               "flex items-center justify-between border-l-[3px] px-5 py-2.5 text-sm transition-colors",
               active
-                ? "border-accent bg-accent/10 font-semibold text-brand"
-                : "border-transparent text-ink/75 hover:bg-bg hover:text-brand",
+                ? "border-brand bg-brand/[0.07] font-semibold text-brand"
+                : "border-transparent text-ink/75 hover:bg-brand/[0.05] hover:text-brand",
             )}
           >
             <span>{t.label}</span>

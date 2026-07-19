@@ -12,7 +12,7 @@ export function WelcomeBanner({
   message: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-brand to-brand-600 p-7 text-white md:p-8">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-600 p-7 text-white md:p-8">
       {/* Decorative light glow, matching the static portal's ::after flourish. */}
       <div
         aria-hidden

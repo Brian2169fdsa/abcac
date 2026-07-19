@@ -17,9 +17,9 @@ export function KpiCard({
   progress?: number;
 }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted">{label}</div>
-      <div className="mt-1.5 font-display text-2xl font-bold text-brand">{value}</div>
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</div>
+      <div className="mt-2 font-display text-3xl font-bold text-ink">{value}</div>
       {sub && <div className="mt-1 text-sm text-muted">{sub}</div>}
       {typeof progress === "number" && (
         <div
