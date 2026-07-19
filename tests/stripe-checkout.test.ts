@@ -23,17 +23,40 @@ vi.mock("@/lib/catalog", () => ({
 
 // Supabase server client — by default, a guest (no user).
 let serverClient: unknown;
+let adminClient: ReturnType<typeof fakeAdminClient>;
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: () => serverClient,
+  createSupabaseAdminClient: () => adminClient,
 }));
 
 import { POST } from "@/app/api/stripe/checkout/route";
 
 function req(body: unknown): Request {
+  const withPaymentForm = body && typeof body === "object" && !Array.isArray(body) && "slug" in body && !("paymentForm" in body)
+    ? { ...body, paymentForm: PAYMENT_FORM }
+    : body;
   return new Request("http://localhost/api/stripe/checkout", {
     method: "POST",
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    body: typeof withPaymentForm === "string" ? withPaymentForm : JSON.stringify(withPaymentForm),
   });
+}
+
+const PAYMENT_FORM = { firstName: "Jamie", lastName: "Counselor", email: "jamie@example.com", phone: "480-555-1212" };
+
+function fakeAdminClient() {
+  const calls: { table: string; op: string; payload: unknown }[] = [];
+  return {
+    calls,
+    from(table: string) {
+      const builder: Record<string, unknown> = {};
+      builder.insert = (payload: unknown) => { calls.push({ table, op: "insert", payload }); return builder; };
+      builder.update = (payload: unknown) => { calls.push({ table, op: "update", payload }); return builder; };
+      builder.select = () => builder;
+      builder.eq = () => builder;
+      builder.single = async () => ({ data: { id: "ps-1" }, error: null });
+      return builder;
+    },
+  };
 }
 
 // A chainable supabase builder whose terminal methods resolve to { data }.
@@ -41,6 +64,8 @@ function fakeProfileClient(opts: {
   user: { id: string; email?: string } | null;
   profile?: { stripe_customer_id?: string | null } | null;
   testingRequest?: Record<string, unknown> | null;
+  reciprocityRequest?: Record<string, unknown> | null;
+  syncApplication?: Record<string, unknown> | null;
 }) {
   return {
     auth: { getUser: async () => ({ data: { user: opts.user } }) },
@@ -48,7 +73,7 @@ function fakeProfileClient(opts: {
       const builder: Record<string, unknown> = {};
       builder.select = () => builder;
       builder.eq = () => builder;
-      builder.maybeSingle = async () => ({ data: table === "testing_requests" ? opts.testingRequest ?? null : opts.profile ?? null });
+      builder.maybeSingle = async () => ({ data: table === "testing_requests" ? opts.testingRequest ?? null : table === "reciprocity_requests" ? opts.reciprocityRequest ?? null : table === "applications" ? opts.syncApplication ?? null : opts.profile ?? null });
       return builder;
     },
   };
@@ -65,9 +90,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   stripeConfigured = true;
   serverClient = fakeProfileClient({ user: null });
+  adminClient = fakeAdminClient();
   getProductBySlug.mockReturnValue(PRODUCT);
   getPriceId.mockReturnValue("price_123");
-  sessionsCreate.mockResolvedValue({ url: "https://stripe.test/session" });
+  sessionsCreate.mockResolvedValue({ id: "cs_test", url: "https://stripe.test/session" });
 });
 
 describe("POST /api/stripe/checkout", () => {
@@ -116,12 +142,21 @@ describe("POST /api/stripe/checkout", () => {
     expect(arg.line_items).toEqual([{ price: "price_123", quantity: 1 }]);
     expect(arg.success_url).toContain("/checkout/success?session_id={CHECKOUT_SESSION_ID}");
     expect(arg.cancel_url).toContain("/checkout/cancel");
-    // No user -> no customer / customer_email / client_reference_id.
+    // No user -> payer email from the required payment form.
     expect(arg.customer).toBeUndefined();
-    expect(arg.customer_email).toBeUndefined();
+    expect(arg.customer_email).toBe("jamie@example.com");
     expect(arg.client_reference_id).toBeUndefined();
     expect(arg.metadata.slug).toBe("initial-cert");
     expect(arg.metadata.member_id).toBe("");
+    expect(arg.metadata.payment_submission_id).toBe("ps-1");
+    expect(adminClient.calls.find((call) => call.table === "payment_submissions" && call.op === "insert")).toBeTruthy();
+  });
+
+  it("rejects a generic checkout without an attached payment form", async () => {
+    const res = await POST(req({ slug: "initial-cert", paymentForm: null }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "payment_form_required" });
+    expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
   it("uses the requested month quantity for certification sync", async () => {
@@ -173,11 +208,16 @@ describe("POST /api/stripe/checkout", () => {
     expect(res.status).toBe(200);
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.customer).toBeUndefined();
-    expect(arg.customer_email).toBe("m2@example.com");
+    expect(arg.customer_email).toBe("jamie@example.com");
     expect(arg.client_reference_id).toBe("user-2");
   });
 
   it("forwards reciprocity metadata markers", async () => {
+    serverClient = fakeProfileClient({
+      user: { id: "user-1", email: "m@example.com" },
+      profile: { stripe_customer_id: null, first_name: "Morgan", last_name: "Lee", email: "m@example.com", phone: "4805551212" } as any,
+      reciprocityRequest: { id: "rr-9", member_id: "user-1", direction: "out_of_az", credential: "CADAC", destination: "Nevada", status: "submitted", payment_status: "pending" },
+    });
     const res = await POST(req({ slug: "initial-cert", reciprocityRequestId: "rr-9" }));
     expect(res.status).toBe(200);
     const arg = sessionsCreate.mock.calls[0][0];
@@ -189,7 +229,7 @@ describe("POST /api/stripe/checkout", () => {
     serverClient = fakeProfileClient({
       user: { id: "user-test", email: "tester@example.com" },
       profile: { stripe_customer_id: null },
-      testingRequest: { id: "tr-1", member_id: "user-test", exam_code: "ADC", testing_mode: "remote", seeks_abcac_credential: true, credential_level: "CAC", status: "awaiting_payment" },
+      testingRequest: { id: "tr-1", member_id: "user-test", exam_code: "ADC", testing_mode: "remote", seeks_abcac_credential: true, credential_level: "CAC", status: "awaiting_payment", purchaser_first_name: "Jamie", purchaser_last_name: "Counselor", purchaser_email: "jamie@example.com", purchaser_phone: "4805551212", tester_first_name: "Taylor", tester_last_name: "Tester", tester_email: "tester@example.com" },
     });
     getProductBySlug.mockReturnValue({ ...PRODUCT, slug: "testing-for-licensure-with-azbbhe-remote-proctored-exam", name: "Remote testing", category: "Testing" });
     getPriceId.mockImplementation((slug: string) => slug.includes("certification-only") ? "price_cert" : "price_test");

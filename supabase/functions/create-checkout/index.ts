@@ -50,6 +50,32 @@ Deno.serve(async (req) => {
     if (invoice.member_id !== user.id) return json({ error: "forbidden" }, 403);
     if (invoice.status === "paid") return json({ error: "already_paid" }, 409);
 
+    const firstName = String(user.user_metadata?.first_name ?? user.user_metadata?.given_name ?? "Member");
+    const lastName = String(user.user_metadata?.last_name ?? user.user_metadata?.family_name ?? "Account holder");
+    const payerEmail = user.email ?? String(user.user_metadata?.email ?? "");
+    const payerPhone = String(user.phone ?? user.user_metadata?.phone ?? "Not provided");
+    if (!payerEmail) return json({ error: "payment_profile_incomplete" }, 400);
+
+    const { data: paymentSubmission, error: submissionError } = await admin
+      .from("payment_submissions")
+      .insert({
+        member_id: user.id,
+        form_type: "invoice",
+        linked_record_type: "invoices",
+        linked_record_id: invoice.id,
+        product_slug: "invoice",
+        product_name: invoice.description,
+        payer_first_name: firstName,
+        payer_last_name: lastName,
+        payer_email: payerEmail,
+        payer_phone: payerPhone,
+        reference_number: invoice.invoice_number,
+        form_payload: { invoiceNumber: invoice.invoice_number, description: invoice.description },
+      })
+      .select("id")
+      .single();
+    if (submissionError || !paymentSubmission?.id) return json({ error: "payment_form_save_failed" }, 500);
+
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
     const base = origin ?? Deno.env.get("VERCEL_URL") ?? "https://portal.abcac.org";
 
@@ -66,11 +92,26 @@ Deno.serve(async (req) => {
           },
         },
       }],
-      customer_email: user.email,
-      metadata: { invoice_id: invoice.id, member_id: invoice.member_id },
+      customer_email: payerEmail,
+      client_reference_id: user.id,
+      metadata: {
+        invoice_id: invoice.id,
+        member_id: invoice.member_id,
+        product_name: invoice.description,
+        slug: "invoice",
+        payment_submission_id: paymentSubmission.id,
+        form_type: "invoice",
+        linked_record_type: "invoices",
+        linked_record_id: invoice.id,
+      },
       success_url: base + "/?payment=success",
       cancel_url: base + "/?payment=cancelled",
     });
+
+    await admin.from("payment_submissions").update({
+      status: "checkout_created",
+      stripe_session_id: session.id,
+    }).eq("id", paymentSubmission.id);
 
     return json({ url: session.url });
   } catch (err) {

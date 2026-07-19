@@ -146,7 +146,7 @@ export function CertificationSyncForm({
         body: JSON.stringify({
           slug: "certification-sync",
           quantity: monthsForward,
-          metadata: { payment_type: "cert_sync", sync_application_id: id },
+          syncApplicationId: id,
         }),
       });
       const data = await response.json();

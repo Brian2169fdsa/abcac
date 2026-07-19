@@ -18,7 +18,7 @@ const sendEmail = vi.fn(async () => {});
 vi.mock("@/lib/email", () => ({ sendEmail: (...a: unknown[]) => sendEmail(...a) }));
 
 vi.mock("@/lib/site-config", () => ({
-  siteConfig: { name: "ABCAC", shortName: "ABCAC" },
+  siteConfig: { name: "ABCAC", shortName: "ABCAC", contact: { email: "abcac@abcac.org", emailHref: "mailto:abcac@abcac.org", phone: "480-980-1770" } },
 }));
 
 let adminClient: ReturnType<typeof makeAdmin>;
@@ -41,6 +41,7 @@ function makeAdmin(opts: {
   reads?: Partial<{
     payments: unknown; // idempotency lookup (.maybeSingle)
     profile: unknown; // profiles read (.maybeSingle)
+    paymentSubmission: unknown;
   }>;
 } = {}) {
   const calls: Call[] = [];
@@ -63,6 +64,7 @@ function makeAdmin(opts: {
     b.maybeSingle = async () => {
       if (table === "payments") return { data: reads.payments ?? null };
       if (table === "profiles") return { data: reads.profile ?? null };
+      if (table === "payment_submissions") return { data: reads.paymentSubmission ?? null };
       return { data: null };
     };
     void pendingOp;
@@ -137,7 +139,7 @@ describe("POST /api/stripe/webhook", () => {
   });
 
   it("writes a payment row on checkout.session.completed", async () => {
-    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" } } });
+    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" }, paymentSubmission: { id: "ps-1", form_type: "general_payment", linked_record_type: null, linked_record_id: null, payer_first_name: "Jo", payer_last_name: "Member", payer_email: "m@example.com", payer_phone: "4805551212", reference_number: null, notes: null } } });
     constructEvent.mockReturnValue({
       id: "evt_1",
       type: "checkout.session.completed",
@@ -156,6 +158,7 @@ describe("POST /api/stripe/webhook", () => {
             member_id: "user-1",
             credential_level: "CACI",
             exam_mode: "remote",
+            payment_submission_id: "ps-1",
           },
         },
       },
@@ -179,6 +182,7 @@ describe("POST /api/stripe/webhook", () => {
       credential_level: "CACI",
       exam_mode: "remote",
       status: "paid",
+      payment_submission_id: "ps-1",
     });
 
     // Persists the stripe_customer_id back onto the profile.
@@ -188,8 +192,9 @@ describe("POST /api/stripe/webhook", () => {
     expect(profileUpdate!.payload).toMatchObject({ stripe_customer_id: "cus_9" });
 
     // Sends a best-effort receipt email.
-    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledTimes(2);
     expect(sendEmail.mock.calls[0][0]).toMatchObject({ to: "m@example.com" });
+    expect(sendEmail.mock.calls[1][0]).toMatchObject({ to: "abcac@abcac.org" });
   });
 
   it("marks a reciprocity request paid when metadata flags it", async () => {

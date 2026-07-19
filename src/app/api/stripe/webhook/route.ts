@@ -58,6 +58,11 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const session = event.data.object as Stripe.Checkout.Session;
   const meta = session.metadata ?? {};
   const memberId = session.client_reference_id || meta.member_id || null;
+  const paymentSubmission = await markPaymentSubmissionPaid(admin, meta.payment_submission_id, {
+    stripeSessionId: session.id,
+    amountCents: session.amount_total ?? 0,
+    currency: session.currency ?? "usd",
+  });
 
   // If this checkout was paying an IC&RC reciprocity OUT transfer fee ($150),
   // flip the reciprocity_requests row to paid and record the session id. The
@@ -118,6 +123,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
 
   await writePayment(admin, {
     member_id: memberId,
+    payment_submission_id: meta.payment_submission_id || null,
     stripe_session_id: session.id,
     stripe_event_id: event.id,
     slug: meta.slug ?? "",
@@ -129,53 +135,14 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     exam_mode: meta.exam_mode || null,
     status: "paid",
   });
-
-  // Best-effort receipt email — never throws, never affects the 200 response.
-  if (memberId) {
-    try {
-      const { data: member } = await admin
-        .from("profiles")
-        .select("email,first_name")
-        .eq("id", memberId)
-        .maybeSingle();
-
-      if (member?.email) {
-        const amountDollars =
-          session.amount_total != null
-            ? `$${(session.amount_total / 100).toFixed(2)}`
-            : "an amount";
-        const productName = escapeHtml(meta.product_name || "your purchase");
-        const greeting = member.first_name ? `Hi ${escapeHtml(member.first_name)},` : "Hi,";
-
-        const html = `
-<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
-  <h2 style="color:#1a3c5e">ABCAC Payment Receipt</h2>
-  <p>${greeting}</p>
-  <p>This email confirms that we have received your payment for <strong>${productName}</strong>.</p>
-  <table style="border-collapse:collapse;width:100%;margin:16px 0">
-    <tr>
-      <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Product</td>
-      <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right">${productName}</td>
-    </tr>
-    <tr>
-      <td style="padding:8px 0;color:#6b7280">Amount paid</td>
-      <td style="padding:8px 0;text-align:right"><strong>${amountDollars}</strong></td>
-    </tr>
-  </table>
-  <p style="color:#6b7280;font-size:14px">If you have any questions about your payment, please contact us at <a href="mailto:info@abcac.org">info@abcac.org</a>.</p>
-  <p style="color:#6b7280;font-size:12px;margin-top:24px">${siteConfig.shortName} &mdash; ${siteConfig.name}</p>
-</div>`.trim();
-
-        await sendEmail({
-          to: member.email,
-          subject: "Your ABCAC payment receipt",
-          html,
-        });
-      }
-    } catch (err) {
-      console.error("receipt email skipped:", err);
-    }
-  }
+  await sendPaymentEmails(admin, {
+    memberId,
+    paymentSubmission,
+    productName: meta.product_name || "ABCAC payment",
+    amountCents: session.amount_total ?? 0,
+    currency: session.currency ?? "usd",
+    stripeReference: session.id,
+  });
 
   // Persist the Stripe customer id on the profile so future checkouts and portal
   // lookups can use it directly (avoids the email-based customer list search).
@@ -231,12 +198,25 @@ async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
     }
   }
 
+  const invoiceWithMetadata = invoice as Stripe.Invoice & {
+    subscription_details?: { metadata?: Record<string, string> | null } | null;
+    parent?: { subscription_details?: { metadata?: Record<string, string> | null } | null } | null;
+  };
+  const meta = invoiceWithMetadata.subscription_details?.metadata
+    ?? invoiceWithMetadata.parent?.subscription_details?.metadata
+    ?? {};
+  const paymentSubmission = meta.payment_submission_id
+    ? await getPaymentSubmission(admin, meta.payment_submission_id)
+    : null;
+  const productName = meta.product_name || invoice.lines.data[0]?.description || "Subscription renewal";
+
   await writePayment(admin, {
     member_id: memberId,
+    payment_submission_id: meta.payment_submission_id || null,
     stripe_session_id: (invoice.id as string) ?? "",
     stripe_event_id: event.id,
     slug: "",
-    product_name: invoice.lines.data[0]?.description ?? "Subscription renewal",
+    product_name: productName,
     amount_cents: invoice.amount_paid ?? 0,
     currency: invoice.currency ?? "usd",
     mode: "subscription",
@@ -244,10 +224,19 @@ async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
     exam_mode: null,
     status: "paid",
   });
+  await sendPaymentEmails(admin, {
+    memberId,
+    paymentSubmission,
+    productName,
+    amountCents: invoice.amount_paid ?? 0,
+    currency: invoice.currency ?? "usd",
+    stripeReference: String(invoice.id),
+  });
 }
 
 interface PaymentRow {
   member_id: string | null;
+  payment_submission_id: string | null;
   stripe_session_id: string;
   stripe_event_id: string;
   slug: string;
@@ -263,6 +252,116 @@ interface PaymentRow {
 async function writePayment(admin: Admin, row: PaymentRow) {
   const { error } = await admin.from("payments").insert(row);
   if (error) console.error("payments insert failed:", error.message);
+}
+
+interface PaymentSubmission {
+  id: string;
+  form_type: string;
+  linked_record_type: string | null;
+  linked_record_id: string | null;
+  payer_first_name: string;
+  payer_last_name: string;
+  payer_email: string;
+  payer_phone: string;
+  reference_number: string | null;
+  notes: string | null;
+}
+
+async function getPaymentSubmission(admin: Admin, id?: string | null): Promise<PaymentSubmission | null> {
+  if (!id) return null;
+  try {
+    const { data } = await admin.from("payment_submissions")
+      .select("id,form_type,linked_record_type,linked_record_id,payer_first_name,payer_last_name,payer_email,payer_phone,reference_number,notes")
+      .eq("id", id)
+      .maybeSingle();
+    return (data as PaymentSubmission | null) ?? null;
+  } catch (err) {
+    console.error("payment submission lookup skipped:", err);
+    return null;
+  }
+}
+
+async function markPaymentSubmissionPaid(
+  admin: Admin,
+  id: string | undefined,
+  payment: { stripeSessionId: string; amountCents: number; currency: string },
+): Promise<PaymentSubmission | null> {
+  if (!id) return null;
+  try {
+    await admin.from("payment_submissions").update({
+      status: "paid",
+      stripe_session_id: payment.stripeSessionId,
+      amount_cents: payment.amountCents,
+      currency: payment.currency,
+      paid_at: new Date().toISOString(),
+    }).eq("id", id);
+  } catch (err) {
+    console.error("payment submission reconciliation skipped:", err);
+  }
+  return getPaymentSubmission(admin, id);
+}
+
+async function sendPaymentEmails(
+  admin: Admin,
+  payment: {
+    memberId: string | null;
+    paymentSubmission: PaymentSubmission | null;
+    productName: string;
+    amountCents: number;
+    currency: string;
+    stripeReference: string;
+  },
+) {
+  let member: { email?: string | null; first_name?: string | null } | null = null;
+  if (payment.memberId) {
+    try {
+      const { data } = await admin.from("profiles").select("email,first_name").eq("id", payment.memberId).maybeSingle();
+      member = data;
+    } catch (err) {
+      console.error("payment member lookup skipped:", err);
+    }
+  }
+
+  const payerEmail = payment.paymentSubmission?.payer_email || member?.email || null;
+  const payerFirstName = payment.paymentSubmission?.payer_first_name || member?.first_name || "";
+  const productName = escapeHtml(payment.productName);
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: payment.currency.toUpperCase() }).format(payment.amountCents / 100);
+
+  if (payerEmail) {
+    const receiptHtml = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+  <h2 style="color:#861f24">ABCAC Payment Receipt</h2>
+  <p>${payerFirstName ? `Hi ${escapeHtml(payerFirstName)},` : "Hi,"}</p>
+  <p>We received your payment for <strong>${productName}</strong>. Your submitted payment form is attached to this transaction for ABCAC staff processing.</p>
+  <table style="border-collapse:collapse;width:100%;margin:16px 0">
+    <tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Product</td><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right">${productName}</td></tr>
+    <tr><td style="padding:8px 0;color:#6b7280">Amount paid</td><td style="padding:8px 0;text-align:right"><strong>${escapeHtml(amount)}</strong></td></tr>
+  </table>
+  <p style="color:#6b7280;font-size:14px">Questions? Contact <a href="${siteConfig.contact.emailHref}">${siteConfig.contact.email}</a> or ${siteConfig.contact.phone}.</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">${siteConfig.shortName} &mdash; ${siteConfig.name}</p>
+</div>`.trim();
+    await sendEmail({ to: payerEmail, subject: "Your ABCAC payment receipt", html: receiptHtml });
+  }
+
+  const submission = payment.paymentSubmission;
+  const adminHtml = `
+<div style="font-family:sans-serif;max-width:620px;margin:0 auto;color:#111">
+  <h2 style="color:#861f24">ABCAC payment received</h2>
+  <p>A Stripe payment was completed and ${submission ? "its form is ready in the Finance dashboard" : "no attached form record was found"}.</p>
+  <table style="border-collapse:collapse;width:100%;margin:16px 0">
+    <tr><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Payer</td><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;text-align:right">${escapeHtml(submission ? `${submission.payer_first_name} ${submission.payer_last_name}` : payerEmail || "Unknown")}</td></tr>
+    <tr><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Product</td><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;text-align:right">${productName}</td></tr>
+    <tr><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Amount</td><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;text-align:right"><strong>${escapeHtml(amount)}</strong></td></tr>
+    <tr><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Form type</td><td style="padding:7px 0;border-bottom:1px solid #e5e7eb;text-align:right">${escapeHtml(submission?.form_type || "Missing")}</td></tr>
+    <tr><td style="padding:7px 0;color:#6b7280">Stripe reference</td><td style="padding:7px 0;text-align:right">${escapeHtml(payment.stripeReference)}</td></tr>
+  </table>
+  <p><a href="${escapeHtml(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000")}/admin/finance">Open the Finance dashboard</a></p>
+</div>`.trim();
+  await sendEmail({
+    to: siteConfig.contact.email,
+    subject: `Payment received: ${payment.productName} — ${amount}`,
+    html: adminHtml,
+  });
 }
 
 function escapeHtml(s: string) {

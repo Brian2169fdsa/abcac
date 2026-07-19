@@ -1,15 +1,30 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PaymentRow {
+  id: string;
+  payment_submission_id: string | null;
+  stripe_session_id: string | null;
   amount_cents: number | null;
   status: string | null;
   slug: string | null;
   product_name: string | null;
   created_at: string | null;
+}
+
+interface PaymentSubmissionRow {
+  id: string;
+  form_type: string;
+  payer_first_name: string;
+  payer_last_name: string;
+  payer_email: string;
+  product_name: string;
+  status: string;
+  created_at: string;
 }
 
 interface InvoiceRow {
@@ -84,17 +99,25 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 export default async function AdminFinancePage() {
   const sb = createSupabaseServerClient();
 
-  const [paymentsData, invoicesData] = await Promise.all([
+  const [paymentsData, invoicesData, submissionsData] = await Promise.all([
     sb
       .from("payments")
-      .select("amount_cents,status,slug,product_name,created_at"),
+      .select("id,payment_submission_id,stripe_session_id,amount_cents,status,slug,product_name,created_at")
+      .order("created_at", { ascending: false }),
     sb
       .from("invoices")
       .select("amount_cents,status,paid_at,created_at,description"),
+    sb
+      .from("payment_submissions")
+      .select("id,form_type,payer_first_name,payer_last_name,payer_email,product_name,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   const payments = (paymentsData.data ?? []) as PaymentRow[];
   const invoices = (invoicesData.data ?? []) as InvoiceRow[];
+  const submissions = (submissionsData.data ?? []) as PaymentSubmissionRow[];
+  const submissionById = new Map(submissions.map((submission) => [submission.id, submission]));
 
   // ── Stat computations ──────────────────────────────────────────────────────
 
@@ -184,6 +207,46 @@ export default async function AdminFinancePage() {
           <StatCard label="Total revenue (paid)" value={money(totalRevenueCents)} />
           <StatCard label="Paid transactions" value={paidTransactionCount} />
           <StatCard label="Outstanding (unpaid invoices)" value={money(outstandingCents)} />
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <SectionHeading>Recent Stripe payments and attached forms</SectionHeading>
+        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+                <th className="px-5 py-3">Payer</th>
+                <th className="px-5 py-3">Product</th>
+                <th className="px-5 py-3">Form</th>
+                <th className="px-5 py-3">Amount</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.length === 0 ? (
+                <tr><td colSpan={6} className="px-5 py-6 text-center text-muted">No Stripe payments recorded.</td></tr>
+              ) : payments.slice(0, 25).map((payment) => {
+                const submission = payment.payment_submission_id ? submissionById.get(payment.payment_submission_id) : undefined;
+                return (
+                  <tr key={payment.id} className="border-b border-line last:border-0">
+                    <td className="px-5 py-3">
+                      <div>{submission ? `${submission.payer_first_name} ${submission.payer_last_name}` : "Form unavailable"}</div>
+                      {submission && <div className="text-xs text-muted">{submission.payer_email}</div>}
+                    </td>
+                    <td className="px-5 py-3">{payment.product_name || payment.slug || "Payment"}</td>
+                    <td className="px-5 py-3 text-muted">{submission?.form_type || "Missing"}</td>
+                    <td className="px-5 py-3 tabular-nums">{money(payment.amount_cents ?? 0)}</td>
+                    <td className="px-5 py-3 capitalize">{payment.status || "unknown"}</td>
+                    <td className="px-5 py-3">
+                      <Link className="font-semibold text-brand hover:underline" href={`/admin/finance/payments/${payment.id}`}>View</Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
 

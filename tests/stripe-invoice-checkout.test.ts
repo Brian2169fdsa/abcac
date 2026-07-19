@@ -34,12 +34,16 @@ function fakeServer(user: { id: string; email?: string } | null) {
 
 // Admin client whose .from("invoices").select().eq().single() resolves to `invoice`.
 function fakeAdmin(invoice: Record<string, unknown> | null) {
+  const calls: { table: string; op: string; payload: unknown }[] = [];
   return {
-    from() {
+    calls,
+    from(table: string) {
       const b: Record<string, unknown> = {};
+      b.insert = (payload: unknown) => { calls.push({ table, op: "insert", payload }); return b; };
+      b.update = (payload: unknown) => { calls.push({ table, op: "update", payload }); return b; };
       b.select = () => b;
       b.eq = () => b;
-      b.single = async () => ({ data: invoice });
+      b.single = async () => ({ data: table === "payment_submissions" ? { id: "ps-invoice" } : invoice, error: null });
       return b;
     },
   };
@@ -60,7 +64,7 @@ beforeEach(() => {
   stripeConfigured = true;
   serverClient = fakeServer({ id: "user-1", email: "m@example.com" });
   adminClient = fakeAdmin(INVOICE);
-  sessionsCreate.mockResolvedValue({ url: "https://stripe.test/inv-session" });
+  sessionsCreate.mockResolvedValue({ id: "cs_invoice", url: "https://stripe.test/inv-session" });
 });
 
 describe("POST /api/stripe/invoice-checkout", () => {
@@ -130,6 +134,10 @@ describe("POST /api/stripe/invoice-checkout", () => {
       member_id: "user-1",
       product_name: "Annual provider fee",
       slug: "invoice",
+      payment_submission_id: "ps-invoice",
+      form_type: "invoice",
+      linked_record_type: "invoices",
+      linked_record_id: "inv-1",
     });
     expect(arg.success_url).toContain("/account/invoices?paid=1");
     expect(arg.cancel_url).toContain("/account/invoices");

@@ -20,12 +20,22 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
   const isCertificationSync = slug === "certification-sync";
 
   const [credentialLevel, setCredentialLevel] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState(Math.min(120, Math.max(1, Math.trunc(initialQuantity))));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleCheckout() {
     setError(null);
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || phone.replace(/\D/g, "").length < 10) {
+      setError("Please complete your name, email, and a valid phone number before continuing.");
+      return;
+    }
     if (needsCredential && !credentialLevel) {
       setError("Please select your credential level.");
       return;
@@ -40,6 +50,14 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
           credentialLevel: credentialLevel || undefined,
           examMode: examMode || undefined,
           quantity: isCertificationSync ? quantity : undefined,
+          paymentForm: {
+            firstName,
+            lastName,
+            email,
+            phone,
+            referenceNumber,
+            notes,
+          },
         }),
       });
       const data = await res.json();
@@ -49,6 +67,10 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
             ? "Online payment isn't enabled yet. Please contact ABCAC to complete this payment."
             : data.error === "price_not_found"
               ? "This item isn't available for checkout yet. Please contact ABCAC."
+              : data.error === "payment_form_required"
+                ? "Please complete the payment details form before continuing."
+                : data.error === "payment_form_save_failed"
+                  ? "We could not securely save your payment form. Please try again or contact ABCAC."
               : "Could not start checkout. Please try again.",
         );
         setLoading(false);
@@ -121,6 +143,39 @@ export function CheckoutForm({ slug, category, examMode, unitPrice = 0, initialQ
           turnaround: 4 weeks.
         </p>
       )}
+
+      <div className="mb-5 border-t border-line pt-5">
+        <h3 className="text-base font-bold text-ink">Payment details</h3>
+        <p className="mt-1 text-sm text-muted">
+          This information is attached to your Stripe payment so ABCAC can match and process it correctly.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="payerFirstName" className="mb-1.5 block text-sm font-semibold">First name</label>
+            <input id="payerFirstName" autoComplete="given-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+          <div>
+            <label htmlFor="payerLastName" className="mb-1.5 block text-sm font-semibold">Last name</label>
+            <input id="payerLastName" autoComplete="family-name" required value={lastName} onChange={(event) => setLastName(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+          <div>
+            <label htmlFor="payerEmail" className="mb-1.5 block text-sm font-semibold">Email</label>
+            <input id="payerEmail" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+          <div>
+            <label htmlFor="payerPhone" className="mb-1.5 block text-sm font-semibold">Phone</label>
+            <input id="payerPhone" type="tel" autoComplete="tel" required value={phone} onChange={(event) => setPhone(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="paymentReference" className="mb-1.5 block text-sm font-semibold">Certification, application, or reference number <span className="font-normal text-muted">(optional)</span></label>
+            <input id="paymentReference" value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-bg px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="paymentNotes" className="mb-1.5 block text-sm font-semibold">Processing notes <span className="font-normal text-muted">(optional)</span></label>
+            <textarea id="paymentNotes" rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:text-sm" />
+          </div>
+        </div>
+      </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
