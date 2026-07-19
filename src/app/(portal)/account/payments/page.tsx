@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 // and services. Workflow-specific payments (exam pre-registration, cert sync,
 // reciprocity, admin invoices) start from their own pages and flow through the
 // same checkout.
-export default async function PortalPaymentsPage({ searchParams }: { searchParams: { product?: string } }) {
+export default async function PortalPaymentsPage({ searchParams }: { searchParams: { product?: string; application?: string } }) {
   const uid = await requireUserId();
   const supabase = createSupabaseServerClient();
   const { data: profile } = await supabase
@@ -33,6 +33,7 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
 
   const products = getProducts();
   const highlighted = searchParams.product ?? "";
+  const applicationId = searchParams.application ?? "";
   const categories = Array.from(new Set(products.map((p) => p.category)));
 
   return (
@@ -62,6 +63,7 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
                     product={product}
                     prefill={prefill}
                     defaultOpen={product.slug === highlighted}
+                    applicationId={product.slug === highlighted ? applicationId : undefined}
                   />
                 ))}
               </div>

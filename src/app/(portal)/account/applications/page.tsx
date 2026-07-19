@@ -99,7 +99,7 @@ export default async function ApplicationsPage() {
             <p className="text-muted">You haven&apos;t submitted an application yet.</p>
             <div className="mt-4 flex justify-center gap-3">
               <CtaButton href="/account/apply">Apply for Certification</CtaButton>
-              <CtaButton href="/account/renew" variant="outline">Submit Recertification</CtaButton>
+              <CtaButton href="/account/certification" variant="outline">Submit Recertification</CtaButton>
             </div>
           </div>
         ) : (

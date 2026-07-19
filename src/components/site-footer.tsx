@@ -32,7 +32,7 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Our services</h4>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.14em] text-white">Quick links</h4>
           <ul className="mt-4 space-y-1 text-sm text-white/65">
             {quickLinks.map((l) => (
               <li key={l.href}>

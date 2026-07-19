@@ -36,8 +36,8 @@ const credentials = [
       "High school diploma or GED, 200–250 hours of addiction and behavioral sciences education, and 2 years or 4,000 hours of work experience.",
     application: "General application plus the CAC supplemental application.",
     forms: [
-      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
-      { label: "CAC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual.pdf" },
+      { label: "General Application Manual", href: "/forms/library/initial-general.pdf" },
+      { label: "CAC Supplemental Application", href: "/forms/library/initial-cac-supplement.pdf" },
     ],
     imagePosition: "0% 0%",
     tone: "bg-brand",
@@ -51,8 +51,8 @@ const credentials = [
       "Bachelor’s degree, 200 hours of addiction and counseling studies, and 3 years or 6,000 hours of work experience.",
     application: "General application plus the CADAC supplemental application.",
     forms: [
-      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
-      { label: "CADAC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual-27032384.pdf" },
+      { label: "General Application Manual", href: "/forms/library/initial-general.pdf" },
+      { label: "CADAC Supplemental Application", href: "/forms/library/initial-cadac-aadc-supplement.pdf" },
     ],
     imagePosition: "50% 0%",
     tone: "bg-info",
@@ -66,8 +66,8 @@ const credentials = [
       "Master’s degree, 180 hours of education in alcohol and drug counseling, and 2,000 hours of supervised work experience.",
     application: "General application plus the AADC supplemental application.",
     forms: [
-      { label: "General Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-General-manual-.pdf" },
-      { label: "AADC Supplemental Application", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-Supplemental-manual-27032384.pdf" },
+      { label: "General Application Manual", href: "/forms/library/initial-general.pdf" },
+      { label: "AADC Supplemental Application", href: "/forms/library/initial-cadac-aadc-supplement.pdf" },
     ],
     imagePosition: "100% 0%",
     tone: "bg-success",
@@ -81,7 +81,7 @@ const credentials = [
       "High school diploma or GED, 46 hours of education in advocacy, mentoring, recovery support, and ethics, and 500 hours of supervised practical experience.",
     application: "Certified Peer Recovery Specialist application.",
     forms: [
-      { label: "CPRS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CPRS-Application-Manual.pdf" },
+      { label: "CPRS Application Manual", href: "/forms/library/initial-cprs.pdf" },
     ],
     imagePosition: "0% 50%",
     tone: "bg-[#6B2A91]",
@@ -95,7 +95,7 @@ const credentials = [
       "A current reciprocal-level AODA credential, qualifying counseling experience, 4,000 hours of clinical supervisory experience, and 30 hours of clinical-supervision education.",
     application: "Certified Clinical Supervisor application.",
     forms: [
-      { label: "CCS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Clinical-Supervisor-Manual-1.pdf" },
+      { label: "CCS Application Manual", href: "/forms/library/initial-ccs.pdf" },
     ],
     imagePosition: "50% 50%",
     tone: "bg-[#386FA4]",
@@ -109,7 +109,7 @@ const credentials = [
       "Education and experience aligned with criminal justice and substance-use treatment. Contact ABCAC for credential-specific guidance.",
     application: "Certified Criminal Justice Professional application.",
     forms: [
-      { label: "CCJP Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/CCJP-Manual.pdf" },
+      { label: "CCJP Application Manual", href: "/forms/library/initial-ccjp.pdf" },
     ],
     imagePosition: "100% 50%",
     tone: "bg-[#527A16]",
@@ -123,7 +123,7 @@ const credentials = [
       "High school diploma or GED, 120 hours of prevention-specific education including 6 ethics hours, 2,000 hours of supervised prevention experience, and 120 hours of direct supervision.",
     application: "Certified Prevention Specialist application.",
     forms: [
-      { label: "CPS Application Manual", href: "https://irp.cdn-website.com/249de5f7/files/uploaded/Prevention-Specialist-Manual-1-3.pdf" },
+      { label: "CPS Application Manual", href: "/forms/library/initial-cps.pdf" },
     ],
     imagePosition: "0% 100%",
     tone: "bg-[#4D78B5]",

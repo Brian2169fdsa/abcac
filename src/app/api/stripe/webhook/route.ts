@@ -157,6 +157,26 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     }
   }
 
+  // Application-packet fee (initial cert, renewal, CEU workshop): advance the
+  // linked application into the review queue so admin sees it as fee-paid.
+  if (meta.payment_type === "application_fee" && memberId && meta.application_id) {
+    try {
+      await admin.from("applications").update({ status: "under_review" })
+        .eq("id", meta.application_id)
+        .eq("member_id", memberId)
+        .eq("status", "submitted");
+      await admin.from("notifications").insert({
+        member_id: memberId,
+        category: "application",
+        title: "Application fee received",
+        body: "ABCAC received your application fee. Your packet is now in the review queue.",
+        link: "/account/applications",
+      });
+    } catch (err) {
+      console.error("application fee reconciliation skipped:", err);
+    }
+  }
+
   // Certification Sync payment advances the linked request to the review queue.
   // It does NOT change credential dates or enable sync by itself; ABCAC staff (or
   // the guarded automation workflow, when explicitly enabled) completes review.

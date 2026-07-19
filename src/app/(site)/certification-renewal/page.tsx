@@ -62,7 +62,7 @@ const renewalTracks = [
     code: "CAC · CADAC · AADC",
     title: "Counselor Recertification",
     description: "For Certified Addiction Counselor, Certified Alcohol & Drug Abuse Counselor, and Advanced Alcohol & Drug Counselor credentials.",
-    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-CAC-CADAC-AADC-150-Re-Certification-Fee-Re-Certification-Packet.pdf",
+    formHref: "/forms/library/recert-cac-cadac-aadc.pdf",
     workflowKey: "renewal:counselor",
     tone: "bg-info",
   },
@@ -70,7 +70,7 @@ const renewalTracks = [
     code: "CPS",
     title: "Prevention Specialist Recertification",
     description: "For professionals renewing the Certified Prevention Specialist credential and prevention-focused continuing education.",
-    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Prevention-Specialist-150-Re-Certification-Fee-Re-Certification-Packet-Fillable-vrxrup.pdf",
+    formHref: "/forms/library/recert-cps.pdf",
     workflowKey: "renewal:cps",
     tone: "bg-success",
   },
@@ -78,7 +78,7 @@ const renewalTracks = [
     code: "CCS",
     title: "Clinical Supervisor Recertification",
     description: "For Certified Clinical Supervisors maintaining advanced supervision, ethics, and professional-development requirements.",
-    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Clinical-Supervisor-150-Re-Certification-Fee-Re-Certification-Packet-430yed-1-ac9ed310.pdf",
+    formHref: "/forms/library/recert-ccs.pdf",
     workflowKey: "renewal:ccs",
     tone: "bg-brand",
   },
@@ -86,7 +86,7 @@ const renewalTracks = [
     code: "CCJP",
     title: "Criminal Justice Professional Recertification",
     description: "For professionals renewing a credential focused on addiction services in criminal-justice and community-supervision settings.",
-    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/The-Certified-Criminal-Justice-Addictions-Professional-150-Re-Certification-Fee-oxaayt.pdf",
+    formHref: "/forms/library/recert-ccjp.pdf",
     workflowKey: "renewal:ccjp",
     tone: "bg-[#6B2A91]",
   },
@@ -94,7 +94,7 @@ const renewalTracks = [
     code: "CPRS",
     title: "Peer Recovery Specialist Recertification",
     description: "For Certified Peer Recovery Specialists documenting continued education in peer support, advocacy, ethics, and recovery services.",
-    formHref: "https://irp.cdn-website.com/249de5f7/files/uploaded/Certified-Peer-Recovery-Specialist-Recet.pdf",
+    formHref: "/forms/library/recert-cprs.pdf",
     workflowKey: "renewal:cprs",
     tone: "bg-[#A24922]",
   },
@@ -383,7 +383,7 @@ export default function CertificationRenewalPage() {
             <p className="mt-2 text-white/70">Prepare your renewal packet, upload your CE certificates, and complete secure payment.</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <CtaButton href="/account/renew" size="lg" className="w-full sm:w-auto">Start Your Renewal</CtaButton>
+            <CtaButton href="/account/certification" size="lg" className="w-full sm:w-auto">Start Your Renewal</CtaButton>
             <CtaButton href="/contact" variant="outline" size="lg" className="w-full border-white text-white hover:bg-white hover:text-info sm:w-auto"><Mail className="h-4 w-4" aria-hidden /> Contact ABCAC</CtaButton>
           </div>
         </div>

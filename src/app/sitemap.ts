@@ -20,6 +20,10 @@ const staticSecondaryRoutes = [
   "remote-or-inperson",
   "blog",
   "store",
+  "certification-sync",
+  "directory",
+  "verify",
+  "board-application",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

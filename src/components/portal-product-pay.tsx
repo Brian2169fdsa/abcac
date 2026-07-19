@@ -14,10 +14,13 @@ export function PortalProductPay({
   product,
   prefill,
   defaultOpen = false,
+  applicationId,
 }: {
   product: Product;
   prefill: CheckoutPrefill;
   defaultOpen?: boolean;
+  /** Links the fee to a submitted application so admin review shows it paid. */
+  applicationId?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const ref = useRef<HTMLDivElement>(null);
@@ -53,6 +56,7 @@ export function PortalProductPay({
             examMode={product.examMode}
             unitPrice={product.price}
             prefill={prefill}
+            applicationId={applicationId}
           />
         </div>
       )}

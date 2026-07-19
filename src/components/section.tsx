@@ -9,12 +9,14 @@ interface SectionProps {
   /** Tighter vertical padding for stacked sections. */
   compact?: boolean;
   surface?: boolean;
+  /** Anchor target (sidebar deep-links jump here). */
+  id?: string;
 }
 
 /** Vertical-rhythm wrapper that every page composes from. */
-export function Section({ children, eyebrow, title, intro, className, compact, surface }: SectionProps) {
+export function Section({ children, eyebrow, title, intro, className, compact, surface, id }: SectionProps) {
   return (
-    <section className={cn(surface && "bg-surface", className)}>
+    <section id={id} className={cn(surface && "bg-surface", className, id && "scroll-mt-32")}>
       <div
         className={cn(
           "mx-auto w-full max-w-content px-4 sm:px-6 lg:px-8",

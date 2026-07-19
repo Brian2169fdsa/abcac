@@ -63,7 +63,7 @@ export default async function ExperiencePage() {
         </SectionCard>
       </Section>
 
-      <Section compact title="Clinical Supervision">
+      <Section compact id="supervision" title="Clinical Supervision">
         <SectionCard
           title="Supervision you provide"
           description="If you hold or are pursuing the CCS credential, record the supervision you provide here."

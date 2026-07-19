@@ -19,7 +19,6 @@ export interface Prefs {
 
 export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: Prefs }) {
   const [savingInfo, setSavingInfo] = useState(false);
-  const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
 
@@ -55,24 +54,6 @@ export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: P
       }).eq("id", user.id);
       flash(error ? "Could not save your information." : "Personal information saved.");
     } finally { setSavingInfo(false); }
-  }
-
-  async function savePrefs(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = e.currentTarget;
-    const ck = (n: string) => (f.elements.namedItem(n) as HTMLInputElement).checked;
-    setSavingPrefs(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { error } = await supabase.from("notification_preferences").upsert({
-        member_id: user.id,
-        renewal_reminders: ck("renewal_reminders"), ceu_deadline_alerts: ck("ceu_deadline_alerts"),
-        abcac_announcements: ck("abcac_announcements"), icrc_updates: ck("icrc_updates"),
-      });
-      flash(error ? "Could not save preferences." : "Notification preferences saved.");
-    } finally { setSavingPrefs(false); }
   }
 
   async function savePw(e: React.FormEvent<HTMLFormElement>) {
@@ -115,14 +96,10 @@ export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: P
         <Button type="submit" disabled={savingInfo} className="mt-4">{savingInfo ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save Information"}</Button>
       </form>
 
-      <form onSubmit={savePrefs} className="rounded-xl border border-line bg-surface p-6">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <h3 className="mb-2">Notification Preferences</h3>
-        <div className={toggle}><span className="text-sm">Renewal reminders</span><input type="checkbox" name="renewal_reminders" defaultChecked={prefs.renewal_reminders} className="h-4 w-4" /></div>
-        <div className={toggle}><span className="text-sm">CEU deadline alerts</span><input type="checkbox" name="ceu_deadline_alerts" defaultChecked={prefs.ceu_deadline_alerts} className="h-4 w-4" /></div>
-        <div className={toggle}><span className="text-sm">ABCAC announcements</span><input type="checkbox" name="abcac_announcements" defaultChecked={prefs.abcac_announcements} className="h-4 w-4" /></div>
-        <div className={toggle}><span className="text-sm">IC&RC updates</span><input type="checkbox" name="icrc_updates" defaultChecked={prefs.icrc_updates} className="h-4 w-4" /></div>
-        <Button type="submit" disabled={savingPrefs} className="mt-4">{savingPrefs ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save Preferences"}</Button>
-      </form>
+        <p className="text-sm text-muted">Email and reminder preferences are managed in <a href="/account/settings" className="font-semibold text-brand">Account Settings</a>.</p>
+      </div>
 
       <form onSubmit={savePw} className="rounded-xl border border-line bg-surface p-6">
         <h3 className="mb-4">Change Password</h3>

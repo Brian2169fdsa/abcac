@@ -50,7 +50,7 @@ export default async function AdminRenewalsPage({
 
   const sb = createSupabaseServerClient();
 
-  const [certsData, invoicesData, profilesData] = await Promise.all([
+  const [certsData, invoicesData, profilesData, renewalPaymentsData] = await Promise.all([
     sb
       .from("certifications")
       .select("member_id,cert_type,cert_number,status,expiration_date"),
@@ -58,10 +58,26 @@ export default async function AdminRenewalsPage({
       .from("invoices")
       .select("member_id,invoice_number,description,amount_cents,status,created_at"),
     sb.from("profiles").select("id,first_name,last_name,email"),
+    // Self-serve renewal fees paid via portal checkout (webhook-written) — fold
+    // them into the pipeline as paid renewal "invoices" so members who paid
+    // online advance to paid-processing without a manually issued invoice.
+    sb
+      .from("payments")
+      .select("member_id,product_name,amount_cents,status,created_at")
+      .eq("slug", "certification-renewal-2-year-credential-renewal-fee")
+      .eq("status", "paid"),
   ]);
 
   const certs = (certsData.data ?? []) as CertInput[];
-  const invoices = (invoicesData.data ?? []) as InvoiceInput[];
+  const selfServeRenewals: InvoiceInput[] = (renewalPaymentsData.data ?? []).map((payment: any) => ({
+    member_id: payment.member_id,
+    invoice_number: "Stripe checkout",
+    description: payment.product_name ?? "Certification renewal fee",
+    amount_cents: payment.amount_cents,
+    status: "paid",
+    created_at: payment.created_at,
+  }));
+  const invoices = [...((invoicesData.data ?? []) as InvoiceInput[]), ...selfServeRenewals];
   const profiles = (profilesData.data ?? []) as ProfileInput[];
 
   const pipeline = buildRenewalPipeline(certs, invoices, profiles);

@@ -6,7 +6,7 @@ import { Section } from "@/components/section";
 import { getPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "News & Updates",
+  title: "ABCAC News",
   description: "Announcements and updates from the Arizona Board for Certification of Addiction Counselors.",
 };
 

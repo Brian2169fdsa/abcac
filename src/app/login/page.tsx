@@ -62,7 +62,7 @@ function LoginInner() {
         </Button>
       </form>
       <p className="mt-4 text-center text-sm text-muted">
-        New to ABCAC? <Link href="/signup" className="font-semibold text-brand">Create an account</Link>
+        New to ABCAC? <Link href={`/signup${next && next !== "/account" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand">Create an account</Link>
       </p>
       <p className="mt-2 text-center text-sm text-muted">
         Need help? <Link href="/contact" className="font-semibold text-brand">Contact ABCAC</Link>

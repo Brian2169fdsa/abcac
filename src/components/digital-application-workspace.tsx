@@ -211,7 +211,7 @@ export function DigitalApplicationWorkspace({
           <p className="mt-1 text-sm text-muted">Your packet is submitted. Complete the matching payment so ABCAC can begin review — it is attached to your account automatically.</p>
           <div className="mt-4 flex flex-wrap gap-3">
             {getWorkflowFees(workflowKey).map((fee) => (
-              <Link key={fee.slug} href={`/account/payments?product=${encodeURIComponent(fee.slug)}`} className={buttonVariants({})}>
+              <Link key={fee.slug} href={`/account/payments?product=${encodeURIComponent(fee.slug)}${applicationId ? `&application=${encodeURIComponent(applicationId)}` : ""}`} className={buttonVariants({})}>
                 {fee.label} <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             ))}
