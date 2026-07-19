@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { getProductBySlug, getPriceId } from "@/lib/catalog";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
@@ -172,7 +173,7 @@ export async function POST(req: Request) {
     ceu_note: product.category === "CEU Endorsement" ? "Submit materials to abcac@abcac.org (4-week review)" : "",
   };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = requestOrigin(req);
   try {
     const session = await stripe.checkout.sessions.create({
       mode: product.mode,

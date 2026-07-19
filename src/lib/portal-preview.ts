@@ -7,6 +7,15 @@ function configuredPreviewCode() {
   return process.env.MEMBER_PORTAL_PREVIEW_CODE?.trim() || DEFAULT_PREVIEW_CODE;
 }
 
+/**
+ * The preview gate is disabled (portal fully open) when the env var is set to
+ * "off" — the launch switch. Flip MEMBER_PORTAL_PREVIEW_CODE=off in Vercel to
+ * open member signup/portal access without a deploy.
+ */
+export function isPortalPreviewGateDisabled() {
+  return configuredPreviewCode().toLowerCase() === "off";
+}
+
 export function isValidPortalPreviewCode(code: string) {
   return code.trim() === configuredPreviewCode();
 }

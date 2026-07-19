@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -7,7 +8,7 @@ export const runtime = "nodejs";
 // Opens the Stripe billing portal for the signed-in member to manage their
 // Recurring products such as annual provider subscriptions.
 export async function GET(req: Request) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = requestOrigin(req);
 
   if (!isStripeConfigured) {
     return NextResponse.redirect(new URL("/account", siteUrl));

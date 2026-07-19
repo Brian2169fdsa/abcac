@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
   const __authUserId = await requireUserId();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name,last_name,phone,date_of_birth,address_line1,city,state,zip_code,account_status,account_submitted_at,account_review_notes")
+    .select("first_name,last_name,phone,date_of_birth,address_line1,city,state,zip_code,account_status,account_submitted_at,account_review_notes,submitted_cert_numbers")
     .eq("id", __authUserId)
     .maybeSingle();
 
