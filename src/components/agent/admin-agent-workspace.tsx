@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Send, Loader2, Sparkles, TrendingUp } from "lucide-react";
+import { Send, Loader2, Sparkles, TrendingUp, ChevronRight, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/assistant/markdown";
 import {
@@ -14,14 +14,47 @@ import {
   StatusPill,
   formatMoneyCompact,
 } from "@/components/agent/charts";
-import {
-  MOCK_MEMBERS,
-  MOCK_TASKS,
-  type MockMember,
-} from "@/lib/mock/agent-data";
 import type { AdminAnalytics, TrendPoint } from "@/lib/admin-analytics";
 import { formatUsd } from "@/lib/format";
-import { TaskRail } from "@/components/agent/task-rail";
+
+// ── Real data passed down from the server page ───────────────────────────────
+
+/** A recent member from `profiles`, enriched with an active-cert count. */
+export interface AgentMember {
+  id: string;
+  name: string;
+  email: string | null;
+  accountStatus: string | null;
+  certStatus: string | null;
+  activeCerts: number;
+  /** ISO timestamp the profile was created. */
+  joined: string | null;
+}
+
+export type AgentTaskPriority = "low" | "normal" | "high";
+
+/** An open row from `member_tasks` — the staff work queue. */
+export interface AgentTask {
+  id: string;
+  memberId: string;
+  memberName: string;
+  title: string;
+  detail: string | null;
+  priority: AgentTaskPriority;
+  status: "open" | "in_progress";
+  /** ISO due date (date-only), if set. */
+  dueDate: string | null;
+  visibleToMember: boolean;
+  createdAt: string;
+}
+
+/** Deterministic date label (UTC) so server and client markup always agree. */
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
 
 // ── Real-data series helpers (TrendPoint[] → chart BarDatum[]) ────────────────
 
@@ -155,7 +188,11 @@ function ArtifactRevenue(a: AdminAnalytics): ReactNode {
   );
 }
 
-function ArtifactMembers(): ReactNode {
+function ArtifactMembers({ members }: { members: AgentMember[] }): ReactNode {
+  if (!members.length) {
+    return <EmptyChart label="No members yet — new sign-ups will appear here." />;
+  }
+
   return (
     <div className="rounded-xl border border-line bg-surface">
       <div className="overflow-x-auto">
@@ -163,30 +200,28 @@ function ArtifactMembers(): ReactNode {
           <thead>
             <tr className="bg-ink text-white">
               <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Name</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Credential</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Status</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">City</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">CEU</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Renewal</th>
-              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Spend</th>
+              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Email</th>
+              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Account</th>
+              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Cert status</th>
+              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Active certs</th>
+              <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">Joined</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {MOCK_MEMBERS.map((m: MockMember) => (
+            {members.map((m) => (
               <tr key={m.id} className="even:bg-bg/60 hover:bg-bg transition-colors">
-                <td className="px-4 py-2.5 font-medium text-ink">{m.name}</td>
-                <td className="px-4 py-2.5 text-ink/80">{m.credential}</td>
-                <td className="px-4 py-2.5">
-                  <StatusPill status={m.status} />
-                </td>
-                <td className="px-4 py-2.5 text-ink/80">{m.city}</td>
-                <td className="px-4 py-2.5 text-ink/80">
-                  {m.ceuDone}/{m.ceuRequired}
-                </td>
-                <td className="px-4 py-2.5 text-ink/80">{m.renewal}</td>
                 <td className="px-4 py-2.5 font-medium text-ink">
-                  {formatMoneyCompact(m.spend)}
+                  <a href={`/admin/members/${m.id}`} className="hover:text-brand hover:underline">
+                    {m.name}
+                  </a>
                 </td>
+                <td className="px-4 py-2.5 text-ink/80">{m.email ?? "—"}</td>
+                <td className="px-4 py-2.5">
+                  <StatusPill status={m.accountStatus ?? "unknown"} />
+                </td>
+                <td className="px-4 py-2.5 text-ink/80">{m.certStatus ?? "—"}</td>
+                <td className="px-4 py-2.5 text-ink/80">{m.activeCerts}</td>
+                <td className="px-4 py-2.5 text-ink/80">{formatDate(m.joined)}</td>
               </tr>
             ))}
           </tbody>
@@ -247,29 +282,55 @@ function ArtifactAttention(a: AdminAnalytics): ReactNode {
   );
 }
 
-function ArtifactAutomate(): ReactNode {
-  const automatableTasks = MOCK_TASKS.filter((t) => t.automatable);
+const PRIORITY_DOT: Record<AgentTaskPriority, string> = {
+  high: "bg-[#C0432F]",
+  normal: "bg-[#C8741F]",
+  low: "bg-[#8A8F98]",
+};
+
+const PRIORITY_LABEL: Record<AgentTaskPriority, string> = {
+  high: "High",
+  normal: "Normal",
+  low: "Low",
+};
+
+function ArtifactTasks({ tasks }: { tasks: AgentTask[] }): ReactNode {
+  const highCount = tasks.filter((t) => t.priority === "high").length;
+  const visibleCount = tasks.filter((t) => t.visibleToMember).length;
 
   return (
     <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
       <div className="text-[12px] font-semibold uppercase tracking-wide text-muted">
-        Automatable now — {automatableTasks.length} tasks
+        Open tasks — {tasks.length}
       </div>
-      <div className="space-y-3">
-        {automatableTasks.map((t) => (
-          <div key={t.id} className="flex items-start gap-3 rounded-lg border border-[#1F5FA8]/20 bg-[#1F5FA8]/[0.03] p-3">
-            <span className="mt-0.5 text-[#1F5FA8]" aria-hidden>⚡</span>
-            <div>
-              <p className="text-[13px] font-semibold text-ink">{t.title}</p>
-              <p className="mt-0.5 text-[12px] text-muted">{t.detail}</p>
-              <p className="mt-1 text-[11px] text-muted">{t.due} · {t.member}</p>
+      {tasks.length ? (
+        <div className="space-y-3">
+          {tasks.map((t) => (
+            <div key={t.id} className="flex items-start gap-3 rounded-lg border border-line bg-bg/40 p-3">
+              <span
+                className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[t.priority])}
+                title={`${PRIORITY_LABEL[t.priority]} priority`}
+                aria-label={`${PRIORITY_LABEL[t.priority]} priority`}
+              />
+              <div>
+                <p className="text-[13px] font-semibold text-ink">{t.title}</p>
+                {t.detail && <p className="mt-0.5 text-[12px] text-muted">{t.detail}</p>}
+                <p className="mt-1 text-[11px] text-muted">
+                  {t.memberName} · {t.dueDate ? `Due ${formatDate(t.dueDate)}` : `Added ${formatDate(t.createdAt)}`}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-line bg-bg/40 px-4 py-8 text-center text-[13px] text-muted">
+          The task queue is clear — nothing is waiting on staff.
+        </p>
+      )}
       <InsightCallout>
-        These are illustrative automation candidates. Turning on the matching workflows in
-        Automation clears them from the manual queue.
+        {tasks.length === 0
+          ? "No open member tasks right now."
+          : `${tasks.length} open task${tasks.length === 1 ? "" : "s"} — ${highCount} high priority, ${visibleCount} visible to members. Work them from the queue on the right or from each member's profile.`}
       </InsightCallout>
     </div>
   );
@@ -291,28 +352,35 @@ type ArtifactKey =
   | "revenue"
   | "members"
   | "attention"
-  | "automate";
+  | "tasks";
 
-const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: (a: AdminAnalytics) => ReactNode }> = {
+/** Everything the server page feeds the workspace — artifacts render from this. */
+interface WorkspaceData {
+  analytics: AdminAnalytics;
+  members: AgentMember[];
+  tasks: AgentTask[];
+}
+
+const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: (d: WorkspaceData) => ReactNode }> = {
   "cert-sales": {
     label: "Certification sales overview",
-    render: (a) => <>{ArtifactCertSales(a)}</>,
+    render: (d) => <>{ArtifactCertSales(d.analytics)}</>,
   },
   revenue: {
     label: "Revenue this month",
-    render: (a) => <>{ArtifactRevenue(a)}</>,
+    render: (d) => <>{ArtifactRevenue(d.analytics)}</>,
   },
   members: {
     label: "Member directory",
-    render: () => <ArtifactMembers />,
+    render: (d) => <ArtifactMembers members={d.members} />,
   },
   attention: {
     label: "Items needing attention",
-    render: (a) => <>{ArtifactAttention(a)}</>,
+    render: (d) => <>{ArtifactAttention(d.analytics)}</>,
   },
-  automate: {
-    label: "Automatable tasks",
-    render: () => <ArtifactAutomate />,
+  tasks: {
+    label: "Open member tasks",
+    render: (d) => <ArtifactTasks tasks={d.tasks} />,
   },
 };
 
@@ -416,7 +484,7 @@ const SUGGESTIONS: Suggestion[] = [
     prompt: "Who are my members?",
     artifactKey: "members",
     assistantIntro:
-      "Here's your current member roster with credential, status, CEU progress, renewal dates, and lifetime spend.",
+      "Here are your most recent members with account status, certification standing, active credentials, and join date.",
   },
   {
     label: "What needs attention?",
@@ -426,11 +494,11 @@ const SUGGESTIONS: Suggestion[] = [
       "Here are the high-priority items that need action today or within the next few days.",
   },
   {
-    label: "What can you automate?",
-    prompt: "What can you automate right now?",
-    artifactKey: "automate",
+    label: "Open tasks",
+    prompt: "Show me the open task queue",
+    artifactKey: "tasks",
     assistantIntro:
-      "These tasks are fully automatable today — clean data, verified credentials, ready to go.",
+      "Here's the staff work queue — every open member task, ordered by due date and priority.",
   },
 ];
 
@@ -452,6 +520,101 @@ interface ArtifactMessage {
 
 type ChatMessage = TextMessage | ArtifactMessage;
 
+// ── Task rail (right column, real member_tasks) ──────────────────────────────
+
+function TaskQueueCard({ task }: { task: AgentTask }) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-surface p-4 transition-shadow hover:shadow-sm",
+        task.priority === "high" ? "border-[#C0432F]/30" : "border-line",
+      )}
+    >
+      {/* Header row */}
+      <div className="flex items-start gap-2">
+        <span
+          className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[task.priority])}
+          title={`${PRIORITY_LABEL[task.priority]} priority`}
+          aria-label={`${PRIORITY_LABEL[task.priority]} priority`}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold leading-snug text-ink">{task.title}</p>
+          {task.detail && (
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{task.detail}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Meta row */}
+      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+        <span className="font-medium text-ink/70">{task.memberName}</span>
+        <span aria-hidden>·</span>
+        <span>
+          {task.dueDate
+            ? `Due ${formatDate(task.dueDate)}`
+            : task.status === "in_progress"
+              ? "In progress"
+              : "No due date"}
+        </span>
+      </div>
+
+      {/* Shared-with-member affordance */}
+      {task.visibleToMember && (
+        <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-[#1F5FA8]/8 px-2 py-0.5 text-[11px] font-medium text-[#1F5FA8]">
+          <Eye className="h-3 w-3" aria-hidden />
+          Visible to member
+        </div>
+      )}
+
+      {/* Action */}
+      <div className="mt-3">
+        <a
+          href={`/admin/members/${task.memberId}`}
+          className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium text-ink/75 transition-colors hover:border-ink/40 hover:text-ink"
+        >
+          Open member
+          <ChevronRight className="h-3 w-3" aria-hidden />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function TaskQueueRail({ tasks }: { tasks: AgentTask[] }) {
+  const highCount = tasks.filter((t) => t.priority === "high").length;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Task Queue
+        </h2>
+        <span className="text-[12px] text-muted">
+          {tasks.length} task{tasks.length === 1 ? "" : "s"}
+          {highCount > 0 && (
+            <>
+              {" · "}
+              <span className="font-semibold text-[#C0432F]">{highCount} high priority</span>
+            </>
+          )}
+        </span>
+      </div>
+
+      {/* Cards */}
+      <div className="flex flex-col gap-3">
+        {tasks.length ? (
+          tasks.map((task) => <TaskQueueCard key={task.id} task={task} />)
+        ) : (
+          <p className="rounded-xl border border-dashed border-line bg-surface px-4 py-8 text-center text-[13px] text-muted">
+            No open tasks — the queue is clear.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Greeting ─────────────────────────────────────────────────────────────────
 
 const GREETING: ChatMessage = {
@@ -461,7 +624,7 @@ const GREETING: ChatMessage = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function AdminAgentWorkspace({ analytics }: { analytics: AdminAnalytics }) {
+export function AdminAgentWorkspace({ analytics, members, tasks }: WorkspaceData) {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -658,7 +821,7 @@ export function AdminAgentWorkspace({ analytics }: { analytics: AdminAnalytics }
                   {/* Rendered artifact */}
                   {msg.artifact && (
                     <div className="max-w-full">
-                      {ARTIFACT_REGISTRY[msg.artifact].render(analytics)}
+                      {ARTIFACT_REGISTRY[msg.artifact].render({ analytics, members, tasks })}
                     </div>
                   )}
                 </div>
@@ -736,9 +899,9 @@ export function AdminAgentWorkspace({ analytics }: { analytics: AdminAnalytics }
           </div>
         </div>
 
-        {/* Task Rail — right column */}
+        {/* Task Rail — right column (real member_tasks work queue) */}
         <div className="overflow-y-auto" style={{ maxHeight: "80vh" }}>
-          <TaskRail />
+          <TaskQueueRail tasks={tasks} />
         </div>
       </div>
     </div>

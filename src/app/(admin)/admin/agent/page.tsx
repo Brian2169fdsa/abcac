@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
-import { AdminAgentWorkspace } from "@/components/agent/admin-agent-workspace";
-import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import {
+  AdminAgentWorkspace,
+  type AgentMember,
+  type AgentTask,
+  type AgentTaskPriority,
+} from "@/components/agent/admin-agent-workspace";
+import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminAnalytics } from "@/lib/admin-analytics";
 import { agentWorkspaceEnabled } from "@/lib/feature-flags";
 
@@ -43,7 +48,71 @@ export default async function AdminAgentPage() {
   // (never exposed to the browser) — the same data the assistant's admin tools
   // read, so the chat and the charts always agree.
   const admin = createSupabaseAdminClient();
-  const analytics = await getAdminAnalytics(admin);
+
+  // Roster + staff work queue come from the cookie-bound client, so RLS applies
+  // (the admin policies grant full reads for the roles this layout admits).
+  const sb = createSupabaseServerClient();
+  const [analytics, rosterRes, tasksRes] = await Promise.all([
+    getAdminAnalytics(admin),
+    sb
+      .from("profiles")
+      .select("id, first_name, last_name, email, account_status, cert_status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    sb
+      .from("member_tasks")
+      .select("id, member_id, title, detail, priority, status, due_date, visible_to_member, created_at")
+      .in("status", ["open", "in_progress"])
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  const rosterRows = rosterRes.data ?? [];
+  const taskRows = tasksRes.data ?? [];
+
+  // Two cheap follow-up lookups: active-cert counts for the roster, and names
+  // for task owners (who may not be among the 20 most recent members).
+  const rosterIds = rosterRows.map((p: any) => p.id as string);
+  const taskMemberIds = Array.from(new Set(taskRows.map((t: any) => t.member_id as string)));
+  const [certsRes, ownersRes] = await Promise.all([
+    sb.from("certifications").select("member_id").eq("status", "active").in("member_id", rosterIds),
+    sb.from("profiles").select("id, first_name, last_name, email").in("id", taskMemberIds),
+  ]);
+
+  const activeCertCount = new Map<string, number>();
+  for (const c of certsRes.data ?? []) {
+    const id = (c as any).member_id as string;
+    activeCertCount.set(id, (activeCertCount.get(id) ?? 0) + 1);
+  }
+
+  const displayName = (p: any) =>
+    [p?.first_name, p?.last_name].filter(Boolean).join(" ") || (p?.email ?? "Unknown member");
+
+  const ownerById = new Map((ownersRes.data ?? []).map((p: any) => [p.id as string, p]));
+
+  const members: AgentMember[] = rosterRows.map((p: any) => ({
+    id: p.id as string,
+    name: displayName(p),
+    email: p.email ?? null,
+    accountStatus: p.account_status ?? null,
+    certStatus: p.cert_status ?? null,
+    activeCerts: activeCertCount.get(p.id as string) ?? 0,
+    joined: p.created_at ?? null,
+  }));
+
+  const tasks: AgentTask[] = taskRows.map((t: any) => ({
+    id: t.id as string,
+    memberId: t.member_id as string,
+    memberName: displayName(ownerById.get(t.member_id as string)),
+    title: (t.title as string) || "Untitled task",
+    detail: t.detail ?? null,
+    priority: (t.priority === "high" || t.priority === "low" ? t.priority : "normal") as AgentTaskPriority,
+    status: t.status === "in_progress" ? "in_progress" : "open",
+    dueDate: t.due_date ?? null,
+    visibleToMember: Boolean(t.visible_to_member),
+    createdAt: t.created_at as string,
+  }));
 
   return (
     <div className="space-y-6">
@@ -61,7 +130,7 @@ export default async function AdminAgentPage() {
       </div>
 
       {/* Workspace */}
-      <AdminAgentWorkspace analytics={analytics} />
+      <AdminAgentWorkspace analytics={analytics} members={members} tasks={tasks} />
     </div>
   );
 }
