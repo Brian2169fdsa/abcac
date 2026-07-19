@@ -1,53 +1,22 @@
 import type { AnnotationType, FormAnnotation, SmartFormField } from "@/lib/digital-form-types";
+import type { NativeField, NativeFieldType, NativeFormSchema } from "@/lib/native-schemas/types";
+import { INITIAL_GENERAL_SCHEMA } from "@/lib/native-schemas/initial-general";
+import { counselorSupplementSchema } from "@/lib/native-schemas/initial-counselor-supplement";
+import { INITIAL_CPRS_SCHEMA } from "@/lib/native-schemas/initial-cprs";
+import { INITIAL_CCS_SCHEMA } from "@/lib/native-schemas/initial-ccs";
+import { INITIAL_CCJP_SCHEMA } from "@/lib/native-schemas/initial-ccjp";
+import { INITIAL_CPS_SCHEMA } from "@/lib/native-schemas/initial-cps";
+import { CEU_WORKSHOP_SCHEMA } from "@/lib/native-schemas/ceu-workshop";
 
 // Native (HTML) versions of ABCAC forms. Each schema reproduces the content of
 // the original PDF as structured fields so members fill a real form instead of
 // typing into boxes floated over a rendered PDF image. Values are stored as the
 // same FormAnnotation[] shape the PDF editor uses (fieldId = schema field id),
 // so drafts, submission, signer requests, and admin review work unchanged.
+//
+// The larger application-manual schemas live in src/lib/native-schemas/*.
 
-export type NativeFieldType = AnnotationType | "yesno" | "textarea";
-
-export type NativeField = {
-  id: string;
-  label: string;
-  type: NativeFieldType;
-  required?: boolean;
-  hint?: string;
-  placeholder?: string;
-  /** Render width hint inside the section grid. */
-  span?: "full" | "half" | "third";
-  /** When set, the question shows a follow-up detail input if answered Yes. */
-  detailLabel?: string;
-};
-
-export type NativeTable = {
-  id: string;
-  columns: Array<{ id: string; label: string; width?: "wide" | "narrow" }>;
-  rows: number;
-  /** Fixed labels for the first column of the first rows (e.g. Ethics). */
-  fixedFirstColumn?: string[];
-};
-
-export type NativeSection = {
-  id: string;
-  title: string;
-  description?: string;
-  /** Bullet list rendered before the fields (requirements, instructions). */
-  notes?: string[];
-  /** Page of the original PDF this section came from (for admin reference). */
-  pdfPage: number;
-  fields?: NativeField[];
-  table?: NativeTable;
-  /** Section is expected to be completed by an invited signer, not the applicant. */
-  signerSection?: { role: string };
-};
-
-export type NativeFormSchema = {
-  formKey: string;
-  intro?: { title: string; paragraphs: string[] };
-  sections: NativeSection[];
-};
+export type { NativeField, NativeFieldType, NativeFormSchema, NativeSection, NativeTable } from "@/lib/native-schemas/types";
 
 const YES_NO_BACKGROUND: Array<{ id: string; label: string; detailed?: boolean }> = [
   { id: "held-other", label: "Do you hold, or have you ever held licensure, certification, or registration in any other state or with any other agency?" },
@@ -389,6 +358,14 @@ const NATIVE_FORM_SCHEMAS: Record<string, NativeFormSchema> = {
   "recert-cprs": recertificationSchema("recert-cprs", "Certified Peer Recovery Specialist", "peer recovery and substance abuse"),
   "board-member": BOARD_MEMBER_SCHEMA,
   "testing-special-accommodations": TESTING_ACCOMMODATIONS_SCHEMA,
+  "initial-general": INITIAL_GENERAL_SCHEMA,
+  "initial-cac-supplement": counselorSupplementSchema("initial-cac-supplement", "CAC"),
+  "initial-cadac-aadc-supplement": counselorSupplementSchema("initial-cadac-aadc-supplement", "CADAC / AADC"),
+  "initial-cprs": INITIAL_CPRS_SCHEMA,
+  "initial-ccs": INITIAL_CCS_SCHEMA,
+  "initial-ccjp": INITIAL_CCJP_SCHEMA,
+  "initial-cps": INITIAL_CPS_SCHEMA,
+  "ceu-workshop": CEU_WORKSHOP_SCHEMA,
 };
 
 export function getNativeFormSchema(formKey: string): NativeFormSchema | undefined {

@@ -10,15 +10,8 @@ import {
   tableFieldId,
 } from "@/lib/native-form-schemas";
 
-const NATIVE_KEYS = [
-  "recert-cac-cadac-aadc",
-  "recert-cps",
-  "recert-ccs",
-  "recert-ccjp",
-  "recert-cprs",
-  "board-member",
-  "testing-special-accommodations",
-];
+// Every form in the library now has a native schema.
+const NATIVE_KEYS = FORM_LIBRARY.map((form) => form.key);
 
 function annotationFor(formKey: string, fieldId: string, value: string): FormAnnotation {
   const schema = getNativeFormSchema(formKey)!;
@@ -36,9 +29,18 @@ describe("native form schemas", () => {
     }
   });
 
-  it("leaves unconverted forms (scanned or long manuals) on the PDF path", () => {
-    expect(getNativeFormSchema("ceu-workshop")).toBeUndefined();
-    expect(getNativeFormSchema("initial-general")).toBeUndefined();
+  it("covers the entire form library — no form is left on the PDF-overlay path", () => {
+    for (const form of FORM_LIBRARY) {
+      expect(getNativeFormSchema(form.key), form.key).toBeDefined();
+    }
+    expect(getNativeFormSchema("nonexistent-form")).toBeUndefined();
+  });
+
+  it("every schema has at least one applicant signature so packets can be signed", () => {
+    for (const key of NATIVE_KEYS) {
+      const signatures = getNativeSignatureFields(getNativeFormSchema(key)!);
+      expect(signatures.length, key).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it("generates unique field ids within each schema", () => {
