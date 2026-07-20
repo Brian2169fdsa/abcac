@@ -69,26 +69,33 @@ slight horizontal scroll on mobile `/testing`; blog title naming; footer "Our se
 
 | # | Item | Impact today |
 |---|------|--------------|
-| A | **Resend email** (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, verify abcac.org domain) | ALL email is a silent no-op: receipts, approval notices, signer invitations, reminders |
-| B | **Confirm Admin → Finance shows the $25 test payment** | Verifies webhook → dashboard chain; still unconfirmed |
-| C | **Live Stripe**: `npm run seed:stripe` with live key, commit live price map, swap Vercel keys | Site can only take test-card payments |
+| B | **🔴 Stripe webhook not delivering** (verified 2026-07-20: the E2E $25 payment never reached the `payments` table). In Stripe → Developers → Webhooks: add endpoint `https://<prod-domain>/api/stripe/webhook` with `checkout.session.completed`; copy the signing secret to Vercel `STRIPE_WEBHOOK_SECRET`; redeploy; then re-verify with a test purchase | Members can pay and the admin side never sees it — no Finance record, no receipt, no application advance |
+| A | **Resend email** (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, verify abcac.org domain) | ALL email is a silent no-op: receipts, approval notices, signer invitations, reminders. Required before the member "portal ready" campaign |
+| E | `CRON_SECRET` in Vercel (+ cron config) | Renewal reminders never run — matters now that the portal holds real expiration dates |
+| C | **Live Stripe**: `npm run seed:stripe` with live key, commit live price map, swap Vercel keys | Site can only take test-card payments (flip last, right before launch) |
 | D | `ANTHROPIC_API_KEY` in Vercel | "Need help?" chat widgets return a friendly 503 |
-| E | `CRON_SECRET` in Vercel (+ cron config) | Renewal reminders and automation digest never run |
-| F | AZBBHE logo → `public/brand/azbbhe-logo.png` | Testing page board section shows no logo |
-| G | **DNS cutover** abcac.org → Vercel | Real visitors still see the old Duda site |
+| J | ClickUp `CLICKUP_API_TOKEN` + `CLICKUP_LIST_ID` in Vercel | Staff tasks don't mirror into ClickUp |
+| F | AZBBHE logo → `public/brand/azbbhe-logo.png` (verified still 404 on prod) | Testing page board section shows no logo |
+| G | **DNS cutover** abcac.org → Vercel (verified 2026-07-20: still the old Duda site) | Real visitors still see the old site |
 | H | Automation rollout decision (16 workflows shipped OFF — see `docs/ship/03`) | Manual ops only (safe default) |
-| I | Optional: delete test rows (E2E payment/submissions, `brian+abcac-e2e-test` account) | Cosmetic |
+| I | Optional: delete test rows (demo seed payments, `brian+abcac-e2e-test` account) | Cosmetic |
+
+### Member-data loose ends (non-blocking)
+
+- 143 roster people have no email → roster-only until emails are found (Admin → Legacy Records).
+- 10 rows marked `review` (yellow/orange in the master spreadsheet) need an active/inactive call.
+- Andrea Thorpe's corrected email is `sobrietylifecoach@qmail.com` — "qmail" may be a gmail typo.
 
 ## The plan (updated 2026-07-20)
 
 - ~~**Phase 1 — code fix pass:** all P0/P1 code items~~ ✅ done, merged.
 - ~~**Phase 2 — SQL:** `cert_schedules` seed + `legacy_members` table~~ ✅ run on live 2026-07-20.
-- **Phase 3 — member data (next):** import the historical member export and run the invite
-  campaign — see `docs/LEGACY-IMPORT-RUNBOOK.md`. Needs the export file + service-role key.
-- **Phase 4 — config afternoon (owner, ~30 min):** A → F in the table. Resend first (email is the
-  biggest silent gap — and required before invites go out), then the Finance check, ClickUp
-  token/List ID, live Stripe when ready for real money.
-- **Phase 5 — launch:** DNS cutover, then the smoke test in `docs/ship/04-launch-readiness.md`
-  (signup → apply → pay → approve → certificate).
-- **Phase 6 — post-launch:** automation phased enablement, test-data cleanup, anything real
-  members surface in the first weeks.
+- ~~**Phase 3 — member data:** import + provision~~ ✅ done 2026-07-20: 455 roster records
+  imported, 283 accounts created and pre-approved (everyone with an email), ~300 certifications
+  issued (active for green-status members, expired for red). Zero emails sent.
+- **Phase 4 — config (owner, next):** the table above, in order — Stripe webhook fix first
+  (the one true defect), then Resend, CRON_SECRET, the rest.
+- **Phase 5 — launch:** live Stripe swap, DNS cutover, then the smoke test in
+  `docs/ship/04-launch-readiness.md` (signup → apply → pay → approve → certificate).
+- **Phase 6 — post-launch:** "portal ready" email campaign to the 283 members (batched),
+  automation phased enablement, test-data cleanup, anything real members surface.
