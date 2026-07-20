@@ -25,7 +25,6 @@ export const PORTAL_NAV: PortalNavGroup[] = [
       { label: "Personal Information", href: "/account/profile" },
       { label: "Employment Information", href: "/account/experience" },
       { label: "Certificate & Wallet Card", href: "/account/certifications" },
-      { label: "Other Certifications", href: "/account/certifications#other-certifications" },
     ],
   },
   {
