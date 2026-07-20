@@ -33,8 +33,13 @@ key, not by board staff.
 2. **Supabase service-role key** (`SUPABASE_SERVICE_ROLE_KEY`) — both scripts
    write with admin privileges. Never commit it.
 
-3. Migration `042_legacy_members.sql` applied to the live database (done
-   2026-07-20).
+3. Migrations `042_legacy_members.sql` (done 2026-07-20) and
+   `043_legacy_member_status.sql` applied to the live database.
+
+The master spreadsheet's row colors carry standing: green → `active`, red →
+`inactive`, anything else → `review`. The conversion from the board's Excel
+master workbook produces a CSV with a `Status` column plus mailing-address
+columns, which the importer maps automatically.
 
 ## Step 1 — Dry-run the import
 
@@ -55,28 +60,45 @@ duplicates. After import, the roster appears in **Admin → Legacy Records**, an
 the **Account Approvals** queue starts flagging signups that match a legacy
 record by email or self-reported cert number.
 
-## Step 3 — Invite in batches
+## Step 3 — Create accounts (no email) or invite in batches
+
+**Pre-populate mode** — create every account up front without sending a single
+email (right choice before the email domain / DNS are ready):
+
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+npx tsx scripts/invite-legacy-members.ts --create-only --provision --include-inactive --limit 500 --dry-run
+```
+
+Accounts are created silently, pre-approved, profile filled (name, phone,
+address), and certification rows issued — `active` for green-status members,
+`expired` for red. Members appear in Admin → Members immediately, and their
+portal is complete the first time they log in. Since no email goes out,
+`invited_at` stays empty — a later email campaign can find exactly who hasn't
+been notified yet. Until then, members can use **Forgot password** on the
+login page to get in.
+
+**Invite mode** — sends a Supabase invite email (member sets a password via
+the link):
 
 ```bash
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SITE_URL=https://abcac.org \
 npx tsx scripts/invite-legacy-members.ts --limit 50 --provision --dry-run
 ```
 
-- `--dry-run` first: lists exactly who would be emailed.
-- `--provision` (recommended): the invited account arrives pre-approved with
-  their certification row(s) issued from the legacy data — first login shows
-  their credential and a downloadable certificate. Without it they land in the
-  normal approval queue.
-- `--limit 50`: batch size. Start small (25–50/day), watch deliverability and
-  replies, then ramp up. Invited rows are stamped and skipped on re-runs, so
-  running the command daily walks through the roster automatically.
+- `--dry-run` first: lists exactly who would be processed.
+- `--provision` (recommended): pre-approve + issue credentials as above.
+- `--include-inactive`: also process red/review-status records (default is
+  active only).
+- `--limit 50`: batch size for invite mode. Start small (25–50/day), watch
+  deliverability, then ramp. Processed rows are stamped and skipped on
+  re-runs, so running daily walks the roster automatically.
 
-Each member receives a Supabase invite email, clicks the link, sets a
-password, and lands in the portal.
-
-> **Send invites only after** the Resend/email domain is verified and DNS has
-> cut over to the new site — the invite link uses `NEXT_PUBLIC_SITE_URL`, and
-> members will explore the site they land on.
+> **Send invite emails only after** the Resend/email domain is verified and
+> DNS has cut over — the link uses `NEXT_PUBLIC_SITE_URL`, and members will
+> explore the site they land on. Accounts already created with
+> `--create-only` are skipped by invite mode; notify them later with a
+> password-setup campaign (their rows have an account but no `invited_at`).
 
 ## Monitoring
 
