@@ -13,6 +13,7 @@ import { buildActivityFeed } from "@/lib/activity";
 import { NextSteps } from "@/components/dashboard/next-steps";
 import { MemberTasksCard, type MemberTask } from "@/components/dashboard/member-tasks-card";
 import { MemberAgentPanel } from "@/components/agent/member-agent-panel";
+import { TaskRail } from "@/components/agent/task-rail";
 import { buildMemberPlan, type AccountStatus } from "@/lib/member-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
@@ -314,6 +315,11 @@ export default async function AccountPage() {
     { limit: 5 },
   );
 
+  // Real data for the flag-gated agent panel + task rail: the compliance result
+  // computed above plus the member's open admin-assigned tasks (a null status
+  // reads as open, matching MemberTasksCard's normalization).
+  const openMemberTasks = memberTasks.filter((t) => (t.status ?? "open") === "open");
+
   return (
     <>
       <PageHero eyebrow="Member Portal" title={`Welcome, ${displayName}`}>
@@ -390,7 +396,20 @@ export default async function AccountPage() {
 
       {agentWorkspaceEnabled && (
         <Section title="Your Certification Insights" compact>
-          <MemberAgentPanel />
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <MemberAgentPanel ceu={ceuCompliance} tasks={openMemberTasks} />
+            <TaskRail
+              tasks={openMemberTasks.map((t) => ({
+                id: t.id,
+                title: t.title?.trim() || "Untitled task",
+                detail: t.detail ?? "",
+                priority:
+                  t.priority === "high" ? "high" : t.priority === "low" ? "low" : "medium",
+                status: t.status ?? "open",
+                due: t.due_date ? `Due ${fmtDate(t.due_date)}` : undefined,
+              }))}
+            />
+          </div>
         </Section>
       )}
 

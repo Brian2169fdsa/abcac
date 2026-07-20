@@ -27,6 +27,7 @@ const ITEMS: { label: string; href: string; count?: CountKey }[] = [
   { label: "Exam Registration", href: "/admin/testing", count: "testing" },
   { label: "Requests", href: "/admin/requests", count: "requests" },
   { label: "Members", href: "/admin/members" },
+  { label: "Legacy Records", href: "/admin/legacy" },
   { label: "Messaging", href: "/admin/messaging" },
   { label: "Invoices", href: "/admin/invoices" },
   { label: "Announcements", href: "/admin/announcements" },

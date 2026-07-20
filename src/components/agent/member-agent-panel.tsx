@@ -10,16 +10,12 @@ import {
   DonutChart,
   InsightCallout,
 } from "@/components/agent/charts";
-import {
-  MEMBER_CEU_PROGRESS,
-  MEMBER_CEU_BY_CATEGORY,
-  MEMBER_TASKS_DEMO,
-  type MemberTaskDemo,
-} from "@/lib/mock/agent-data";
+import type { ComplianceResult } from "@/lib/ceu-compliance";
+import type { MemberTask } from "@/components/dashboard/member-tasks-card";
 
 // ── Priority display helpers ───────────────────────────────────────────────
 
-type Priority = MemberTaskDemo["priority"];
+type Priority = "high" | "medium" | "low";
 
 const PRIORITY_CHIP: Record<Priority, string> = {
   high: "border-accent/50 bg-accent/10 text-accent-strong",
@@ -39,16 +35,28 @@ const PRIORITY_ICON: Record<Priority, React.ReactNode> = {
   low: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />,
 };
 
-// ── CEU totals ─────────────────────────────────────────────────────────────
+/** member_tasks stores low / normal / high — anything unknown reads as medium. */
+function priorityOf(value: string | null): Priority {
+  return value === "high" ? "high" : value === "low" ? "low" : "medium";
+}
 
-const totalCeuHours = MEMBER_CEU_BY_CATEGORY.reduce((s, d) => s + d.value, 0);
+function fmtDue(d: string): string {
+  return new Date(d).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function hoursLabel(n: number): string {
+  return `${n} hour${n === 1 ? "" : "s"}`;
+}
 
 // ── Task card component ────────────────────────────────────────────────────
 
-function TaskCard({ task }: { task: MemberTaskDemo }) {
-  // `task.due` is a human-readable display string (e.g. "Due in 7 days",
-  // "Window opens in 60 days"), not a parseable date — render it directly.
-  const isUrgent = task.priority === "high";
+function TaskCard({ task }: { task: MemberTask }) {
+  const priority = priorityOf(task.priority);
+  const isUrgent = priority === "high";
 
   return (
     <li
@@ -62,45 +70,81 @@ function TaskCard({ task }: { task: MemberTaskDemo }) {
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-            PRIORITY_CHIP[task.priority],
+            PRIORITY_CHIP[priority],
           )}
         >
-          {PRIORITY_ICON[task.priority]}
-          {PRIORITY_LABEL[task.priority]}
+          {PRIORITY_ICON[priority]}
+          {PRIORITY_LABEL[priority]}
         </span>
       </div>
 
       {/* Title + detail */}
       <div className="flex-1">
-        <h3 className="text-base font-semibold text-ink">{task.title}</h3>
-        <p className="mt-1 text-sm text-muted">{task.detail}</p>
+        <h3 className="text-base font-semibold text-ink">
+          {task.title?.trim() || "Untitled task"}
+        </h3>
+        {task.detail && <p className="mt-1 text-sm text-muted">{task.detail}</p>}
       </div>
 
-      {/* Due date + CTA */}
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <div
-          className={cn(
-            "flex items-center gap-1.5 text-xs font-medium",
-            isUrgent ? "text-accent-strong" : "text-muted",
-          )}
-        >
-          <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-          {task.due}
+      {/* Due date */}
+      {task.due_date && (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              isUrgent ? "text-accent-strong" : "text-muted",
+            )}
+          >
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+            Due {fmtDue(task.due_date)}
+          </div>
         </div>
-        <Link
-          href={task.href}
-          className="rounded-lg border border-brand px-3 py-1.5 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-surface"
-        >
-          {task.cta}
-        </Link>
-      </div>
+      )}
     </li>
   );
 }
 
 // ── Main panel ─────────────────────────────────────────────────────────────
 
-export function MemberAgentPanel() {
+export interface MemberAgentPanelProps {
+  /** Real CEU compliance for the member's primary credential (from the page). */
+  ceu: ComplianceResult;
+  /** Real open admin-assigned tasks (member_tasks rows, status = open). */
+  tasks: MemberTask[];
+}
+
+export function MemberAgentPanel({ ceu, tasks }: MemberAgentPanelProps) {
+  // Approved vs required, from real compliance numbers.
+  const progressData = [
+    { label: "Approved", value: ceu.totalApproved },
+    { label: "Required", value: ceu.requiredTotal },
+  ];
+
+  // Category donut: use the real ethics / cultural breakdown when any of those
+  // hours exist; otherwise fall back to approved vs remaining — never invent
+  // categories the member hasn't logged.
+  const generalApproved = Math.max(0, ceu.totalApproved - ceu.ethics - ceu.cultural);
+  const hasCategoryData = ceu.ethics > 0 || ceu.cultural > 0;
+  const categoryData = (
+    hasCategoryData
+      ? [
+          { label: "Ethics", value: ceu.ethics },
+          { label: "Cultural Diversity", value: ceu.cultural },
+          { label: "General", value: generalApproved },
+        ]
+      : [
+          { label: "Approved", value: ceu.totalApproved },
+          { label: "Remaining", value: ceu.remaining },
+        ]
+  ).filter((d) => d.value > 0);
+
+  const categoryShortfalls = [
+    ceu.ethicsRemaining > 0 ? `${hoursLabel(ceu.ethicsRemaining)} of ethics` : null,
+    ceu.culturalRemaining > 0
+      ? `${hoursLabel(ceu.culturalRemaining)} of cultural diversity`
+      : null,
+  ].filter((s): s is string => s !== null);
+
   return (
     <div className="space-y-8">
       {/* Intro line */}
@@ -123,13 +167,14 @@ export function MemberAgentPanel() {
             render={(active) =>
               active === "Progress" ? (
                 <BarChart
-                  data={MEMBER_CEU_PROGRESS}
+                  data={progressData}
                   height={200}
                 />
               ) : (
                 <DonutChart
-                  data={MEMBER_CEU_BY_CATEGORY}
-                  centerLabel={String(totalCeuHours)}
+                  data={categoryData}
+                  centerLabel={String(ceu.totalApproved)}
+                  centerSub={`of ${ceu.requiredTotal} hrs`}
                   size={180}
                 />
               )
@@ -137,30 +182,60 @@ export function MemberAgentPanel() {
           />
 
           <InsightCallout>
-            You&rsquo;re 4 hours from completing this cycle&rsquo;s CEU requirement &mdash; two short
-            courses would close it. Check out the{" "}
-            <Link href="/account/ceus" className="font-semibold text-brand hover:underline">
-              CEU portal
-            </Link>{" "}
-            for approved providers.
+            {ceu.compliant ? (
+              <>
+                You&rsquo;ve completed this cycle&rsquo;s CEU requirement &mdash;{" "}
+                {ceu.totalApproved} of {ceu.requiredTotal} approved hours, with the ethics and
+                cultural diversity minimums met. Nice work.
+              </>
+            ) : (
+              <>
+                {ceu.remaining > 0 ? (
+                  <>
+                    You&rsquo;re {hoursLabel(ceu.remaining)} from completing this cycle&rsquo;s{" "}
+                    {ceu.requiredTotal}-hour CEU requirement ({ceu.totalApproved} approved so
+                    far).
+                  </>
+                ) : (
+                  <>
+                    Your {ceu.requiredTotal} total hours are approved, but a category minimum is
+                    still open.
+                  </>
+                )}
+                {categoryShortfalls.length > 0 && (
+                  <> That includes {categoryShortfalls.join(" and ")} still needed.</>
+                )}{" "}
+                Check out the{" "}
+                <Link href="/account/ceus" className="font-semibold text-brand hover:underline">
+                  CEU portal
+                </Link>{" "}
+                for approved providers.
+              </>
+            )}
           </InsightCallout>
         </div>
       </section>
 
-      {/* Personalized task cards ───────────────────────────────────────── */}
-      <section aria-labelledby="demo-tasks-heading">
+      {/* Open tasks assigned to the member ─────────────────────────────── */}
+      <section aria-labelledby="open-tasks-heading">
         <h3
-          id="demo-tasks-heading"
+          id="open-tasks-heading"
           className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted"
         >
           Recommended Actions
         </h3>
 
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {MEMBER_TASKS_DEMO.map((task) => (
-            <TaskCard key={task.id} task={task} />
-          ))}
-        </ul>
+        {tasks.length === 0 ? (
+          <p className="rounded-xl border border-line bg-surface p-5 text-sm text-muted">
+            No open tasks &mdash; you&rsquo;re all caught up.
+          </p>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {tasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

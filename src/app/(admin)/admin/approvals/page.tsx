@@ -1,4 +1,5 @@
 import { AccountApprovalActions } from "@/components/admin/account-approval-actions";
+import { describeLegacyRecord, matchLegacyRecords, type LegacyMemberRecord } from "@/lib/legacy-members";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,17 @@ export default async function AdminApprovals() {
     .not("account_submitted_at", "is", null)
     .order("account_submitted_at", { ascending: true });
   const rows = data ?? [];
+
+  // Legacy roster matching: does this signup correspond to a historical
+  // ABCAC record? (Table may not exist until migration 042 runs — degrade.)
+  let legacyRecords: LegacyMemberRecord[] = [];
+  try {
+    const { data: legacy } = await sb
+      .from("legacy_members")
+      .select("id,first_name,last_name,email,cert_type,cert_number,expiration_date,claimed_by")
+      .limit(5000);
+    legacyRecords = (legacy ?? []) as LegacyMemberRecord[];
+  } catch { /* migration 042 not applied yet */ }
 
   return (
     <>
@@ -44,6 +56,11 @@ export default async function AdminApprovals() {
                         <span className="font-semibold">Self-reported #:</span> {p.submitted_cert_numbers}
                       </div>
                     ) : null}
+                    {matchLegacyRecords(legacyRecords, { email: p.email, submittedCertNumbers: p.submitted_cert_numbers }).slice(0, 3).map((match) => (
+                      <div key={match.record.id} className="mt-1 inline-flex rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+                        Legacy match ({match.matchedBy === "email" ? "email" : "cert #"}): {describeLegacyRecord(match.record)}
+                      </div>
+                    ))}
                   </td>
                   <td className="px-5 py-3 text-muted">{fmt(p.account_submitted_at)}</td>
                   <td className="px-5 py-3"><AccountApprovalActions memberId={p.id} /></td>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { pushTaskToClickUp } from "@/lib/clickup";
 import { sendEmail } from "@/lib/email";
 import { siteConfig } from "@/lib/site-config";
 
@@ -95,6 +96,12 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
         status: "open",
         priority: "high",
         visible_to_member: false,
+      });
+      void pushTaskToClickUp({
+        title: `Pre-register ${meta.exam_code || "IC&RC"} exam candidate with SMT`,
+        detail: `Payment received for testing request ${meta.testing_request_id}.`,
+        priority: "high",
+        adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/testing/${meta.testing_request_id}`,
       });
       await admin.from("notifications").insert({
         member_id: memberId,
