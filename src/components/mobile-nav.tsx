@@ -17,7 +17,7 @@ interface MobileNavProps {
 
 /**
  * Mobile mega-menu drawer (sub-xl). Renders the MENU groups as collapsible
- * accordions, the simple MENU_LINKS, and the Member Portal / Book an Audit
+ * accordions, the simple MENU_LINKS, and the Member Portal / Get Certified
  * CTAs near the bottom. Desktop uses <MegaMenu /> instead.
  */
 export function MobileNav({ open, onClose }: MobileNavProps) {

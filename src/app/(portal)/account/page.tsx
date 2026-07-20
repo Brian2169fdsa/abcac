@@ -49,6 +49,7 @@ interface Profile {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  cert_status: string | null;
 }
 interface CeuRecord extends CeuLike {
   id: string;
@@ -221,20 +222,29 @@ export default async function AccountPage() {
       : null;
 
   // KPI 4: IC&RC / cert status — derive from active certs or the latest app.
+  // A former holder (lapsed legacy credential, no active cert) is shown their
+  // real standing instead of being treated like a brand-new applicant.
   const latestApp = applications[0];
+  const formerHolder =
+    activeCerts.length === 0 &&
+    (profile?.cert_status === "former_holder" || certifications.some((c) => c.status === "expired"));
   const statusKpi: { value: string; sub: string } = activeCerts.length > 0
     ? { value: "Active", sub: "Certification in good standing" }
-    : latestApp
-      ? {
-          value: titleCase(latestApp.status ?? "submitted"),
-          sub: titleCase((latestApp.app_type ?? "Application").replace(/_/g, " ")),
-        }
-      : { value: "—", sub: "No active certification" };
+    : formerHolder
+      ? { value: "Lapsed", sub: "Certification expired — renewal available" }
+      : latestApp
+        ? {
+            value: titleCase(latestApp.status ?? "submitted"),
+            sub: titleCase((latestApp.app_type ?? "Application").replace(/_/g, " ")),
+          }
+        : { value: "—", sub: "No active certification" };
 
   // Banner message mirrors the static portal's contextual copy.
   const bannerMessage =
     activeCerts.length === 0
-      ? "Complete your profile and upload your supporting documents to get started with your certification."
+      ? formerHolder
+        ? "Welcome back. Your previous ABCAC credential has expired — start a renewal from the Certification tab to reinstate it."
+        : "Complete your profile and upload your supporting documents to get started with your certification."
       : ceuCompliance.remaining > 0
         ? `Your certifications are active. ${ceuCompliance.remaining} CEU hour${ceuCompliance.remaining !== 1 ? "s" : ""} remaining to stay compliant.`
         : primaryDue?.days && primaryDue.days > 0
@@ -263,6 +273,7 @@ export default async function AccountPage() {
     certifications: planCerts,
     ceuCompliance,
     missingDocuments: openDocRequests,
+    formerHolder,
   });
 
   const quickActions = [
