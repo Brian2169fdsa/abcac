@@ -27,7 +27,21 @@ const HEADER_ALIASES: Record<string, string[]> = {
   expiration_date: ["expires", "expiration", "expiration date", "expires on", "renewal date", "exp date", "exp"],
   ic_rc_level: ["ic&rc level", "icrc level", "level"],
   notes: ["notes", "comments", "remarks"],
+  status: ["status", "standing", "active/inactive"],
+  address_line1: ["address 1", "address1", "address", "street address", "address line 1"],
+  address_line2: ["address 2", "address2", "suite", "apt", "address line 2"],
+  city: ["city"],
+  state: ["state", "st"],
+  zip_code: ["zip code", "zip", "zipcode", "postal code"],
 };
+
+/** Normalize a status cell to active | inactive | review (default active). */
+function toStatus(raw: string): string {
+  const value = raw.trim().toLowerCase();
+  if (["inactive", "expired", "lapsed", "red"].includes(value)) return "inactive";
+  if (["review", "unknown", "pending", "yellow", "orange"].includes(value)) return "review";
+  return "active";
+}
 
 /** Minimal CSV parser supporting quoted fields and embedded commas/quotes. */
 function parseCsv(text: string): Record<string, string>[] {
@@ -109,6 +123,12 @@ async function main() {
     expiration_date: toDate(source[mapping.expiration_date] ?? ""),
     ic_rc_level: source[mapping.ic_rc_level] || null,
     notes: source[mapping.notes] || null,
+    status: toStatus(source[mapping.status] ?? ""),
+    address_line1: source[mapping.address_line1] || null,
+    address_line2: source[mapping.address_line2] || null,
+    city: source[mapping.city] || null,
+    state: source[mapping.state] || null,
+    zip_code: source[mapping.zip_code] || null,
     source_row: source,
     import_batch: batch,
   }));
