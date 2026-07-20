@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getProducts } from "@/lib/catalog";
-import { getPosts } from "@/lib/blog";
+import { getPosts, getArticles } from "@/lib/blog";
 
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -61,11 +61,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "yearly" as const,
   }));
 
+  const articleEntries: MetadataRoute.Sitemap = getArticles().map((article) => ({
+    url: `${base}/blog/${article.slug}`,
+    lastModified: new Date(article.date),
+    priority: 0.7,
+    changeFrequency: "monthly" as const,
+  }));
+
   return [
     homepageEntry,
     ...primaryEntries,
     ...secondaryEntries,
     ...productEntries,
+    ...articleEntries,
     ...postEntries,
   ];
 }

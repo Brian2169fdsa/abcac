@@ -19,6 +19,11 @@ interface Cert {
 /** Downloads the official certificate / wallet card as real PDF files generated
  *  from the certification record ABCAC issued, plus the admin-uploaded scan
  *  when one exists. */
+/** Historical credential names can contain path separators ("CAC/ADC"). */
+function fileSafe(value: string | null | undefined) {
+  return (value ?? "credential").replace(/[^\w.-]+/g, "-");
+}
+
 export function CertificateActions({ cert, memberName }: { cert: Cert; memberName: string }) {
   const [busy, setBusy] = useState<"file" | "cert" | "wallet" | null>(null);
 
@@ -51,7 +56,7 @@ export function CertificateActions({ cert, memberName }: { cert: Cert; memberNam
   async function certificate() {
     setBusy("cert");
     try {
-      downloadPdf(await generateCertificatePdf(pdfData), `ABCAC-Certificate-${cert.cert_type ?? "credential"}.pdf`);
+      downloadPdf(await generateCertificatePdf(pdfData), `ABCAC-Certificate-${fileSafe(cert.cert_type)}.pdf`);
     } catch {
       alert("Could not generate the certificate PDF. Please try again.");
     } finally {
@@ -62,7 +67,7 @@ export function CertificateActions({ cert, memberName }: { cert: Cert; memberNam
   async function wallet() {
     setBusy("wallet");
     try {
-      downloadPdf(await generateWalletCardPdf(pdfData), `ABCAC-Wallet-Card-${cert.cert_type ?? "credential"}.pdf`);
+      downloadPdf(await generateWalletCardPdf(pdfData), `ABCAC-Wallet-Card-${fileSafe(cert.cert_type)}.pdf`);
     } catch {
       alert("Could not generate the wallet card PDF. Please try again.");
     } finally {

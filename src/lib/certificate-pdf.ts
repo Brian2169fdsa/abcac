@@ -24,7 +24,28 @@ function fmt(d: string | null | undefined) {
   return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
 
-export async function generateCertificatePdf(data: CertificatePdfData): Promise<Uint8Array> {
+// The standard PDF fonts only encode WinAnsi — a name with a character outside
+// it (e.g. "Renée" is fine, "Ngũgĩ" is not) would make drawText throw. Fold
+// what we can to a close ASCII form and drop the rest so generation never fails.
+function winAnsiSafe(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\x20-\x7E -ÿ]/g, "");
+}
+
+function safeData(data: CertificatePdfData): CertificatePdfData {
+  return {
+    ...data,
+    memberName: winAnsiSafe(data.memberName),
+    certType: winAnsiSafe(data.certType),
+    icRcLevel: data.icRcLevel ? winAnsiSafe(data.icRcLevel) : data.icRcLevel,
+    certNumber: data.certNumber ? winAnsiSafe(data.certNumber) : data.certNumber,
+  };
+}
+
+export async function generateCertificatePdf(rawData: CertificatePdfData): Promise<Uint8Array> {
+  const data = safeData(rawData);
   const doc = await PDFDocument.create();
   const [letterW, letterH] = PageSizes.Letter;
   const page = doc.addPage([letterH, letterW]); // landscape
@@ -86,7 +107,8 @@ export async function generateCertificatePdf(data: CertificatePdfData): Promise<
 }
 
 /** Standard wallet-card size: 3.375in x 2.125in at 72pt/in. */
-export async function generateWalletCardPdf(data: CertificatePdfData): Promise<Uint8Array> {
+export async function generateWalletCardPdf(rawData: CertificatePdfData): Promise<Uint8Array> {
+  const data = safeData(rawData);
   const doc = await PDFDocument.create();
   const width = 3.375 * 72;
   const height = 2.125 * 72;
