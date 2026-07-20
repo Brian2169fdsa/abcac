@@ -1,0 +1,4 @@
+First Name,Last Name,Email,Phone,Credential,Cert Number,Issued Date,Expiration Date,IC&RC Level,Notes
+Maria,Gonzalez,maria@example.com,(602) 555-0142,CADAC,CADAC-04471,3/15/2023,3/15/2027,,
+James,Whitfield,james@example.com,(480) 555-0197,CAC,887,11/2/2024,11/2/2026,,
+James,Whitfield,james@example.com,(480) 555-0197,CCS,CCS-0112,6/10/2025,6/10/2027,,Second credential — same person invited once

@@ -1,11 +1,16 @@
 # ABCAC Launch Assessment — Full Site, Portal, and Admin Audit
 
-> 2026-07-19. Three parallel code audits (public site, member portal, admin console + config)
-> plus live-production probes (all public routes 200, migration 040 applied, #160 deployed).
-> **Verdict: the platform is functionally complete.** Every member flow has a real, permission-legal
-> write path; every admin queue reads data a real flow writes; no mock data renders with current
-> settings; missing env keys degrade safely. What remains is a concentrated punch list — narrow
-> code fixes, a few config steps only the owner can do, and cleanup.
+> 2026-07-19, updated 2026-07-20. Three parallel code audits (public site, member portal, admin
+> console + config) plus live-production probes.
+> **Status update 2026-07-20: every code item below (P0, P1, and P2) is fixed and merged (PR #163),
+> and the live DB has migrations 040–042 + the cert_schedules seed applied.** The platform also now
+> includes the legacy-member import/invite system (`docs/LEGACY-IMPORT-RUNBOOK.md`) and optional
+> ClickUp task mirroring. What remains before launch is the owner/config table below plus the
+> member-data import — no outstanding code work.
+>
+> Original verdict (2026-07-19): the platform is functionally complete. Every member flow has a
+> real, permission-legal write path; every admin queue reads data a real flow writes; no mock data
+> renders with current settings; missing env keys degrade safely.
 
 ## P0 — fix before launch (code)
 
@@ -74,14 +79,16 @@ slight horizontal scroll on mobile `/testing`; blog title naming; footer "Our se
 | H | Automation rollout decision (16 workflows shipped OFF — see `docs/ship/03`) | Manual ops only (safe default) |
 | I | Optional: delete test rows (E2E payment/submissions, `brian+abcac-e2e-test` account) | Cosmetic |
 
-## The plan
+## The plan (updated 2026-07-20)
 
-- **Phase 1 — code fix pass (me, ~one PR):** all P0 code items (1–3) + P1 items (5–11).
-  Tests + typecheck + visual verify, single PR.
-- **Phase 2 — 2 minutes of SQL (you):** run the `cert_schedules` seed above in Supabase.
-- **Phase 3 — config afternoon (you, ~30 min):** A → F in the table. Resend first (email is the
-  biggest silent gap), then the Finance check, live Stripe when ready for real money.
-- **Phase 4 — launch:** DNS cutover, then the smoke test in `docs/ship/04-launch-readiness.md`
+- ~~**Phase 1 — code fix pass:** all P0/P1 code items~~ ✅ done, merged.
+- ~~**Phase 2 — SQL:** `cert_schedules` seed + `legacy_members` table~~ ✅ run on live 2026-07-20.
+- **Phase 3 — member data (next):** import the historical member export and run the invite
+  campaign — see `docs/LEGACY-IMPORT-RUNBOOK.md`. Needs the export file + service-role key.
+- **Phase 4 — config afternoon (owner, ~30 min):** A → F in the table. Resend first (email is the
+  biggest silent gap — and required before invites go out), then the Finance check, ClickUp
+  token/List ID, live Stripe when ready for real money.
+- **Phase 5 — launch:** DNS cutover, then the smoke test in `docs/ship/04-launch-readiness.md`
   (signup → apply → pay → approve → certificate).
-- **Phase 5 — post-launch:** P2 polish, automation phased enablement, wire the flag-gated
-  Reports/AI surfaces to real data before enabling.
+- **Phase 6 — post-launch:** automation phased enablement, test-data cleanup, anything real
+  members surface in the first weeks.
