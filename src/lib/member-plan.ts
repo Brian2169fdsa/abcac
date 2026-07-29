@@ -51,6 +51,8 @@ export interface MemberPlanInput {
   ceuCompliance: PlanCeuCompliance;
   /** Count of documents ABCAC has requested but not yet received. */
   missingDocuments: number;
+  /** Lapsed credential holder (e.g. legacy import) — steer to renewal, not a new application. */
+  formerHolder?: boolean;
   /** "Today" — injectable for deterministic tests. */
   asOf?: Date;
   /** Renewal-warning window in days (default 90). */
@@ -122,6 +124,19 @@ export function buildMemberPlan(input: MemberPlanInput): PlanStep[] {
   });
 
   // 2 ─ Submit application / get approved ─────────────────────────────────────
+  // A former holder (lapsed credential, no active cert) is not a new applicant:
+  // their next step is reinstating the credential, not an initial application.
+  if (input.formerHolder && !active) {
+    steps.push({
+      id: "submit-application",
+      title: "Renew your lapsed certification",
+      detail:
+        "Your previous ABCAC credential has expired. Start a renewal from the Certification tab to reinstate it.",
+      status: "todo",
+      href: "/account/certification",
+      priority: "high",
+    });
+  } else {
   const appDone = active || input.accountStatus === "approved";
   const appInProgress =
     input.accountStatus === "submitted" ||
@@ -143,6 +158,7 @@ export function buildMemberPlan(input: MemberPlanInput): PlanStep[] {
     href: appDone ? "/account/applications" : "/account/apply",
     priority: "high",
   });
+  }
 
   // 3 ─ Upload requested documents ────────────────────────────────────────────
   const docsDone = input.missingDocuments <= 0;

@@ -80,7 +80,7 @@ export default function StyleguidePage() {
             CtaButton
           </h2>
           <div className="flex flex-wrap gap-3">
-            <CtaButton href="/contact" variant="primary">Book an Audit</CtaButton>
+            <CtaButton href="/contact" variant="primary">Get Certified</CtaButton>
             <CtaButton href="/contact" variant="outline">Learn More</CtaButton>
             <CtaButton href="/contact" variant="ghost">Ghost CTA</CtaButton>
             <CtaButton href="/contact" variant="accent">Accent CTA</CtaButton>

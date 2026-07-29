@@ -1,9 +1,27 @@
+import fs from "fs";
+import path from "path";
+
 export interface Post {
   slug: string;
   title: string;
   date: string;        // ISO
   excerpt: string;
   body: string[];      // paragraphs
+}
+
+/** Long-form SEO article sourced from a markdown file in content/blog. */
+export interface Article {
+  slug: string;
+  title: string;
+  date: string;            // ISO
+  category: string;
+  tags: string[];
+  author: string;
+  readingTime: string;     // e.g. "6 min"
+  metaDescription: string;
+  imageAlt: string;
+  image: string;           // /blog/<file>.png
+  body: string;            // markdown (without the duplicate H1)
 }
 
 // Real ABCAC announcements (sourced from current board communications).
@@ -52,4 +70,71 @@ export function getPosts() {
 }
 export function getPost(slug: string) {
   return POSTS.find((p) => p.slug === slug);
+}
+
+// ─── Markdown articles (content/blog/*.md) ───────────────────────────────────
+
+const ARTICLE_DIR = path.join(process.cwd(), "content", "blog");
+
+/** Minimal frontmatter parser for our own files: `key: "value"` / `key: [..]`. */
+function parseFrontmatter(raw: string): { meta: Record<string, string | string[]>; body: string } {
+  const match = /^---\n([\s\S]*?)\n---\n?/.exec(raw);
+  if (!match) return { meta: {}, body: raw };
+  const meta: Record<string, string | string[]> = {};
+  for (const line of match[1].split("\n")) {
+    const i = line.indexOf(":");
+    if (i < 0) continue;
+    const key = line.slice(0, i).trim();
+    let value = line.slice(i + 1).trim();
+    if (value.startsWith("[")) {
+      try { meta[key] = JSON.parse(value.replace(/'/g, '"')) as string[]; continue; } catch { /* fall through */ }
+    }
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    meta[key] = value;
+  }
+  return { meta, body: raw.slice(match[0].length) };
+}
+
+let articleCache: Article[] | null = null;
+
+function loadArticles(): Article[] {
+  if (articleCache) return articleCache;
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(ARTICLE_DIR).filter((f) => f.endsWith(".md"));
+  } catch {
+    return (articleCache = []);
+  }
+  const articles: Article[] = [];
+  for (const file of files) {
+    const raw = fs.readFileSync(path.join(ARTICLE_DIR, file), "utf8");
+    const { meta, body } = parseFrontmatter(raw);
+    const str = (k: string) => (typeof meta[k] === "string" ? (meta[k] as string) : "");
+    if (!str("slug") || !str("title")) continue;
+    articles.push({
+      slug: str("slug"),
+      title: str("title"),
+      date: str("date"),
+      category: str("category"),
+      tags: Array.isArray(meta.tags) ? (meta.tags as string[]) : [],
+      author: str("author") || "ABCAC Editorial Team",
+      readingTime: str("reading_time"),
+      metaDescription: str("meta_description"),
+      imageAlt: str("featured_image_alt"),
+      image: `/blog/${file.replace(/\.md$/, "")}.png`,
+      // The page renders the title itself — drop the duplicate leading H1.
+      body: body.replace(/^\s*# .*\n/, "").trim(),
+    });
+  }
+  articleCache = articles.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  return articleCache;
+}
+
+export function getArticles() {
+  return loadArticles();
+}
+export function getArticle(slug: string) {
+  return loadArticles().find((a) => a.slug === slug);
 }

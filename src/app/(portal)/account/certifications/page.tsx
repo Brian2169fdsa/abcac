@@ -17,6 +17,14 @@ function fmt(d: string | null) {
 }
 
 /** Label/value pair used by the stacked mobile card layout. */
+function CertStatusPill({ status }: { status: string | null }) {
+  if (status === "active")
+    return <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Active</span>;
+  if (status === "revoked")
+    return <span className="rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand">Revoked</span>;
+  return <span className="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold text-muted">Expired</span>;
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
@@ -70,6 +78,7 @@ export default async function CertificationsPage() {
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3">Certification</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Number</th>
                   <th className="px-4 py-3">Date Issued</th>
                   <th className="px-4 py-3">Expiration</th>
@@ -81,6 +90,7 @@ export default async function CertificationsPage() {
                 {rows.map((c) => (
                   <tr key={c.id} className="border-b border-line last:border-0">
                     <td className="px-4 py-3 font-semibold text-ink">{c.cert_type ?? "—"}</td>
+                    <td className="px-4 py-3"><CertStatusPill status={c.status} /></td>
                     <td className="px-4 py-3 text-muted">{c.cert_number ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{fmt(c.issued_date)}</td>
                     <td className="px-4 py-3 text-muted">{fmt(c.expiration_date)}</td>
@@ -95,7 +105,10 @@ export default async function CertificationsPage() {
             <ul className="space-y-3 px-4 pb-4 pt-2 md:hidden">
               {rows.map((c) => (
                 <li key={c.id} className="rounded-xl border border-line bg-bg p-4">
-                  <div className="text-sm font-semibold text-ink">{c.cert_type ?? "—"}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-ink">{c.cert_type ?? "—"}</div>
+                    <CertStatusPill status={c.status} />
+                  </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Number">{c.cert_number ?? "—"}</Field>
                     <Field label="IC&amp;RC Level">{c.ic_rc_level ?? "—"}</Field>
