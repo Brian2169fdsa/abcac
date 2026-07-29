@@ -23,7 +23,7 @@ export function MegaMenu() {
 
   return (
     <div
-      className="relative hidden items-center gap-0.5 rounded-2xl border border-info/[0.06] bg-surface/80 p-1 shadow-[0_8px_28px_-22px_rgba(13,34,63,0.5)] xl:flex"
+      className="relative hidden items-center gap-0.5 rounded-2xl border border-info/[0.08] bg-surface p-1 shadow-[0_8px_28px_-22px_rgba(13,34,63,0.5)] xl:flex"
       onMouseLeave={() => setOpen(null)}
     >
       <Link

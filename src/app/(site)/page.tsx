@@ -17,8 +17,10 @@ import { StatCard } from "@/components/stat-card";
 import { ServiceCard } from "@/components/service-card";
 import { CtaButton } from "@/components/cta-button";
 import { FaqSection } from "@/components/faq-section";
+import { BlogCard } from "@/components/blog/blog-card";
 import { siteConfig } from "@/lib/site-config";
 import { FAQS, TESTIMONIALS } from "@/lib/faqs";
+import { getPostSummaries } from "@/lib/blog";
 
 export const metadata: Metadata = {
   title: "ABCAC — Arizona Board for Certification of Addiction Counselors",
@@ -55,6 +57,8 @@ const credentials = [
 ];
 
 export default function HomePage() {
+  const latestPosts = getPostSummaries().slice(0, 3);
+
   return (
     <>
       {/* Hero */}
@@ -212,7 +216,7 @@ export default function HomePage() {
 
       {/* Credential teaser */}
       <Section eyebrow="Credentials" title="Which Credential Is Right for You?" intro="Whether you're just starting out, advancing your clinical skills, or supporting others through lived experience — ABCAC offers the credential that aligns with your path." className="bg-surface">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-5">
           {credentials.map((c, index) => (
             <div key={c.code} className="group modern-surface relative overflow-hidden rounded-[1.5rem] p-5 transition duration-300 hover:-translate-y-1.5 hover:border-brand/20 hover:shadow-[0_28px_70px_-38px_rgba(13,34,63,0.4)] sm:p-6 lg:p-5">
               <span className="pointer-events-none absolute right-4 top-3 font-display text-5xl font-bold text-brand opacity-[0.045]" aria-hidden>0{index + 1}</span>
@@ -298,6 +302,27 @@ export default function HomePage() {
               <figcaption className="mt-5 border-t border-line pt-4 text-sm font-semibold text-ink">— {t.author}</figcaption>
             </figure>
           ))}
+        </div>
+      </Section>
+
+      {/* Knowledge Center */}
+      <Section
+        id="knowledge-center"
+        eyebrow="Knowledge Center"
+        title="Practical guidance for your certification journey"
+        intro="Current, plain-language resources for Arizona addiction professionals—from choosing a credential and preparing for testing to maintaining certification and strengthening practice."
+        className="overflow-hidden border-y border-line bg-gradient-to-b from-bg to-surface"
+      >
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {latestPosts.map((post) => (
+            <BlogCard key={post.slug} post={post} />
+          ))}
+        </div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <CtaButton href="/blog" size="lg">Explore the Knowledge Center</CtaButton>
+          <p className="text-sm leading-relaxed text-muted">
+            Browse all articles on certification, testing, ethics, treatment, and career growth.
+          </p>
         </div>
       </Section>
 

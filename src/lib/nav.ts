@@ -73,6 +73,7 @@ export const MENU: MegaGroup[] = [
 
 // Simple top-level links shown alongside the mega groups.
 export const MENU_LINKS: MenuLink[] = [
+  { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -86,5 +87,6 @@ export const NAV: NavItem[] = [
   { label: "Reciprocity", href: "/reciprocity" },
   { label: "Testing", href: "/testing" },
   { label: "Sync Your Certs", href: "/certification-sync" },
+  { label: "Blog", href: "/blog" },
   { label: "Contact Us", href: "/contact" },
 ];
