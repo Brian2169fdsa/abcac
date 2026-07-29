@@ -71,7 +71,7 @@ export function MegaMenu() {
       {/* Dropdown panel */}
       {open !== null && (
         <div className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-4">
-          <div className="w-[850px] max-w-[92vw] overflow-hidden rounded-[1.75rem] border border-info/10 bg-surface/95 shadow-[0_36px_100px_-40px_rgba(13,34,63,0.55)] ring-1 ring-white/80 backdrop-blur-2xl">
+          <div className="w-[850px] max-w-[92vw] overflow-hidden rounded-[1.75rem] border border-info/10 bg-white shadow-[0_36px_100px_-40px_rgba(13,34,63,0.55)] ring-1 ring-white">
             <div className="grid grid-cols-[255px_1fr]">
               {/* Branded featured block */}
               <Link href={MENU[open].featured.href} className="group relative isolate flex min-h-[390px] flex-col overflow-hidden bg-gradient-to-br from-info via-info to-brand-600 p-7 text-white">
@@ -96,7 +96,7 @@ export function MegaMenu() {
               </Link>
 
               {/* Links grid */}
-              <div className="grid grid-cols-2 gap-2 p-5">
+              <div className="grid grid-cols-2 gap-2 bg-white p-5">
                 {MENU[open].links.map((link) => {
                   const external = link.href.startsWith("http");
                   const inner = (
