@@ -99,9 +99,8 @@ export function CertificationHub() {
           </div>
           {path === "renewal" && (
             <p className="mt-3 text-xs text-muted">
-              You can pay the $150 renewal fee any time from the{" "}
-              <a href="/account/payments?product=certification-renewal-2-year-credential-renewal-fee" className="font-semibold text-brand">Payments page</a>
-              {" "}— your packet and payment are matched to your account automatically.
+              Your $150 renewal payment becomes available after you submit the recertification packet, so the payment,
+              documents, and credential remain attached to the same application.
             </p>
           )}
         </div>

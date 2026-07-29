@@ -40,6 +40,7 @@ export function paymentFormLabel(formType: string) {
     testing_preregistration: "Exam pre-registration form",
     certification_sync: "Certification sync request",
     reciprocity_request: "Reciprocity request",
+    application_fee: "Submitted application payment",
     invoice: "Admin-issued invoice",
   } as Record<string, string>)[formType] ?? "Payment form";
 }

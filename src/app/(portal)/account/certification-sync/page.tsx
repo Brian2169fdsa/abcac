@@ -7,9 +7,11 @@ import { CertificationSyncForm } from "./certification-sync-form";
 export const metadata = { title: "Certification Sync Request" };
 export const dynamic = "force-dynamic";
 
-export default async function CertificationSyncAccountPage({ searchParams }: { searchParams?: { mode?: string } }) {
+export default async function CertificationSyncAccountPage({ searchParams }: { searchParams?: { mode?: string; months?: string } }) {
   const memberId = await requireUserId();
   const supabase = createSupabaseServerClient();
+  const requestedMonths = Number(searchParams?.months);
+  const preferredMonths = Number.isInteger(requestedMonths) && requestedMonths >= 1 && requestedMonths <= 120 ? requestedMonths : 1;
   const [{ data: profile }, { data: request }] = await Promise.all([
     supabase.from("profiles").select("first_name,last_name,phone").eq("id", memberId).maybeSingle(),
     supabase.from("applications").select("id,status,member_notes,signature_name").eq("member_id", memberId).eq("app_type", "cert_sync").in("status", ["draft", "submitted", "under_review"]).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
@@ -24,6 +26,7 @@ export default async function CertificationSyncAccountPage({ searchParams }: { s
           <CertificationSyncForm
             request={request ?? null}
             preferredMode={searchParams?.mode === "paper" ? "paper" : "digital"}
+            preferredMonths={preferredMonths}
             profile={{ fullName, phone: profile?.phone ?? "" }}
           />
         </div>

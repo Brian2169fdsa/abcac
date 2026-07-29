@@ -7,6 +7,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
+import { safeInternalPath } from "@/lib/portal-routing";
 
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 const labelCls = "mb-1.5 block text-sm font-semibold";
@@ -25,9 +26,7 @@ type CertEntry = { number: string; type: string };
 
 function SignupForm() {
   const params = useSearchParams();
-  // Only ever forward same-site paths (prevents open redirects).
-  const rawNext = params.get("next") || "/account";
-  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/account";
+  const nextPath = safeInternalPath(params.get("next"));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -103,7 +102,7 @@ function SignupForm() {
         <CheckCircle2 className="mx-auto h-12 w-12 text-success" aria-hidden />
         <h1 className="mt-6">Check your email</h1>
         <p className="mt-3 text-muted">We sent a confirmation link to verify your address. Click it to activate your account, then sign in.</p>
-        <Link href="/login" className="mt-6 inline-block font-semibold text-brand hover:text-brand-600">Go to sign in →</Link>
+        <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="mt-6 inline-block font-semibold text-brand hover:text-brand-600">Go to sign in →</Link>
       </div>
     );
   }
@@ -181,7 +180,7 @@ function SignupForm() {
         </Button>
       </form>
       <p className="mt-4 text-center text-sm text-muted">
-        Already have an account? <Link href="/login" className="font-semibold text-brand">Sign in</Link>
+        Already have an account? <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="font-semibold text-brand">Sign in</Link>
       </p>
     </div>
   );

@@ -34,7 +34,7 @@ export default function RemoteOrInPersonPage() {
             </p>
             {remote && (
               <CtaButton href="/account/testing?mode=remote" className="mt-6 w-full sm:w-auto sm:self-start">
-                Pay Now — <PriceTag product={remote} className="ml-1 text-white" />
+                Start Remote Pre-Registration — <PriceTag product={remote} className="ml-1 text-white" />
               </CtaButton>
             )}
           </div>
@@ -48,7 +48,7 @@ export default function RemoteOrInPersonPage() {
             </p>
             {inPerson && (
               <CtaButton href="/account/testing?mode=in_person" className="mt-6 w-full sm:w-auto sm:self-start">
-                Pay Now — <PriceTag product={inPerson} className="ml-1 text-white" />
+                Start In-Person Pre-Registration — <PriceTag product={inPerson} className="ml-1 text-white" />
               </CtaButton>
             )}
           </div>

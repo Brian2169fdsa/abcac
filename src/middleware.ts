@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminRole } from "@/lib/auth/roles";
+import { safeInternalPath } from "@/lib/portal-routing";
 
 // Single source of auth truth for the portal/admin areas.
 //
@@ -18,6 +19,7 @@ import { isAdminRole } from "@/lib/auth/roles";
 // redirects, per the canonical @supabase/ssr pattern.
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  const requestedPath = safeInternalPath(`${path}${request.nextUrl.search}`);
 
   const isPublicPortalFeature = path === "/account/certification-sync" || path === "/account/forms";
 
@@ -47,18 +49,22 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   // A redirect that carries the refreshed auth cookies.
-  const redirectTo = (pathname: string, opts?: { keepNext?: boolean }) => {
+  const redirectTo = (pathname: string, opts?: { next?: string }) => {
     const target = request.nextUrl.clone();
     target.pathname = pathname;
     target.search = "";
-    if (opts?.keepNext) target.searchParams.set("next", path);
+    if (opts?.next) target.searchParams.set("next", safeInternalPath(opts.next));
     const redirect = NextResponse.redirect(target);
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
     return redirect;
   };
 
-  if (!user && (path.startsWith("/account") || path.startsWith("/admin"))) {
-    return redirectTo("/login", { keepNext: true });
+  if (!user && path.startsWith("/admin")) {
+    return redirectTo("/login", { next: requestedPath });
+  }
+
+  if (!user && path.startsWith("/account")) {
+    return redirectTo("/portal", { next: requestedPath });
   }
 
   // Gate the admin area to admins (defense-in-depth; the layout also checks).
@@ -72,7 +78,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Gate unapproved members to the onboarding/approval flow.
-  if (user && path.startsWith("/account") && path !== "/account/onboarding" && !isPublicPortalFeature) {
+  if (
+    process.env.PORTAL_ACCOUNT_APPROVAL_REQUIRED === "true" &&
+    user &&
+    path.startsWith("/account") &&
+    path !== "/account/onboarding" &&
+    !isPublicPortalFeature
+  ) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("account_status")

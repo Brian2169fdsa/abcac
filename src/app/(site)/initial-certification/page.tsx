@@ -387,7 +387,7 @@ export default function InitialCertificationPage() {
                   <h3 className="text-base">Application + In-Person Exam</h3>
                   <PriceTag product={full} className="mt-3 text-2xl font-semibold text-brand" />
                   <p className="mt-3 flex-1 text-sm text-muted">Full application processing and IC&amp;RC exam at an approved Arizona testing center.</p>
-                  <CtaButton href="/account/certification" className="mt-5 w-full">Pay In-Person Fee</CtaButton>
+                  <CtaButton href="/account/certification" className="mt-5 w-full">Continue with In-Person Package</CtaButton>
                 </div>
               )}
               {remote && (
@@ -395,7 +395,7 @@ export default function InitialCertificationPage() {
                   <h3 className="text-base">Application + Remote Exam</h3>
                   <PriceTag product={remote} className="mt-3 text-2xl font-semibold text-brand" />
                   <p className="mt-3 flex-1 text-sm text-muted">Full application processing with a secure remote-proctored IC&amp;RC exam.</p>
-                  <CtaButton href="/account/certification" className="mt-5 w-full">Pay Remote Fee</CtaButton>
+                  <CtaButton href="/account/certification" className="mt-5 w-full">Continue with Remote Package</CtaButton>
                 </div>
               )}
               {certOnly && (
@@ -403,7 +403,7 @@ export default function InitialCertificationPage() {
                   <h3 className="text-base">Certification Only</h3>
                   <PriceTag product={certOnly} className="mt-3 text-2xl font-semibold text-brand" />
                   <p className="mt-3 flex-1 text-sm text-muted">For applicants who already passed the applicable IC&amp;RC exam.</p>
-                  <CtaButton href="/account/certification" variant="outline" className="mt-5 w-full">Pay Certification Fee</CtaButton>
+                  <CtaButton href="/account/certification" variant="outline" className="mt-5 w-full">Continue with Certification Only</CtaButton>
                 </div>
               )}
             </div>

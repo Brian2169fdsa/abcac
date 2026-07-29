@@ -1,9 +1,36 @@
-import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { CtaButton } from "@/components/cta-button";
 
 export const metadata = { title: "Payment Confirmed" };
+
+const portalDestinations = {
+  "/account/testing": {
+    label: "Track Exam Registration",
+    record: "exam registration",
+    next: "ABCAC staff will review your exam registration and complete your pre-registration with SMT.",
+  },
+  "/account/certification-sync": {
+    label: "Track Certification Sync",
+    record: "certification sync request",
+    next: "ABCAC staff will review the dates and credentials attached to your synchronization request.",
+  },
+  "/account/requests": {
+    label: "Track Reciprocity Request",
+    record: "reciprocity request",
+    next: "ABCAC staff will review the credential and destination attached to your reciprocity request.",
+  },
+  "/account/applications": {
+    label: "Track Application",
+    record: "application",
+    next: "ABCAC staff will review the application packet and documents attached to this payment.",
+  },
+  "/account/payments": {
+    label: "View Payments",
+    record: "payment",
+    next: "ABCAC staff will process the service request attached to this payment.",
+  },
+} as const;
 
 export default async function CheckoutSuccessPage({
   searchParams,
@@ -13,6 +40,7 @@ export default async function CheckoutSuccessPage({
   let productName: string | null = null;
   let isCeu = false;
   let isTesting = false;
+  let portalReturnPath: keyof typeof portalDestinations = "/account/payments";
 
   if (isStripeConfigured && searchParams.session_id) {
     try {
@@ -20,10 +48,15 @@ export default async function CheckoutSuccessPage({
       productName = session.metadata?.product_name ?? null;
       isCeu = Boolean(session.metadata?.ceu_note);
       isTesting = session.metadata?.payment_type === "testing";
+      const requestedReturnPath = session.metadata?.portal_return_path;
+      if (requestedReturnPath && requestedReturnPath in portalDestinations) {
+        portalReturnPath = requestedReturnPath as keyof typeof portalDestinations;
+      }
     } catch {
       // Ignore — show the generic confirmation.
     }
   }
+  const destination = portalDestinations[portalReturnPath];
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 text-center md:px-8 md:py-20">
@@ -45,7 +78,7 @@ export default async function CheckoutSuccessPage({
               </li>
             </>
           ) : (
-            <li>ABCAC will process your request and follow up by email.</li>
+            <li>{destination.next}</li>
           )}
           {isCeu && (
             <li>
@@ -54,21 +87,16 @@ export default async function CheckoutSuccessPage({
             </li>
           )}
           <li>
-            You can view your {isTesting ? "exam registration" : "credential status"} and payment history in your
-            member account.
+            You can view your {destination.record} and payment history in your member account.
           </li>
         </ul>
       </div>
 
       <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <CtaButton href={isTesting ? "/account/testing" : "/account"} className="w-full sm:w-auto">
-          {isTesting ? "Track Exam Registration" : "Go to My Account"}
+        <CtaButton href={portalReturnPath} className="w-full sm:w-auto">
+          {destination.label}
         </CtaButton>
-        {!isTesting && (
-          <Link href="/store" className="inline-flex h-11 items-center justify-center px-5 font-semibold text-brand hover:text-brand-600">
-            Back to store
-          </Link>
-        )}
+        <CtaButton href="/account" variant="outline" className="w-full sm:w-auto">Go to My Account</CtaButton>
       </div>
     </div>
   );

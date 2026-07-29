@@ -149,7 +149,8 @@ describe("POST /api/stripe/checkout", () => {
     expect(arg.mode).toBe("payment");
     expect(arg.line_items).toEqual([{ price: "price_123", quantity: 1 }]);
     expect(arg.success_url).toContain("/checkout/success?session_id={CHECKOUT_SESSION_ID}");
-    expect(arg.cancel_url).toContain("/checkout/cancel");
+    expect(arg.cancel_url).toContain("/account/payments");
+    expect(arg.metadata.portal_return_path).toBe("/account/payments");
     expect(arg.customer_email).toBe("jamie@example.com");
     expect(arg.client_reference_id).toBe("member-1");
     expect(arg.metadata.slug).toBe("initial-cert");
@@ -159,11 +160,15 @@ describe("POST /api/stripe/checkout", () => {
   });
 
   it("links an application-packet fee to the application and forwards webhook metadata", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "initial-certification-full-application-exam-fee",
+    });
     serverClient = fakeProfileClient({
       user: { id: "member-1", email: "jamie@example.com" },
       syncApplication: { id: "app-9", app_type: "initial", cert_type: "CAC", status: "submitted" },
     });
-    const res = await POST(req({ slug: "initial-cert", applicationId: "app-9" }));
+    const res = await POST(req({ slug: "initial-certification-full-application-exam-fee", applicationId: "app-9" }));
     expect(res.status).toBe(200);
     const insert = adminClient.calls.find((call) => call.table === "payment_submissions" && call.op === "insert");
     expect((insert?.payload as any).linked_record_type).toBe("applications");
@@ -172,6 +177,8 @@ describe("POST /api/stripe/checkout", () => {
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.metadata.payment_type).toBe("application_fee");
     expect(arg.metadata.application_id).toBe("app-9");
+    expect(arg.cancel_url).toBe("http://localhost:3000/account/applications");
+    expect(arg.metadata.portal_return_path).toBe("/account/applications");
   });
 
   it("falls back to the member profile when no payment form is posted", async () => {
@@ -198,12 +205,90 @@ describe("POST /api/stripe/checkout", () => {
       name: "Certification Sync",
       category: "Service",
     });
-    const res = await POST(req({ slug: "certification-sync", quantity: 6 }));
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      syncApplication: {
+        id: "sync-1",
+        member_id: "member-1",
+        app_type: "cert_sync",
+        cert_type: "Multiple credentials",
+        status: "submitted",
+        member_notes: "{}",
+      },
+    });
+    const res = await POST(req({ slug: "certification-sync", syncApplicationId: "sync-1", quantity: 6 }));
     expect(res.status).toBe(200);
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.mode).toBe("payment");
     expect(arg.line_items).toEqual([{ price: "price_123", quantity: 6 }]);
     expect(arg.metadata.sync_months).toBe("6");
+    expect(arg.cancel_url).toBe("http://localhost:3000/account/certification-sync");
+    expect(arg.metadata.portal_return_path).toBe("/account/certification-sync");
+  });
+
+  it("rejects a dedicated workflow product without its member-owned request", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "certification-sync",
+      name: "Certification Sync",
+      category: "Service",
+    });
+    const res = await POST(req({ slug: "certification-sync", quantity: 6 }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: "workflow_required",
+      workflow: "/account/certification-sync",
+    });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects an application fee without the submitted application", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "certification-renewal-2-year-credential-renewal-fee",
+      category: "Renewal",
+    });
+    const res = await POST(req({ slug: "certification-renewal-2-year-credential-renewal-fee" }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "application_required" });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects an application fee linked to the wrong workflow type", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "certification-renewal-2-year-credential-renewal-fee",
+      category: "Renewal",
+    });
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      syncApplication: { id: "app-9", app_type: "initial", cert_type: "CAC", status: "submitted" },
+    });
+    const res = await POST(req({
+      slug: "certification-renewal-2-year-credential-renewal-fee",
+      applicationId: "app-9",
+    }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "application_type_mismatch" });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects payment while the linked application is still a draft", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "initial-certification-full-application-exam-fee",
+    });
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      syncApplication: { id: "app-9", app_type: "initial", cert_type: "CAC", status: "draft" },
+    });
+    const res = await POST(req({
+      slug: "initial-certification-full-application-exam-fee",
+      applicationId: "app-9",
+    }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "application_not_payable" });
+    expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
   it("does not accept quantity overrides for other products", async () => {
@@ -255,6 +340,8 @@ describe("POST /api/stripe/checkout", () => {
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.metadata.reciprocity_request_id).toBe("rr-9");
     expect(arg.metadata.payment_type).toBe("reciprocity");
+    expect(arg.cancel_url).toBe("http://localhost:3000/account/requests");
+    expect(arg.metadata.portal_return_path).toBe("/account/requests");
   });
 
   it("builds an authenticated testing workflow checkout with certification add-on", async () => {
@@ -270,6 +357,7 @@ describe("POST /api/stripe/checkout", () => {
     const arg = sessionsCreate.mock.calls[0][0];
     expect(arg.line_items).toEqual([{ price: "price_test", quantity: 1 }, { price: "price_cert", quantity: 1 }]);
     expect(arg.cancel_url).toBe("http://localhost:3000/account/testing");
+    expect(arg.metadata.portal_return_path).toBe("/account/testing");
     expect(arg.metadata).toMatchObject({ payment_type: "testing", testing_request_id: "tr-1", exam_code: "ADC", credential_level: "CAC", exam_mode: "remote", member_id: "user-test" });
   });
 

@@ -5,6 +5,11 @@ import { getProductBySlug, getPriceId } from "@/lib/catalog";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { TESTING_PRODUCT_BY_MODE, isTestingMode } from "@/lib/testing-requests";
 import { normalizePaymentIntake, type PaymentIntakeInput } from "@/lib/payment-submissions";
+import {
+  applicationTypeForProduct,
+  productRequiresApplication,
+  productRequiresDedicatedWorkflow,
+} from "@/lib/portal-routing";
 
 export const runtime = "nodejs";
 
@@ -81,6 +86,7 @@ export async function POST(req: Request) {
     if (!memberId) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
     const { data } = await supabase.from("reciprocity_requests").select("id,member_id,direction,credential,destination,status,payment_status").eq("id", parsed.reciprocityRequestId).eq("member_id", memberId).maybeSingle();
     if (!data) return NextResponse.json({ error: "reciprocity_request_not_found" }, { status: 404 });
+    slug = "icrc-reciprocity-transfer";
     formType = "reciprocity_request";
     linkedRecordType = "reciprocity_requests";
     linkedRecordId = data.id;
@@ -88,6 +94,9 @@ export async function POST(req: Request) {
     formPayload = { direction: data.direction, credential: data.credential, destination: data.destination };
   } else {
     const syncApplicationId = parsed.syncApplicationId || (typeof parsed.metadata?.sync_application_id === "string" ? parsed.metadata.sync_application_id : undefined);
+    if (syncApplicationId && slug !== "certification-sync") {
+      return NextResponse.json({ error: "invalid_sync_product" }, { status: 400 });
+    }
     if (slug === "certification-sync" && syncApplicationId) {
       if (!memberId) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
       const { data } = await supabase.from("applications").select("id,member_id,app_type,cert_type,status,member_notes").eq("id", syncApplicationId).eq("member_id", memberId).eq("app_type", "cert_sync").maybeSingle();
@@ -111,12 +120,11 @@ export async function POST(req: Request) {
       // fee-paid indicator and the webhook can advance the application.
       const { data } = await supabase.from("applications").select("id,app_type,cert_type,status")
         .eq("id", parsed.applicationId).eq("member_id", memberId).maybeSingle();
-      if (data) {
-        formType = "application_fee";
-        linkedRecordType = "applications";
-        linkedRecordId = data.id;
-        formPayload = { applicationId: data.id, appType: data.app_type, certType: data.cert_type };
-      }
+      if (!data) return NextResponse.json({ error: "application_not_found" }, { status: 404 });
+      formType = "application_fee";
+      linkedRecordType = "applications";
+      linkedRecordId = data.id;
+      formPayload = { applicationId: data.id, appType: data.app_type, certType: data.cert_type, status: data.status };
     }
   }
 
@@ -133,6 +141,32 @@ export async function POST(req: Request) {
   if (typeof slug !== "string" || !slug) return NextResponse.json({ error: "missing_slug" }, { status: 400 });
   const product = getProductBySlug(slug);
   if (!product) return NextResponse.json({ error: "product_not_found" }, { status: 404 });
+
+  const dedicatedWorkflow = productRequiresDedicatedWorkflow(product.slug);
+  const hasDedicatedRecord =
+    (product.slug === "certification-sync" && formType === "certification_sync") ||
+    (product.slug === "icrc-reciprocity-transfer" && formType === "reciprocity_request") ||
+    (product.slug.startsWith("testing-for-licensure") && formType === "testing_preregistration");
+  if (dedicatedWorkflow && !hasDedicatedRecord) {
+    return NextResponse.json(
+      { error: "workflow_required", workflow: dedicatedWorkflow },
+      { status: 409 },
+    );
+  }
+
+  if (productRequiresApplication(product.slug)) {
+    if (formType !== "application_fee" || linkedRecordType !== "applications" || !linkedRecordId) {
+      return NextResponse.json({ error: "application_required" }, { status: 409 });
+    }
+    const expectedType = applicationTypeForProduct(product.slug);
+    if (formPayload.appType !== expectedType) {
+      return NextResponse.json({ error: "application_type_mismatch" }, { status: 409 });
+    }
+    if (!["submitted", "under_review"].includes(String(formPayload.status ?? ""))) {
+      return NextResponse.json({ error: "application_not_payable" }, { status: 409 });
+    }
+  }
+
   const priceId = getPriceId(slug);
   if (!priceId) return NextResponse.json({ error: "price_not_found" }, { status: 503 });
 
@@ -188,7 +222,7 @@ export async function POST(req: Request) {
   }
 
   const productName = testingRequest ? `IC&RC ${testingRequest.exam_code} exam pre-registration` : product.name;
-  const checkoutMetadata = {
+  const checkoutMetadata: Record<string, string> = {
     ...forwardedMetadata,
     payment_submission_id: paymentSubmission.id,
     form_type: formType,
@@ -204,12 +238,23 @@ export async function POST(req: Request) {
   };
 
   const siteUrl = requestOrigin(req);
+  const portalReturnPath =
+    formType === "testing_preregistration"
+      ? "/account/testing"
+      : formType === "certification_sync"
+        ? "/account/certification-sync"
+        : formType === "reciprocity_request"
+          ? "/account/requests"
+          : formType === "application_fee"
+            ? "/account/applications"
+            : "/account/payments";
+  checkoutMetadata.portal_return_path = portalReturnPath;
   try {
     const session = await stripe.checkout.sessions.create({
       mode: product.mode,
       line_items: lineItems,
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: testingRequest ? `${siteUrl}/account/testing` : `${siteUrl}/checkout/cancel`,
+      cancel_url: `${siteUrl}${portalReturnPath}`,
       ...(existingStripeCustomerId ? { customer: existingStripeCustomerId } : { customer_email: intake.email }),
       ...(memberId ? { client_reference_id: memberId } : {}),
       metadata: checkoutMetadata,

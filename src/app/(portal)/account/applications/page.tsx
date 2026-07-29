@@ -5,6 +5,7 @@ import { PageHero } from "@/components/page-hero";
 import { CtaButton } from "@/components/cta-button";
 import { ApplicationsStatusChip } from "@/components/account/applications-status-chip";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { paymentOptionsForApplication } from "@/lib/portal-routing";
 
 export const metadata = { title: "Application Status" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ interface Application {
   submitted_at: string | null; reviewed_at: string | null; est_completion: string | null; admin_notes: string | null;
 }
 interface Payment { slug: string | null; product_name: string | null; created_at: string | null; }
+interface PaymentSubmission { linked_record_id: string | null; status: string | null; }
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -34,7 +36,8 @@ function stageIndex(status: string | null): number {
 }
 
 // Loosely associate a recorded payment with an application by type.
-function feePaid(appType: string | null, payments: Payment[]): boolean {
+function feePaid(applicationId: string, appType: string | null, payments: Payment[], submissions: PaymentSubmission[]): boolean {
+  if (submissions.some((submission) => submission.linked_record_id === applicationId && submission.status === "paid")) return true;
   const slugs = payments.map((p) => p.slug ?? "");
   if (appType === "cert_sync") return slugs.includes("certification-sync");
   if (appType === "renewal") return slugs.some((s) => s.includes("renewal"));
@@ -82,13 +85,15 @@ export default async function ApplicationsPage() {
   const __authUserId = await requireUserId();
   const uid = __authUserId;
 
-  const [{ data: apps }, { data: pays }, { count: docCount }] = await Promise.all([
+  const [{ data: apps }, { data: pays }, { data: paymentSubmissions }, { count: docCount }] = await Promise.all([
     supabase.from("applications").select("*").eq("member_id", uid).order("submitted_at", { ascending: false }),
     supabase.from("payments").select("slug,product_name,created_at").eq("member_id", uid),
+    supabase.from("payment_submissions").select("linked_record_id,status").eq("member_id", uid).eq("linked_record_type", "applications"),
     supabase.from("documents").select("*", { count: "exact", head: true }).eq("member_id", uid),
   ]);
   const applications = (apps as Application[]) ?? [];
   const payments = (pays as Payment[]) ?? [];
+  const submissions = (paymentSubmissions as PaymentSubmission[]) ?? [];
 
   return (
     <>
@@ -119,8 +124,14 @@ export default async function ApplicationsPage() {
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-lg border border-line bg-bg p-3 text-sm">
                     <div className="text-muted">Fee</div>
-                    <div className={`font-semibold ${feePaid(a.app_type, payments) ? "text-success" : "text-amber-600"}`}>
-                      {feePaid(a.app_type, payments) ? "Paid" : "Not recorded"}
+                    <div
+                      className={`font-semibold ${
+                        feePaid(a.id, a.app_type, payments, submissions)
+                          ? "text-success"
+                          : "text-amber-600"
+                      }`}
+                    >
+                      {feePaid(a.id, a.app_type, payments, submissions) ? "Paid" : "Not recorded"}
                     </div>
                   </div>
                   <div className="rounded-lg border border-line bg-bg p-3 text-sm">
@@ -140,11 +151,17 @@ export default async function ApplicationsPage() {
                   </div>
                 )}
 
-                {(a.status === null || a.status === "submitted") && !feePaid(a.app_type, payments) && (
-                  <p className="mt-4 text-sm text-muted">
-                    Tip: complete your fee and upload any{" "}
-                    <a href="/account/documents" className="font-semibold text-brand">required documents</a> to speed up review.
-                  </p>
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && (
+                  <div className="mt-4 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
+                    <p className="text-sm font-semibold text-ink">Complete the payment linked to this application</p>
+                    <p className="mt-1 text-sm text-muted">Choose the correct option below. The payment will be recorded against this exact application.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {paymentOptionsForApplication(a.app_type ?? "", a.id).map((option) => (
+                        <CtaButton key={option.href} href={option.href} size="sm">{option.label}</CtaButton>
+                      ))}
+                      <CtaButton href="/account/documents" variant="outline" size="sm">Review documents</CtaButton>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

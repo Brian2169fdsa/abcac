@@ -70,8 +70,6 @@ function completeness(p: Profile | null): number {
   return Math.round((filled / fields.length) * 100);
 }
 
-const RENEWAL_SLUG = "certification-renewal-2-year-credential-renewal-fee";
-
 function fmtDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -582,7 +580,7 @@ export default async function AccountPage() {
                           ? ` · ${d} days left`
                           : ""}
                   </p>
-                  <CtaButton href={`/account/payments?product=${RENEWAL_SLUG}`} variant="outline" size="sm" className="mt-4">Renew</CtaButton>
+                  <CtaButton href="/account/certification" variant="outline" size="sm" className="mt-4">Start Renewal</CtaButton>
                 </div>
               );
             })}

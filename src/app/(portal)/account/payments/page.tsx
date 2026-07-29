@@ -6,6 +6,11 @@ import { PageHero } from "@/components/page-hero";
 import { Section } from "@/components/section";
 import { PortalProductPay } from "@/components/portal-product-pay";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  applicationTypeForProduct,
+  productRequiresApplication,
+  productRequiresDedicatedWorkflow,
+} from "@/lib/portal-routing";
 
 export const metadata = { title: "Payments" };
 export const dynamic = "force-dynamic";
@@ -34,7 +39,29 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
   const products = getProducts();
   const highlighted = searchParams.product ?? "";
   const applicationId = searchParams.application ?? "";
-  const categories = Array.from(new Set(products.map((p) => p.category)));
+  const highlightedProduct = products.find((product) => product.slug === highlighted);
+  const requiredApplicationType = highlightedProduct ? applicationTypeForProduct(highlightedProduct.slug) : null;
+  const { data: linkedApplication } = requiredApplicationType && applicationId
+    ? await supabase
+        .from("applications")
+        .select("id,app_type,status")
+        .eq("id", applicationId)
+        .eq("member_id", uid)
+        .maybeSingle()
+    : { data: null };
+  const validLinkedApplication = Boolean(
+    linkedApplication &&
+      linkedApplication.app_type === requiredApplicationType &&
+      ["submitted", "under_review"].includes(linkedApplication.status ?? ""),
+  );
+  const invalidApplicationPayment =
+    Boolean(highlightedProduct && requiredApplicationType) && !validLinkedApplication;
+  const visibleProducts = products.filter((product) => {
+    if (productRequiresDedicatedWorkflow(product.slug)) return false;
+    if (!productRequiresApplication(product.slug)) return true;
+    return product.slug === highlighted && validLinkedApplication;
+  });
+  const categories = Array.from(new Set(visibleProducts.map((product) => product.category)));
 
   return (
     <>
@@ -44,6 +71,18 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
         intro="Pay ABCAC fees securely from your account. Your details are pre-filled, every payment is attached to your member record, and receipts appear under Invoices & Receipts."
       />
       <Section compact>
+        {invalidApplicationPayment && (
+          <div className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
+            <p className="font-bold">Submit the related form before paying this fee.</p>
+            <p className="mt-1 leading-relaxed">
+              Application and endorsement payments become available from a submitted packet so ABCAC can match the
+              payment to the correct credential and documents.
+            </p>
+            <Link href="/account/applications" className={`${buttonVariants({ size: "sm" })} mt-4`}>
+              View applications
+            </Link>
+          </div>
+        )}
         <div className="mb-8 flex flex-wrap gap-3 rounded-xl border border-line bg-surface p-4 text-sm">
           <span className="font-semibold text-ink">Looking for a specific workflow?</span>
           <Link className="font-semibold text-brand hover:text-brand-600" href="/account/testing">Exam registration</Link>
@@ -57,7 +96,7 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
             <div key={category}>
               <h2 className="mb-4 text-2xl">{category}</h2>
               <div className="space-y-4">
-                {products.filter((p) => p.category === category).map((product) => (
+                {visibleProducts.filter((product) => product.category === category).map((product) => (
                   <PortalProductPay
                     key={product.slug}
                     product={product}

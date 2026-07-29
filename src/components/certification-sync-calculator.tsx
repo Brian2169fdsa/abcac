@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { CtaButton } from "@/components/cta-button";
+import { portalGatewayHref } from "@/lib/portal-routing";
 
 const UNIT_PRICE = 15;
 
@@ -61,8 +62,8 @@ export function CertificationSyncCalculator() {
       <p className="mt-4 rounded-xl bg-brand/[0.06] p-4 text-sm leading-relaxed text-muted">
         Example: moving a credential 6 months forward costs $90. This service is not a $15 monthly subscription.
       </p>
-      <CtaButton href={`/store/certification-sync?quantity=${months}`} size="lg" className="mt-6 w-full justify-center">
-        Continue with {months} {months === 1 ? "month" : "months"}
+      <CtaButton href={portalGatewayHref(`/account/certification-sync?months=${months}`)} size="lg" className="mt-6 w-full justify-center">
+        Start sync request for {months} {months === 1 ? "month" : "months"}
       </CtaButton>
     </div>
   );

@@ -36,10 +36,12 @@ function readDetails(request: ExistingRequest): Details {
 export function CertificationSyncForm({
   request,
   preferredMode,
+  preferredMonths,
   profile,
 }: {
   request: ExistingRequest;
   preferredMode: "digital" | "paper";
+  preferredMonths: number;
   profile: { fullName: string; phone: string };
 }) {
   const saved = readDetails(request);
@@ -49,7 +51,7 @@ export function CertificationSyncForm({
   const [fullName, setFullName] = useState(saved.fullName ?? profile.fullName);
   const [phone, setPhone] = useState(saved.phone ?? profile.phone);
   const [credentials, setCredentials] = useState<SyncCredentialInput[]>(saved.credentials?.length ? saved.credentials : [emptyCredential(), emptyCredential()]);
-  const [monthsForward, setMonthsForward] = useState(saved.monthsForward ?? 1);
+  const [monthsForward, setMonthsForward] = useState(saved.monthsForward ?? preferredMonths);
   const [targetExpirationDate, setTargetExpirationDate] = useState(saved.targetExpirationDate ?? "");
   const [signatureName, setSignatureName] = useState(request?.signature_name ?? "");
   const [paperDocumentPath, setPaperDocumentPath] = useState(saved.paperDocumentPath ?? null);

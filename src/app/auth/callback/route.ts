@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/portal-routing";
 
 // Handles Supabase email-confirmation and password-recovery links: exchanges
 // the one-time code for a cookie session, then forwards to `next`.
 export async function GET(req: Request) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/account";
+  const next = safeInternalPath(searchParams.get("next"));
 
   if (code) {
     try {

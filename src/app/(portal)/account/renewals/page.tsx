@@ -217,10 +217,10 @@ export default async function RenewalsPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <CtaButton
-                              href="/account/payments?product=certification-renewal-2-year-credential-renewal-fee"
+                              href="/account/certification"
                               size="sm"
                             >
-                              Renew
+                              Start Renewal
                             </CtaButton>
                             <Link
                               href="/account/certification"
@@ -273,10 +273,10 @@ export default async function RenewalsPage() {
                     </dl>
                     <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
                       <CtaButton
-                        href="/account/payments?product=certification-renewal-2-year-credential-renewal-fee"
+                        href="/account/certification"
                         size="sm"
                       >
-                        Renew
+                        Start Renewal
                       </CtaButton>
                       <Link
                         href="/account/certification"

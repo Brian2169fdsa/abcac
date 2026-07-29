@@ -56,7 +56,7 @@ export default function CertificationPaymentPage() {
             <p className="mt-5 text-sm font-semibold uppercase tracking-[0.14em] text-accent-strong">Initial Certification Fees</p>
             <h1 className="mt-3 max-w-[15ch] text-[clamp(2.5rem,4vw,4.25rem)] tracking-[-0.035em]">Choose the payment that matches your path</h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-              Submit your application documents before paying. Then select the package that matches your exam plan and review the total before continuing to Stripe.
+              Submit your application documents in the member portal first. Then select the package that matches your exam plan; ABCAC keeps the application, payment, receipt, and review status connected.
             </p>
             <CtaButton href="#payment-options" size="lg" className="mt-7 w-full justify-center sm:w-auto">Compare Payment Options <ArrowRight className="h-4 w-4" aria-hidden /></CtaButton>
           </div>
@@ -79,7 +79,7 @@ export default function CertificationPaymentPage() {
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Payment Options</p>
             <h2 className="mt-3 text-3xl sm:text-4xl">Select one certification package</h2>
-            <p className="mt-4 text-lg text-muted">Each package opens a review page before secure checkout. ABCAC begins processing after your documents and payment are received.</p>
+            <p className="mt-4 text-lg text-muted">Each package opens a review page and then the sign-in or account-creation gateway. Stripe checkout is available only after the required application packet has been submitted.</p>
           </div>
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {products.map(({ product, eyebrow, title, description, button, featured }) => (
@@ -123,7 +123,7 @@ export default function CertificationPaymentPage() {
             <ShieldCheck className="h-7 w-7 text-white" aria-hidden />
             <h2 className="mt-5 text-2xl text-white">How secure payment works</h2>
             <p className="mt-4 leading-relaxed text-white/70">
-              Your package review page sends you to Stripe Checkout. Stripe securely collects card details; ABCAC receives the payment status and links the receipt to your member account.
+              Your package review page sends you through the member gateway. After the submitted application is verified, Stripe securely collects card details and ABCAC links the payment and receipt to that exact application.
             </p>
             <p className="mt-4 text-sm text-white/60">Do not email card numbers or include payment details in uploaded documents.</p>
           </div>
