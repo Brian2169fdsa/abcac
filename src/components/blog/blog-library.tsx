@@ -66,7 +66,7 @@ export function BlogLibrary({ posts, categories }: BlogLibraryProps) {
                 type="button"
                 onClick={() => setActiveCategory(category)}
                 className={cn(
-                  "rounded-full border px-3.5 py-2 text-left text-xs font-bold leading-tight transition",
+                  "min-h-11 rounded-full border px-3.5 py-2 text-left text-xs font-bold leading-tight transition",
                   activeCategory === category
                     ? "border-brand bg-brand text-white shadow-sm"
                     : "border-ink/10 bg-bg text-muted hover:border-brand/25 hover:bg-brand/[0.04] hover:text-brand",
@@ -85,7 +85,7 @@ export function BlogLibrary({ posts, categories }: BlogLibraryProps) {
           {visiblePosts.length === 1 ? "article" : "articles"}
         </p>
         {activeCategory !== "All" && (
-          <button type="button" onClick={() => setActiveCategory("All")} className="font-bold text-brand hover:text-brand-600">
+          <button type="button" onClick={() => setActiveCategory("All")} className="inline-flex min-h-11 items-center font-bold text-brand hover:text-brand-600">
             Clear filter
           </button>
         )}

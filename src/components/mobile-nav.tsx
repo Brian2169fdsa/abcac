@@ -57,7 +57,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 xl:hidden">
+    <div className="fixed inset-0 z-[60] xl:hidden">
       <div className="absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <div className="absolute right-0 top-0 flex h-full w-[90%] max-w-md flex-col overflow-hidden rounded-l-[2rem] bg-surface shadow-[0_0_90px_-28px_rgba(13,34,63,0.75)]">
         {/* Header */}

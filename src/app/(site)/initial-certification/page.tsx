@@ -329,7 +329,7 @@ export default function InitialCertificationPage() {
                           href={form.href}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white"
                         >
                           <FileCheck2 className="h-3.5 w-3.5" aria-hidden />
                           {form.label}

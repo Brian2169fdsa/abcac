@@ -49,7 +49,7 @@ export function BlogCard({ post }: BlogCardProps) {
         <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-muted">{post.excerpt}</p>
         <Link
           href={`/blog/${post.slug}`}
-          className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand transition-colors hover:text-brand-600"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-brand transition-colors hover:text-brand-600"
         >
           Read article
           <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden />
