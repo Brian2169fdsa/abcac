@@ -1,82 +1,120 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
-import { PageHero } from "@/components/page-hero";
-import { Section } from "@/components/section";
-import { getPosts, getArticles } from "@/lib/blog";
+import Link from "next/link";
+import { ArrowRight, BookOpen, Clock3, Sparkles } from "lucide-react";
+import { BlogLibrary } from "@/components/blog/blog-library";
+import { CtaButton } from "@/components/cta-button";
+import { getCategories, getPostSummaries } from "@/lib/blog";
+
+const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
-  title: "ABCAC News & Insights",
+  title: "Knowledge Center",
   description:
-    "Guides, policy updates, and career resources for Arizona addiction counseling professionals — plus announcements from the Arizona Board for Certification of Addiction Counselors.",
+    "Practical guidance for Arizona addiction counselors on certification, licensure, testing, compliance, treatment, and career growth.",
+  alternates: { canonical: `${base}/blog` },
 };
 
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+function formatDate(date: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function BlogPage() {
-  const articles = getArticles();
-  const posts = getPosts();
+  const posts = getPostSummaries();
+  const [featuredPost, ...libraryPosts] = posts;
+
   return (
     <>
-      <PageHero
-        eyebrow="News & Insights"
-        title="ABCAC News & Insights"
-        intro="Guides, policy updates, and career resources for Arizona's addiction counseling professionals."
-      />
-      {articles.length > 0 && (
-        <Section>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {articles.map((a) => (
-              <Link
-                key={a.slug}
-                href={`/blog/${a.slug}`}
-                className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-brand"
-              >
-                <div className="relative aspect-[1200/630] w-full">
-                  <Image
-                    src={a.image}
-                    alt={a.imageAlt}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col p-6">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-accent-strong">
-                    {a.category} · {a.readingTime}
-                  </p>
-                  <h3 className="mt-2 text-lg">{a.title}</h3>
-                  <p className="mt-2 flex-1 text-sm text-muted">{a.metaDescription}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand">
-                    Read article <ArrowRight className="h-4 w-4" aria-hidden />
+      <section className="relative isolate overflow-hidden border-b border-ink/10 bg-info text-white">
+        <div className="site-grid absolute inset-0 -z-20 opacity-30" aria-hidden />
+        <div className="site-noise absolute inset-0 -z-10" aria-hidden />
+        <div className="absolute -right-24 -top-32 -z-10 h-96 w-96 rounded-full border-[70px] border-white/[0.045]" aria-hidden />
+        <div className="mx-auto grid w-full max-w-content gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8 lg:py-24">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white/75">
+              <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden />
+              ABCAC Knowledge Center
+            </div>
+            <h1 className="mt-6 max-w-xl text-white">Practical insight for Arizona addiction professionals.</h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/68 sm:text-lg">
+              Understand credentials, prepare for testing, follow policy changes, and strengthen the work you do every day.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-5 text-sm text-white/65">
+              <span className="inline-flex items-center gap-2"><BookOpen className="h-4 w-4" aria-hidden /> {posts.length} resources</span>
+              <span className="h-1 w-1 rounded-full bg-white/30" aria-hidden />
+              <span>Written for Arizona professionals</span>
+            </div>
+          </div>
+
+          {featuredPost && (
+            <article className="group overflow-hidden rounded-[2rem] border border-white/15 bg-white/[0.08] shadow-[0_38px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur">
+              <Link href={`/blog/${featuredPost.slug}`} className="relative block aspect-[16/9] overflow-hidden">
+                <Image
+                  src={featuredPost.featuredImage}
+                  alt={featuredPost.featuredImageAlt}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 58vw, 100vw"
+                  className="object-cover transition duration-700 group-hover:scale-[1.025]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-info via-info/15 to-transparent" aria-hidden />
+                <span className="absolute left-5 top-5 rounded-full bg-brand px-3.5 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-white shadow-lg">
+                  Featured
+                </span>
+                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/70">
+                    <span>{featuredPost.category}</span>
+                    <span className="h-1 w-1 rounded-full bg-white/45" aria-hidden />
+                    <time dateTime={featuredPost.date}>{formatDate(featuredPost.date)}</time>
+                    <span className="h-1 w-1 rounded-full bg-white/45" aria-hidden />
+                    <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" aria-hidden /> {featuredPost.readingTime}</span>
+                  </div>
+                  <h2 className="mt-3 max-w-2xl text-2xl leading-tight text-white sm:text-3xl">{featuredPost.title}</h2>
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white">
+                    Read the guide <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
                   </span>
                 </div>
               </Link>
-            ))}
-          </div>
-        </Section>
-      )}
-      <Section title="Board announcements" intro="Official updates from ABCAC.">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((p) => (
-            <Link
-              key={p.slug}
-              href={`/blog/${p.slug}`}
-              className="flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors hover:border-brand"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-accent-strong">{fmt(p.date)}</p>
-              <h3 className="mt-2 text-lg">{p.title}</h3>
-              <p className="mt-2 flex-1 text-sm text-muted">{p.excerpt}</p>
-              <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand">
-                Read more <ArrowRight className="h-4 w-4" aria-hidden />
-              </span>
-            </Link>
-          ))}
+            </article>
+          )}
         </div>
-      </Section>
+      </section>
+
+      <section className="relative">
+        <div className="mx-auto w-full max-w-content px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <div className="mb-10 max-w-3xl">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="h-px w-8 bg-brand" aria-hidden />
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Explore the library</p>
+            </div>
+            <h2>Clear answers for the work ahead.</h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+              Browse current guidance on Arizona credentialing, IC&amp;RC testing, professional practice, and the issues shaping addiction services.
+            </p>
+          </div>
+          <BlogLibrary posts={libraryPosts} categories={getCategories()} />
+        </div>
+      </section>
+
+      <section className="border-t border-ink/10 bg-surface">
+        <div className="mx-auto grid w-full max-w-content gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-center lg:px-8">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Ready when you are</p>
+            <h2 className="mt-3 text-3xl">Turn what you learned into your next step.</h2>
+            <p className="mt-3 max-w-2xl text-muted">
+              Compare credentials, start an application, or sign in to continue work already in progress.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <CtaButton href="/initial-certification" size="lg">Explore Certification</CtaButton>
+            <CtaButton href="/account" variant="outline" size="lg">Open Member Portal</CtaButton>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

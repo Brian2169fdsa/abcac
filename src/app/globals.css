@@ -101,4 +101,24 @@
       0 24px 70px -42px rgb(13 34 63 / 0.4);
     backdrop-filter: blur(16px);
   }
+
+  .article-content > * + * {
+    margin-top: 1.35rem;
+  }
+
+  .article-content > h2 {
+    margin-top: 3.75rem;
+  }
+
+  .article-content > h3 {
+    margin-top: 2.5rem;
+  }
+
+  .article-content blockquote > :first-child {
+    margin-top: 0;
+  }
+
+  .article-content blockquote > :last-child {
+    margin-bottom: 0;
+  }
 }
