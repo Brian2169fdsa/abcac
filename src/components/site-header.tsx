@@ -31,8 +31,8 @@ export function SiteHeader() {
     <>
       <header
         className={cn(
-          "sticky top-0 z-40 border-b border-line/80 bg-bg/85 backdrop-blur-2xl transition-all duration-300",
-          scrolled && "bg-surface/90 shadow-[0_16px_45px_-32px_rgba(13,34,63,0.55)]",
+          "sticky top-0 z-40 border-b border-line/80 bg-bg transition-[background-color,box-shadow] duration-300",
+          scrolled && "bg-surface shadow-[0_16px_45px_-32px_rgba(13,34,63,0.55)]",
         )}
       >
         <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" aria-hidden />

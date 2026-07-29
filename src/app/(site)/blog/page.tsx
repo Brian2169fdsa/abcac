@@ -25,7 +25,7 @@ function formatDate(date: string) {
 
 export default function BlogPage() {
   const posts = getPostSummaries();
-  const [featuredPost, ...libraryPosts] = posts;
+  const featuredPost = posts[0];
 
   return (
     <>
@@ -33,13 +33,15 @@ export default function BlogPage() {
         <div className="site-grid absolute inset-0 -z-20 opacity-30" aria-hidden />
         <div className="site-noise absolute inset-0 -z-10" aria-hidden />
         <div className="absolute -right-24 -top-32 -z-10 h-96 w-96 rounded-full border-[70px] border-white/[0.045]" aria-hidden />
-        <div className="mx-auto grid w-full max-w-content gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8 lg:py-24">
+        <div className="mx-auto grid w-full max-w-content gap-10 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:px-8 lg:py-20">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white/75">
               <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden />
               ABCAC Knowledge Center
             </div>
-            <h1 className="mt-6 max-w-xl text-white">Practical insight for Arizona addiction professionals.</h1>
+            <h1 className="mt-6 max-w-xl text-[clamp(2.75rem,4vw,3.75rem)] leading-[0.98] tracking-[-0.04em] text-white">
+              Practical guidance for Arizona addiction professionals.
+            </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-white/68 sm:text-lg">
               Understand credentials, prepare for testing, follow policy changes, and strengthen the work you do every day.
             </p>
@@ -51,30 +53,36 @@ export default function BlogPage() {
           </div>
 
           {featuredPost && (
-            <article className="group overflow-hidden rounded-[2rem] border border-white/15 bg-white/[0.08] shadow-[0_38px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur">
-              <Link href={`/blog/${featuredPost.slug}`} className="relative block aspect-[16/9] overflow-hidden">
-                <Image
-                  src={featuredPost.featuredImage}
-                  alt={featuredPost.featuredImageAlt}
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 58vw, 100vw"
-                  className="object-cover transition duration-700 group-hover:scale-[1.025]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-info via-info/15 to-transparent" aria-hidden />
-                <span className="absolute left-5 top-5 rounded-full bg-brand px-3.5 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-white shadow-lg">
-                  Featured
-                </span>
-                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/70">
-                    <span>{featuredPost.category}</span>
-                    <span className="h-1 w-1 rounded-full bg-white/45" aria-hidden />
+            <article className="group overflow-hidden rounded-[2rem] border border-white/15 bg-surface text-ink shadow-[0_38px_90px_-50px_rgba(0,0,0,0.9)]">
+              <Link
+                href={`/blog/${featuredPost.slug}`}
+                className="block h-full"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-info">
+                  <Image
+                    src={featuredPost.featuredImage}
+                    alt={featuredPost.featuredImageAlt}
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 52vw, 100vw"
+                    className="object-cover transition duration-700 group-hover:scale-[1.025]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-info/35 via-transparent to-transparent" aria-hidden />
+                  <span className="absolute left-5 top-5 rounded-full bg-brand px-3.5 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-white shadow-lg">
+                    Featured
+                  </span>
+                </div>
+                <div className="flex flex-col justify-center p-6 sm:p-7">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
+                    <span className="text-brand">{featuredPost.category}</span>
+                    <span className="h-1 w-1 rounded-full bg-brand/35" aria-hidden />
                     <time dateTime={featuredPost.date}>{formatDate(featuredPost.date)}</time>
-                    <span className="h-1 w-1 rounded-full bg-white/45" aria-hidden />
+                    <span className="h-1 w-1 rounded-full bg-brand/35" aria-hidden />
                     <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" aria-hidden /> {featuredPost.readingTime}</span>
                   </div>
-                  <h2 className="mt-3 max-w-2xl text-2xl leading-tight text-white sm:text-3xl">{featuredPost.title}</h2>
-                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white">
+                  <h2 className="mt-4 text-2xl leading-tight text-ink">{featuredPost.title}</h2>
+                  <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted sm:text-base">{featuredPost.excerpt}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand">
                     Read the guide <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
                   </span>
                 </div>
@@ -84,7 +92,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      <section className="relative">
+      <section id="article-library" className="relative scroll-mt-24">
         <div className="mx-auto w-full max-w-content px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
           <div className="mb-10 max-w-3xl">
             <div className="mb-4 flex items-center gap-3">
@@ -96,7 +104,7 @@ export default function BlogPage() {
               Browse current guidance on Arizona credentialing, IC&amp;RC testing, professional practice, and the issues shaping addiction services.
             </p>
           </div>
-          <BlogLibrary posts={libraryPosts} categories={getCategories()} />
+          <BlogLibrary posts={posts} categories={getCategories()} />
         </div>
       </section>
 
