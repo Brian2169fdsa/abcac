@@ -17,7 +17,7 @@ export function FaqAccordion({ items }: { items: readonly Faq[] }) {
           <div
             key={f.q}
             className={cn(
-              "group overflow-hidden rounded-2xl border bg-surface/95 shadow-[0_16px_45px_-32px_rgba(0,0,0,0.55)] backdrop-blur transition-all",
+              "group overflow-hidden rounded-2xl border bg-white shadow-[0_16px_45px_-32px_rgba(0,0,0,0.55)] transition-all",
               isOpen ? "border-brand/35 shadow-[0_24px_55px_-32px_rgba(123,31,31,0.55)]" : "border-white/10 hover:border-white/25",
             )}
           >
@@ -28,10 +28,10 @@ export function FaqAccordion({ items }: { items: readonly Faq[] }) {
               className="flex w-full min-h-[68px] items-center justify-between gap-4 px-5 py-4 text-left sm:px-6"
             >
               <span className="flex min-w-0 items-center gap-4">
-                <span className="hidden text-xs font-bold tracking-[0.12em] text-brand/40 sm:inline">0{i + 1}</span>
+                <span className="hidden text-xs font-bold tracking-[0.12em] text-brand opacity-50 sm:inline">0{i + 1}</span>
                 <span className="break-words font-semibold text-ink transition-colors group-hover:text-brand">{f.q}</span>
               </span>
-              <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors", isOpen ? "bg-brand text-white" : "bg-brand/[0.07] text-brand")}>
+              <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors", isOpen ? "bg-brand text-white" : "bg-[#f8efef] text-brand")}>
                 <ChevronDown
                   className={cn("h-4 w-4 transition-transform duration-300", isOpen && "rotate-180")}
                   aria-hidden

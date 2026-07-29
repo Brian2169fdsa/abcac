@@ -63,28 +63,28 @@ export default function HomePage() {
         <div className="site-grid absolute inset-0 -z-10 opacity-55" aria-hidden />
         <div className="absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand/[0.08] blur-3xl" aria-hidden />
         <div className="absolute -bottom-44 left-1/3 -z-10 h-80 w-80 rounded-full bg-info/[0.06] blur-3xl" aria-hidden />
-        <div className="mx-auto grid w-full max-w-[94rem] items-center gap-12 px-5 py-14 sm:px-8 sm:py-16 md:grid-cols-[1.02fr_0.98fr] md:gap-14 lg:px-12 lg:py-20 xl:px-16">
+        <div className="mx-auto grid w-full max-w-[94rem] items-center gap-10 px-5 py-10 sm:px-8 sm:py-12 md:grid-cols-[1.02fr_0.98fr] md:gap-12 lg:px-12 lg:py-14 xl:px-16">
           {/* Left: copy */}
           <div className="relative z-10">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-surface/80 px-3.5 py-2 text-xs font-semibold text-brand shadow-sm backdrop-blur">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-white px-3.5 py-2 text-xs font-semibold text-brand shadow-sm">
               <Sparkles className="h-4 w-4" aria-hidden />
               {siteConfig.trustLine}
             </div>
-            <p className="mb-4 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-accent-strong">
+            <p className="mb-3 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-accent-strong">
               <span className="h-px w-8 bg-brand" aria-hidden />
               Certification &amp; Testing Support
             </p>
-            <h1 className="max-w-[15ch] text-[clamp(2.85rem,4.6vw,4.7rem)] tracking-[-0.05em]">{siteConfig.tagline}</h1>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+            <h1 className="max-w-[18ch] text-[clamp(2.6rem,3.65vw,3.85rem)] leading-[0.98] tracking-[-0.045em]">{siteConfig.tagline}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-[1.05rem]">
               Apply for initial certification, renew your credentials, register for IC&amp;RC exams, earn
               CEUs, and transfer your credential through reciprocity. One trusted place for Arizona&apos;s
               addiction counseling professionals.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <CtaButton href="/initial-certification" size="lg" className="w-full justify-center shadow-lg shadow-brand/20 sm:w-auto">Initial Certification</CtaButton>
               <CtaButton href="/certification-renewal" variant="outline" size="lg" className="w-full justify-center sm:w-auto">Renew Certification</CtaButton>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-ink">
+            <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2.5 text-sm font-semibold text-ink">
               {["IC&RC Recognized", "Arizona Based", "1,200+ Certified"].map((item) => (
                 <li key={item} className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 fill-brand/10 text-brand" aria-hidden />
@@ -128,7 +128,7 @@ export default function HomePage() {
       </section>
 
       {/* Stat band */}
-      <section className="relative z-10 -mt-2 px-4 pb-16 pt-5 sm:-mt-9 sm:px-6 sm:pt-0 lg:-mt-11 lg:px-8">
+      <section className="relative z-10 px-4 pb-14 pt-6 sm:-mt-5 sm:px-6 sm:pt-0 lg:-mt-7 lg:px-8">
         <div className="mx-auto grid w-full max-w-content gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((s) => (
             <StatCard key={s.label} {...s} />
@@ -212,11 +212,11 @@ export default function HomePage() {
 
       {/* Credential teaser */}
       <Section eyebrow="Credentials" title="Which Credential Is Right for You?" intro="Whether you're just starting out, advancing your clinical skills, or supporting others through lived experience — ABCAC offers the credential that aligns with your path." className="bg-surface">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {credentials.map((c, index) => (
-            <div key={c.code} className="group modern-surface relative overflow-hidden rounded-[1.5rem] p-6 transition duration-300 hover:-translate-y-1.5 hover:border-brand/20 hover:shadow-[0_28px_70px_-38px_rgba(13,34,63,0.4)]">
-              <span className="absolute -right-3 -top-5 font-display text-7xl font-bold text-brand/[0.035]" aria-hidden>0{index + 1}</span>
-              <span className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-sm font-bold text-brand ring-1 ring-brand/10">0{index + 1}</span>
+            <div key={c.code} className="group modern-surface relative overflow-hidden rounded-[1.5rem] p-5 transition duration-300 hover:-translate-y-1.5 hover:border-brand/20 hover:shadow-[0_28px_70px_-38px_rgba(13,34,63,0.4)] sm:p-6 lg:p-5">
+              <span className="pointer-events-none absolute right-4 top-3 font-display text-5xl font-bold text-brand opacity-[0.045]" aria-hidden>0{index + 1}</span>
+              <span className="relative mb-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-sm font-bold text-brand ring-1 ring-brand/10">0{index + 1}</span>
               <h3 className="text-base leading-snug">{c.code}</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted">{c.desc}</p>
             </div>

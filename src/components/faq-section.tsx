@@ -22,7 +22,7 @@ export function FaqSection({
       <div className="site-noise absolute inset-0 -z-20" aria-hidden />
       <div className="absolute -left-32 -top-32 -z-10 h-80 w-80 rounded-full bg-brand/25 blur-3xl" aria-hidden />
       <div className="absolute -bottom-40 -right-32 -z-10 h-96 w-96 rounded-full bg-white/[0.05] blur-3xl" aria-hidden />
-      <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16 lg:px-12 lg:py-28">
+      <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16 lg:px-12 lg:py-20">
         <div className="lg:sticky lg:top-28 lg:self-start">
           <div className="flex items-center gap-3">
             <span className="h-px w-8 bg-white/35" aria-hidden />
