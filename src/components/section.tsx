@@ -16,20 +16,23 @@ interface SectionProps {
 /** Vertical-rhythm wrapper that every page composes from. */
 export function Section({ children, eyebrow, title, intro, className, compact, surface, id }: SectionProps) {
   return (
-    <section id={id} className={cn(surface && "bg-surface", className, id && "scroll-mt-32")}>
+    <section id={id} className={cn("relative", surface && "bg-surface", className, id && "scroll-mt-32")}>
       <div
         className={cn(
           "mx-auto w-full max-w-content px-4 sm:px-6 lg:px-8",
-          compact ? "py-10 sm:py-12 md:py-14" : "py-12 sm:py-16 lg:py-24",
+          compact ? "py-12 sm:py-14 md:py-16" : "py-16 sm:py-20 lg:py-28",
         )}
       >
         {(eyebrow || title || intro) && (
-          <div className="mb-8 max-w-2xl sm:mb-10">
+          <div className="mb-10 max-w-3xl sm:mb-12">
             {eyebrow && (
-              <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-accent-strong">{eyebrow}</p>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="h-px w-8 bg-brand" aria-hidden />
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">{eyebrow}</p>
+              </div>
             )}
             {title && <h2>{title}</h2>}
-            {intro && <p className="mt-3 text-lg text-muted">{intro}</p>}
+            {intro && <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">{intro}</p>}
           </div>
         )}
         {children}

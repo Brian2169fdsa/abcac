@@ -3,19 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "relative isolate inline-flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px",
   {
     variants: {
       variant: {
-        primary: "bg-brand text-white hover:bg-brand-600",
-        outline: "border border-brand text-brand bg-transparent hover:bg-brand hover:text-white",
-        ghost: "text-brand hover:bg-line/60",
-        accent: "bg-accent text-white hover:brightness-110",
+        primary:
+          "bg-brand text-white shadow-[0_12px_28px_-14px_rgba(123,31,31,0.8)] hover:-translate-y-0.5 hover:bg-brand-600 hover:shadow-[0_18px_34px_-14px_rgba(123,31,31,0.7)]",
+        outline:
+          "border border-brand/30 bg-surface/80 text-brand shadow-sm backdrop-blur hover:-translate-y-0.5 hover:border-brand hover:bg-brand hover:text-white hover:shadow-[0_12px_26px_-16px_rgba(123,31,31,0.55)]",
+        ghost: "text-brand hover:bg-brand/[0.07]",
+        accent:
+          "bg-info text-white shadow-[0_12px_28px_-16px_rgba(13,34,63,0.7)] hover:-translate-y-0.5 hover:bg-info/90",
       },
       size: {
         default: "h-11 px-5",
-        sm: "h-9 px-4 text-sm",
-        lg: "h-12 px-7 text-base",
+        sm: "h-10 px-4 text-sm",
+        lg: "h-[52px] px-7 text-base",
       },
     },
     defaultVariants: { variant: "primary", size: "default" },

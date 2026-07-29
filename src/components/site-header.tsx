@@ -29,24 +29,34 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className={cn("sticky top-0 z-40 border-b border-line/80 bg-surface/95 backdrop-blur-xl transition-all", scrolled && "shadow-[0_10px_35px_-24px_rgba(13,34,63,0.45)]")}>
-        <div className="mx-auto flex h-20 w-full max-w-[94rem] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="shrink-0" aria-label={`${siteConfig.shortName} home`}>
-            <BrandLogo priority className="h-12 sm:h-14" />
+      <header
+        className={cn(
+          "sticky top-0 z-40 border-b border-line/80 bg-bg/85 backdrop-blur-2xl transition-all duration-300",
+          scrolled && "bg-surface/90 shadow-[0_16px_45px_-32px_rgba(13,34,63,0.55)]",
+        )}
+      >
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" aria-hidden />
+        <div className="mx-auto flex h-[78px] w-full max-w-[94rem] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            className="shrink-0 rounded-xl px-1 py-1 transition-opacity hover:opacity-80"
+            aria-label={`${siteConfig.shortName} home`}
+          >
+            <BrandLogo priority className="h-10 sm:h-11" />
           </Link>
 
           <nav aria-label="Primary"><MegaMenu /></nav>
 
           <div className="flex shrink-0 items-center gap-2.5">
-            <CtaButton href={HEADER_CTA.href} variant="outline" size="sm" className="hidden 2xl:inline-flex">
+            <CtaButton href={HEADER_CTA.href} variant="ghost" size="sm" className="hidden 2xl:inline-flex">
               {HEADER_CTA.label}
             </CtaButton>
-            <CtaButton href="/account" size="sm" className="hidden md:inline-flex">
+            <CtaButton href="/account" size="sm" className="hidden px-5 md:inline-flex">
               Member Portal
             </CtaButton>
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink xl:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface text-ink shadow-sm transition hover:border-brand/20 hover:text-brand xl:hidden"
               aria-label="Open menu"
               aria-expanded={open}
               onClick={() => setOpen(true)}
