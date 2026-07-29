@@ -10,9 +10,8 @@ const nextConfig = {
       { source: "/initial-or-renewal", destination: "/initial-certification", permanent: true },
       { source: "/home", destination: "/", permanent: true },
       { source: "/product/:slug", destination: "/store/:slug", permanent: true },
-      // Retire the legacy static portal entry points in favor of the authenticated
-      // Next.js member and admin applications.
-      { source: "/portal", destination: "/account", permanent: true },
+      // Retire the legacy static admin entry point. /portal is the public
+      // authentication gateway into the Next.js member application.
       { source: "/portal/admin", destination: "/admin", permanent: true },
       // The admin console is a separate app at /admin (not nested under
       // /account). Catch the intuitive-but-wrong /account/admin URL so it never

@@ -90,7 +90,12 @@ export async function POST(req: Request) {
     formType = "reciprocity_request";
     linkedRecordType = "reciprocity_requests";
     linkedRecordId = data.id;
-    intake = normalizePaymentIntake({ firstName: profile?.first_name, lastName: profile?.last_name, email: profile?.email ?? authEmail, phone: profile?.phone });
+    intake = normalizePaymentIntake({
+      firstName: profile?.first_name,
+      lastName: profile?.last_name,
+      email: profile?.email ?? authEmail,
+      phone: profile?.phone,
+    }) ?? intake;
     formPayload = { direction: data.direction, credential: data.credential, destination: data.destination };
   } else {
     const syncApplicationId = parsed.syncApplicationId || (typeof parsed.metadata?.sync_application_id === "string" ? parsed.metadata.sync_application_id : undefined);
@@ -112,7 +117,7 @@ export async function POST(req: Request) {
         lastName: profile?.last_name || fullName.slice(1).join(" "),
         email: profile?.email ?? authEmail,
         phone: profile?.phone || String(details.phone || ""),
-      });
+      }) ?? intake;
       formPayload = { applicationId: data.id, certType: data.cert_type, request: details };
     } else if (parsed.applicationId) {
       // Application-packet fee (initial certification, renewal, CEU workshop):
