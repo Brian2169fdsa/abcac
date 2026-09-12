@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,12 @@ export function TestingRegistrationForm({ defaults, initialMode }: { defaults: P
         const attached = await attachTestingDocuments(result.id, uploaded);
         if (!attached.ok) throw new Error(attached.error ?? "Could not attach supporting documents.");
       }
+      if (!paymentsEnabled) {
+        // Payments paused for launch: the request is saved as awaiting_payment and
+        // resumable from Exam Registration once online payment opens.
+        window.location.href = "/account/testing?saved=1";
+        return;
+      }
       const response = await fetch("/api/stripe/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ testingRequestId: result.id }),
       });
@@ -112,7 +119,7 @@ export function TestingRegistrationForm({ defaults, initialMode }: { defaults: P
         <label className="mt-6 block text-sm font-semibold">Supporting documents <span className="font-normal text-muted">(optional)</span><input type="file" name="supportingDocuments" multiple accept=".pdf,.jpg,.jpeg,.png" className="mt-2 block w-full rounded-xl border border-dashed border-line bg-bg p-4 text-sm font-normal" /><span className="mt-2 block text-xs font-normal text-muted">Upload up to 10 PDF, JPG, or PNG files. Each file must be under 10MB.</span></label>
       </section>
 
-      <div className="rounded-3xl bg-info p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8"><div><h2 className="text-2xl text-white">Submit and pay securely</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75">Your request is saved before Stripe checkout. Payment moves it into the ABCAC staff queue for SMT pre-registration.</p>{error && <p className="mt-3 font-semibold text-red-200">{error}</p>}</div><Button type="submit" disabled={loading} size="lg" className="mt-5 w-full shrink-0 bg-white text-info hover:bg-white/90 sm:mt-0 sm:w-auto">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Save &amp; Continue to Payment <CheckCircle2 className="h-4 w-4" /></>}</Button></div>
+      <div className="rounded-3xl bg-info p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8"><div><h2 className="text-2xl text-white">Submit and pay securely</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75">Your request is saved before Stripe checkout. Payment moves it into the ABCAC staff queue for SMT pre-registration.</p>{error && <p className="mt-3 font-semibold text-red-200">{error}</p>}</div><Button type="submit" disabled={loading} size="lg" className="mt-5 w-full shrink-0 bg-white text-info hover:bg-white/90 sm:mt-0 sm:w-auto">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{paymentsEnabled ? "Save & Continue to Payment" : "Save Exam Request"} <CheckCircle2 className="h-4 w-4" /></>}</Button></div>
     </form>
   );
 }

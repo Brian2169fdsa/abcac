@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { getProductBySlug, getPriceId } from "@/lib/catalog";
@@ -39,6 +40,7 @@ const RESERVED_METADATA_KEYS = new Set([
 ]);
 
 export async function POST(req: Request) {
+  if (!paymentsEnabled) return NextResponse.json({ error: "payments_paused" }, { status: 503 });
   if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
   let parsed: {

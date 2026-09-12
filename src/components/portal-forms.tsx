@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -465,7 +466,8 @@ export function ReciprocityForm() {
       if (!isOut) { setDone("into"); router.refresh(); return; }
 
       // OUT of Arizona: start the $150 credit-card Stripe Checkout. Degrade
-      // gracefully if payments aren't configured/seeded.
+      // gracefully if payments aren't configured/seeded, or are paused for launch.
+      if (!paymentsEnabled) { setDone("out_invoice"); router.refresh(); return; }
       try {
         const res = await fetch("/api/stripe/checkout", {
           method: "POST",
@@ -511,11 +513,11 @@ export function ReciprocityForm() {
       </label>
       <label className="block"><span className={labelCls}>Reason / notes</span><input name="reason" className={field} /></label>
       {isOut
-        ? <p className="text-sm text-muted">A <strong>$150 IC&amp;RC transfer fee</strong> applies and is paid by credit card after you submit.</p>
+        ? <p className="text-sm text-muted">A <strong>$150 IC&amp;RC transfer fee</strong> applies{paymentsEnabled ? " and is paid by credit card after you submit." : ". Online payment opens shortly; ABCAC will confirm how to pay."}</p>
         : <p className="text-sm text-muted">Inbound transfers carry <strong>no fee</strong>. ABCAC will review your notice and follow up.</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <Button type="submit" disabled={loading}>
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : isOut ? "Submit & Pay $150" : "Submit Inbound Notice"}
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : isOut ? (paymentsEnabled ? "Submit & Pay $150" : "Submit Transfer Request") : "Submit Inbound Notice"}
       </Button>
     </form>
   );

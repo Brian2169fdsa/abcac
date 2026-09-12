@@ -19,7 +19,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule, CeuLike } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor, computeDueFromExpiration } from "@/lib/schedules";
 import { isAdminRole } from "@/lib/auth/roles";
-import { agentWorkspaceEnabled } from "@/lib/feature-flags";
+import { agentWorkspaceEnabled, paymentsEnabled } from "@/lib/feature-flags";
 
 export const metadata = { title: "My Account" };
 export const dynamic = "force-dynamic";
@@ -602,8 +602,8 @@ export default async function AccountPage() {
         )}
       </Section>
 
-      {/* Certification Sync */}
-      <Section surface title="Certification Sync" compact>
+      {/* Certification Sync — a paid request; hidden while payments are paused */}
+      {(paymentsEnabled || syncOn) && <Section surface title="Certification Sync" compact>
         <p className="text-muted">
           {syncOn ? "Certification Sync has been applied to your account." : "Align multiple renewal dates into one cycle with a one-time $15 fee per month moved forward."}
         </p>
@@ -614,7 +614,7 @@ export default async function AccountPage() {
             <CtaButton href="/account/certification-sync" variant="accent">Start Certification Sync</CtaButton>
           )}
         </div>
-      </Section>
+      </Section>}
 
       {/* Payment history */}
       <Section title="Payment History" compact>

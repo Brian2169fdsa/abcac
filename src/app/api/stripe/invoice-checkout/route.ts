@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -7,6 +8,7 @@ export const runtime = "nodejs";
 
 // Creates a Stripe Checkout Session to pay an admin-issued invoice.
 export async function POST(req: Request) {
+  if (!paymentsEnabled) return NextResponse.json({ error: "payments_paused" }, { status: 503 });
   if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
   let parsed: { invoice_id?: string };

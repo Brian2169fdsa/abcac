@@ -15,6 +15,7 @@ export default async function PortalLayout({ children }: { children: React.React
   let isAdmin = false;
   let notificationCount = 0;
   let notifications: Notification[] = [];
+  let restricted = false;
 
   try {
     // The middleware already validated the session; read the id from its header
@@ -26,7 +27,7 @@ export default async function PortalLayout({ children }: { children: React.React
       const [{ data: profile }, { count }, unread, recent] = await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name,last_name,portal_role")
+          .select("first_name,last_name,portal_role,account_status")
           .eq("id", userId)
           .maybeSingle(),
         supabase
@@ -45,6 +46,10 @@ export default async function PortalLayout({ children }: { children: React.React
       if (name) memberName = name;
       messageCount = count ?? 0;
       isAdmin = isAdminRole((profile as { portal_role?: string | null } | null)?.portal_role);
+      // Pending accounts (approval gate on) get a minimal shell: the full sidebar
+      // would only bounce them back to onboarding on every click.
+      const accountStatus = (profile as { account_status?: string | null } | null)?.account_status ?? "approved";
+      restricted = !isAdmin && process.env.PORTAL_ACCOUNT_APPROVAL_REQUIRED !== "false" && accountStatus !== "approved";
       notificationCount = unread;
       notifications = recent;
     }
@@ -57,6 +62,7 @@ export default async function PortalLayout({ children }: { children: React.React
       memberName={memberName}
       messageCount={messageCount}
       isAdmin={isAdmin}
+      restricted={restricted}
       notificationCount={notificationCount}
       notifications={notifications}
     >

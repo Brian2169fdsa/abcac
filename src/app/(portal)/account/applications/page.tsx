@@ -7,6 +7,8 @@ import { ApplicationsStatusChip } from "@/components/account/applications-status
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { paymentOptionsForApplication } from "@/lib/portal-routing";
 import { getWorkflowForApplication } from "@/lib/form-library";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 
 export const metadata = { title: "Application Status" };
 export const dynamic = "force-dynamic";
@@ -171,7 +173,10 @@ export default async function ApplicationsPage() {
                   </div>
                 )}
 
-                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && (
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id).length > 0 && (
+                  <div className="mt-4"><PaymentsPausedNotice compact /></div>
+                )}
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && paymentsEnabled && (
                   <div className="mt-4 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
                     <p className="text-sm font-semibold text-ink">Complete the payment linked to this application</p>
                     <p className="mt-1 text-sm text-muted">Choose the correct option below. The payment will be recorded against this exact application.</p>

@@ -83,8 +83,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Gate unapproved members to the onboarding/approval flow.
+  // Default ON: new public signups go through onboarding + staff approval.
+  // Pre-provisioned members are already approved and never see the gate.
+  // Set PORTAL_ACCOUNT_APPROVAL_REQUIRED=false for fully open self-service.
   if (
-    process.env.PORTAL_ACCOUNT_APPROVAL_REQUIRED === "true" &&
+    process.env.PORTAL_ACCOUNT_APPROVAL_REQUIRED !== "false" &&
     user &&
     path.startsWith("/account") &&
     path !== "/account/onboarding" &&

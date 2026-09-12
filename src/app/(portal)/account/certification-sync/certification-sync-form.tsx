@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 import Link from "next/link";
 import { CheckCircle2, Download, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -138,7 +140,7 @@ export function CertificationSyncForm({
   }
 
   async function checkout(id = requestId) {
-    if (!id) return;
+    if (!id || !paymentsEnabled) return;
     setError(null);
     setBusy("pay");
     try {
@@ -179,9 +181,10 @@ export function CertificationSyncForm({
         <h2 className="mt-4 text-2xl">Your sync request is saved</h2>
         <p className="mt-2 text-muted">ABCAC can now see this request in the admin queue. Complete the one-time ${total.toFixed(2)} payment if you have not already paid.</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" onClick={() => checkout()} disabled={busy === "pay"}>{busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Pay $${total.toFixed(2)} securely`}</Button>
+          {paymentsEnabled && <Button size="lg" onClick={() => checkout()} disabled={busy === "pay"}>{busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Pay $${total.toFixed(2)} securely`}</Button>}
           <Link href="/account/applications" className={buttonVariants({ variant: "outline", size: "lg" })}>Track request status</Link>
         </div>
+        {!paymentsEnabled && <div className="mt-6"><PaymentsPausedNotice compact /></div>}
         {message && <p className="mt-4 rounded-lg border border-line bg-surface p-3 text-sm text-muted">{message}</p>}
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       </div>
@@ -248,7 +251,7 @@ export function CertificationSyncForm({
       {error && <p className="mt-5 text-sm text-red-600">{error}</p>}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Button type="button" variant="outline" size="lg" onClick={() => save("draft")} disabled={busy !== null}>{busy === "save" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save draft"}</Button>
-        <Button type="button" size="lg" onClick={submitAndPay} disabled={busy !== null}>{busy === "submit" || busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Submit and pay $${total.toFixed(2)}`}</Button>
+        <Button type="button" size="lg" onClick={submitAndPay} disabled={busy !== null}>{busy === "submit" || busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : paymentsEnabled ? `Submit and pay $${total.toFixed(2)}` : "Submit request"}</Button>
       </div>
       <p className="mt-3 text-xs text-muted">Your draft and documents are stored privately in your ABCAC account.</p>
     </div>

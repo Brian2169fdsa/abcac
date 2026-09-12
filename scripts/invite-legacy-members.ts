@@ -13,6 +13,13 @@
  *                    pre-populating the portal before the email domain is
  *                    ready). Members later get a password-setup email, or use
  *                    "Forgot password" on the login page.
+ *   --announce     — the launch campaign. For accounts ALREADY created (claimed,
+ *                    never emailed) send a "your portal is ready" email through
+ *                    Resend that links to /forgot, where the member requests
+ *                    their own password link. Requires RESEND_API_KEY,
+ *                    RESEND_FROM_EMAIL, NEXT_PUBLIC_SITE_URL. Stamps invited_at
+ *                    so a re-run never emails the same person twice.
+ *                    Batch with --limit (25–50/day to start).
  *
  * With --provision, the account is also pre-approved and the member's
  * certification row(s) + mailing address are issued from the legacy data — so
@@ -23,7 +30,7 @@
  * (which also takes status=review). Safe to re-run: processed rows are stamped
  * and skipped. Use --limit to batch (e.g. 50/day) and watch deliverability.
  */
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
@@ -33,6 +40,7 @@ async function main() {
   const dryRun = args.includes("--dry-run");
   const provision = args.includes("--provision");
   const createOnly = args.includes("--create-only");
+  const announce = args.includes("--announce");
   const includeInactive = args.includes("--include-inactive");
   const limitIndex = args.indexOf("--limit");
   const limit = limitIndex >= 0 ? Math.max(1, Number(args[limitIndex + 1]) || 50) : 50;
@@ -43,6 +51,11 @@ async function main() {
   if (!url || !serviceKey) { console.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required."); process.exit(1); }
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+
+  if (announce) {
+    await announceCreatedAccounts(admin, { limit, dryRun, siteUrl, includeInactive });
+    return;
+  }
   let query = admin
     .from("legacy_members")
     .select("id,first_name,last_name,email,phone,cert_type,cert_number,issued_date,expiration_date,ic_rc_level,status,address_line1,address_line2,city,state,zip_code")
@@ -153,6 +166,84 @@ async function main() {
     if (!createOnly) await new Promise((resolve) => setTimeout(resolve, 250)); // gentle on the email sender
   }
   console.log(`Done: ${processed}/${byEmail.size} processed.`);
+}
+
+/**
+ * Launch campaign: email members whose portal account already exists but who
+ * have never been contacted. The email links to /forgot so the member requests
+ * their own password link — that path works on every device and does not
+ * depend on Supabase invite-link mechanics. One email per person; the roster
+ * rows are stamped invited_at so re-runs skip them.
+ */
+async function announceCreatedAccounts(
+  admin: SupabaseClient,
+  opts: { limit: number; dryRun: boolean; siteUrl: string; includeInactive: boolean },
+) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || "ABCAC <noreply@abcac.org>";
+  if (!opts.siteUrl) { console.error("NEXT_PUBLIC_SITE_URL is required for --announce (it becomes the portal link)."); process.exit(1); }
+  if (!resendKey && !opts.dryRun) { console.error("RESEND_API_KEY is required for --announce."); process.exit(1); }
+
+  let query = admin
+    .from("legacy_members")
+    .select("id,first_name,last_name,email,status,claimed_by")
+    .not("email", "is", null)
+    .not("claimed_by", "is", null)
+    .is("invited_at", null)
+    .order("created_at")
+    .limit(opts.limit * 3); // several credential rows per person
+  if (!opts.includeInactive) query = query.eq("status", "active");
+  type RosterRow = { id: string; first_name: string | null; last_name: string | null; email: string | null; status: string | null; claimed_by: string | null };
+  const { data, error } = await query;
+  if (error) { console.error("Query failed:", error.message); process.exit(1); }
+  const rows = (data ?? []) as RosterRow[];
+  if (!rows.length) { console.log("Nothing to announce — every created account has been emailed."); return; }
+
+  const byEmail = new Map<string, RosterRow[]>();
+  for (const row of rows) {
+    const email = row.email!.toLowerCase();
+    byEmail.set(email, [...(byEmail.get(email) ?? []), row]);
+  }
+  const people = Array.from(byEmail.entries()).slice(0, opts.limit);
+  console.log(`${people.length} member(s) to announce, dryRun=${opts.dryRun}`);
+
+  const forgotUrl = `${opts.siteUrl}/forgot`;
+  let sent = 0;
+  for (const [email, records] of people) {
+    const first = records[0].first_name?.trim() || "there";
+    if (opts.dryRun) { console.log(`[dry-run] would email ${email}`); continue; }
+    const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+  <h2 style="color:#861f24">Your ABCAC member portal is ready</h2>
+  <p>Hi ${escapeHtml(first)},</p>
+  <p>The Arizona Board for Certification of Addiction Counselors has moved credential records online. Your account is already set up under this email address, with your certification on file.</p>
+  <p><strong>To sign in for the first time, set your password:</strong></p>
+  <p style="margin:20px 0"><a href="${forgotUrl}" style="background:#861f24;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Set my password</a></p>
+  <ol style="color:#333">
+    <li>Enter this email address (${escapeHtml(email)}) and choose “Send Reset Link”.</li>
+    <li>Open the link from the email on the <em>same device and browser</em>.</li>
+    <li>Choose a password. You will land on your dashboard.</li>
+  </ol>
+  <p>In the portal you can download your certificate and wallet card, log continuing education, upload documents, and message the board.</p>
+  <p style="color:#6b7280;font-size:14px">Questions? Reply to this email or call 480-980-1770.</p>
+  <p style="color:#6b7280;font-size:12px;margin-top:24px">ABCAC — Arizona Board for Certification of Addiction Counselors · PO Box 83165, Phoenix, AZ 85071</p>
+</div>`.trim();
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: email, subject: "Your ABCAC member portal is ready", html }),
+    });
+    if (!res.ok) { console.error(`Send failed for ${email}: ${res.status} ${await res.text()}`); continue; }
+    await admin.from("legacy_members").update({ invited_at: new Date().toISOString() }).in("id", records.map((r) => r.id));
+    sent++;
+    console.log(`Announced ${email}`);
+    await new Promise((resolve) => setTimeout(resolve, 400)); // stay well under Resend's per-second limit
+  }
+  console.log(`Done: ${sent}/${people.length} emailed.`);
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 }
 
 void main();

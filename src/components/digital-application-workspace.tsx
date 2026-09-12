@@ -8,6 +8,8 @@ import type { DigitalFormDocument, FormAnnotation, SmartFormField } from "@/lib/
 import type { FormDefinition } from "@/lib/form-library";
 import { hasCompletedEntry, isDigitalFormComplete, isDigitalPacketComplete } from "@/lib/digital-form-progress";
 import { getWorkflowFees } from "@/lib/form-library";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 import { getNativeFormSchema, getNativeSignatureFields, missingRequiredNativeFields } from "@/lib/native-form-schemas";
 import { DigitalPdfEditor } from "@/components/digital-pdf-editor";
 import { NativeFormEditor } from "@/components/native-form-editor";
@@ -266,7 +268,8 @@ export function DigitalApplicationWorkspace({
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div>}
       {message && <div className="rounded-xl border border-success/20 bg-success/10 p-4 text-sm font-semibold text-success">{message}</div>}
-      {awaitingFee && (
+      {awaitingFee && !paymentsEnabled && <PaymentsPausedNotice />}
+      {awaitingFee && paymentsEnabled && (
         <div className="rounded-2xl border border-brand/20 bg-brand/[0.05] p-5 sm:p-6">
           <h3 className="text-lg font-bold text-ink">Final step: pay your fee</h3>
           <p className="mt-1 text-sm text-muted">Your packet is submitted. Complete the matching payment so ABCAC can begin review — it is attached to your account automatically.</p>

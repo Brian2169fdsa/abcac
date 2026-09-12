@@ -16,6 +16,7 @@ export function PortalShell({
   memberName,
   messageCount,
   isAdmin = false,
+  restricted = false,
   notificationCount = 0,
   notifications = [],
   children,
@@ -23,6 +24,8 @@ export function PortalShell({
   memberName: string;
   messageCount?: number;
   isAdmin?: boolean;
+  /** Pending-approval account: sidebar shows only Home / Onboarding / Settings. */
+  restricted?: boolean;
   notificationCount?: number;
   notifications?: Notification[];
   children: React.ReactNode;
@@ -62,7 +65,7 @@ export function PortalShell({
 
       <div className="flex">
         {/* Desktop sidebar (fixed) */}
-        <PortalSidebar isAdmin={isAdmin} className="fixed bottom-0 left-0 top-[120px] z-30 hidden lg:block" />
+        <PortalSidebar isAdmin={isAdmin} restricted={restricted} className="fixed bottom-0 left-0 top-[120px] z-30 hidden lg:block" />
 
         {/* Mobile drawer + overlay */}
         {drawerOpen && (
@@ -79,7 +82,7 @@ export function PortalShell({
             drawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <PortalSidebar isAdmin={isAdmin} className="h-full" onClose={() => setDrawerOpen(false)} />
+          <PortalSidebar isAdmin={isAdmin} restricted={restricted} className="h-full" onClose={() => setDrawerOpen(false)} />
         </div>
 
         {/* Main content */}
