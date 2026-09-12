@@ -131,6 +131,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams?: { 
                             }}
                           />
                         </div>
+                      ) : isVoid(inv.status) ? (
+                        <div className="flex justify-end">
+                          <span className="text-xs text-muted">Closed — no payment due</span>
+                        </div>
                       ) : (
                         <div className="flex justify-end">
                           <PayInvoiceButton invoiceId={inv.id} />

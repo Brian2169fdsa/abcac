@@ -56,14 +56,17 @@ async function main() {
     await announceCreatedAccounts(admin, { limit, dryRun, siteUrl, includeInactive });
     return;
   }
+  // Fetch every pending row (not just a slice) so a person's credential rows
+  // can never be split across a page boundary — grouping by email below would
+  // otherwise stamp claimed_by/invited_at on only some of a person's rows,
+  // leaving the rest eligible and causing a duplicate invite next run.
   let query = admin
     .from("legacy_members")
     .select("id,first_name,last_name,email,phone,cert_type,cert_number,issued_date,expiration_date,ic_rc_level,status,address_line1,address_line2,city,state,zip_code")
     .not("email", "is", null)
     .is("invited_at", null)
     .is("claimed_by", null)
-    .order("created_at")
-    .limit(limit);
+    .order("created_at");
   if (!includeInactive) query = query.eq("status", "active");
   const { data: pending, error } = await query;
   if (error) { console.error("Query failed:", error.message); process.exit(1); }
@@ -75,10 +78,11 @@ async function main() {
     const email = row.email!.toLowerCase();
     byEmail.set(email, [...(byEmail.get(email) ?? []), row]);
   }
-  console.log(`${byEmail.size} member(s) to process (${pending.length} credential rows), mode=${createOnly ? "create-only" : "invite"}, provision=${provision}, includeInactive=${includeInactive}, dryRun=${dryRun}`);
+  const people = Array.from(byEmail.entries()).slice(0, limit);
+  console.log(`${people.length} member(s) to process (of ${byEmail.size} pending), mode=${createOnly ? "create-only" : "invite"}, provision=${provision}, includeInactive=${includeInactive}, dryRun=${dryRun}`);
 
   let processed = 0;
-  for (const [email, records] of Array.from(byEmail.entries())) {
+  for (const [email, records] of people) {
     const primary = records[0];
     const name = [primary.first_name, primary.last_name].filter(Boolean).join(" ") || email;
     const label = records.map((r: typeof primary) => `${r.cert_type ?? "?"}${r.status === "active" ? "" : ` (${r.status})`}`).join(", ");
@@ -184,14 +188,17 @@ async function announceCreatedAccounts(
   if (!opts.siteUrl) { console.error("NEXT_PUBLIC_SITE_URL is required for --announce (it becomes the portal link)."); process.exit(1); }
   if (!resendKey && !opts.dryRun) { console.error("RESEND_API_KEY is required for --announce."); process.exit(1); }
 
+  // Fetch every pending row (not just a slice) so a person's credential rows
+  // can never be split across a page boundary — grouping by email below would
+  // otherwise stamp invited_at on only some of a person's rows, leaving the
+  // rest eligible and causing a duplicate email on the next run.
   let query = admin
     .from("legacy_members")
     .select("id,first_name,last_name,email,status,claimed_by")
     .not("email", "is", null)
     .not("claimed_by", "is", null)
     .is("invited_at", null)
-    .order("created_at")
-    .limit(opts.limit * 3); // several credential rows per person
+    .order("created_at");
   if (!opts.includeInactive) query = query.eq("status", "active");
   type RosterRow = { id: string; first_name: string | null; last_name: string | null; email: string | null; status: string | null; claimed_by: string | null };
   const { data, error } = await query;
