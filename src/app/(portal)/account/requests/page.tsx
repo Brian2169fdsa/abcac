@@ -53,6 +53,9 @@ export default async function RequestsPage() {
     label: `${r.purpose} → ${r.recipient_name}`,
     status: r.status,
     submittedAt: r.submitted_at,
+    trailing: r.letter_path ? (
+      <ViewFileButton bucket="member-documents" path={r.letter_path} label="View Letter" />
+    ) : undefined,
   }));
 
   const reciprocityRows: RequestHistoryRow[] = (rec ?? []).map((r) => {
