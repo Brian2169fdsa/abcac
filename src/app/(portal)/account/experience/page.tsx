@@ -1,7 +1,7 @@
 import { requireUserId } from "@/lib/auth/current-user";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
-import { AddEmploymentForm, EditEmploymentForm, AddSupervisionForm } from "@/components/portal-forms";
+import { AddEmploymentForm, EditEmploymentForm, DeleteEmploymentButton, AddSupervisionForm, EditSupervisionForm, DeleteSupervisionButton } from "@/components/portal-forms";
 import { SectionCard } from "@/components/account/section-card";
 import { DataTable } from "@/components/account/data-table";
 import { StatusChip } from "@/components/account/status-chip";
@@ -74,7 +74,10 @@ export default async function ExperiencePage() {
             head={["Employer", "Position", "Start", "End", ""]}
             rows={(emp ?? []).map((e) => [
               e.employer_name, e.position_title, fmt(e.start_date), e.is_current ? "Present" : fmt(e.end_date),
-              <EditEmploymentForm key="edit" record={{ id: e.id, employer_name: e.employer_name, position_title: e.position_title, start_date: e.start_date, end_date: e.end_date, is_current: e.is_current }} />,
+              <div key="actions" className="flex flex-wrap gap-1">
+                <EditEmploymentForm record={{ id: e.id, employer_name: e.employer_name, position_title: e.position_title, start_date: e.start_date, end_date: e.end_date, is_current: e.is_current }} />
+                <DeleteEmploymentButton id={e.id} />
+              </div>,
             ])}
             empty="No employment records yet. Add your work history to support your application."
           />
@@ -88,13 +91,17 @@ export default async function ExperiencePage() {
           action={<AddSupervisionForm />}
         >
           <DataTable
-            head={["Supervisee", "Credential", "Start", "End", "Status"]}
+            head={["Supervisee", "Credential", "Start", "End", "Status", ""]}
             rows={((sup ?? []) as SupervisionRecord[]).map((s) => [
               s.supervisee_name,
               s.supervisee_credential,
               fmt(s.start_date),
               s.end_date ? fmt(s.end_date) : "Present",
               s.status ? <StatusChip status={s.status} /> : "—",
+              <div key="actions" className="flex flex-wrap gap-1">
+                <EditSupervisionForm record={{ id: s.id, supervisee_name: s.supervisee_name, supervisee_credential: s.supervisee_credential, start_date: s.start_date, end_date: s.end_date }} />
+                <DeleteSupervisionButton id={s.id} />
+              </div>,
             ])}
             empty="No supervision records yet."
           />
