@@ -6,6 +6,7 @@ import { CtaButton } from "@/components/cta-button";
 import { ApplicationsStatusChip } from "@/components/account/applications-status-chip";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { paymentOptionsForApplication } from "@/lib/portal-routing";
+import { getWorkflowForApplication } from "@/lib/form-library";
 
 export const metadata = { title: "Application Status" };
 export const dynamic = "force-dynamic";
@@ -45,7 +46,23 @@ function feePaid(applicationId: string, appType: string | null, payments: Paymen
   return payments.length > 0;
 }
 
+/** Deep link back into the workspace (or dedicated page) that owns this application. */
+function workspaceHref(a: Application): { href: string; label: string } | null {
+  if (a.app_type === "cert_sync") return { href: "/account/certification-sync", label: "View sync request" };
+  const workflow = getWorkflowForApplication(a.app_type, a.cert_type);
+  if (!workflow) return null;
+  const href = `/account/forms?workflow=${encodeURIComponent(workflow.key)}&application=${encodeURIComponent(a.id)}`;
+  return a.status === "draft" ? { href, label: "Continue application" } : { href, label: "View packet" };
+}
+
 function Timeline({ status }: { status: string | null }) {
+  if (status === "draft") {
+    return (
+      <div className="rounded-lg border border-dashed border-line bg-bg px-4 py-3 text-sm text-muted">
+        Draft — not yet submitted to ABCAC. Continue the application to finish and submit it.
+      </div>
+    );
+  }
   const rejected = status === "rejected";
   const idx = stageIndex(status);
   if (rejected) {
@@ -114,9 +131,12 @@ export default async function ApplicationsPage() {
                 <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-display text-lg font-bold text-ink">{title(a.app_type)}{a.cert_type ? ` — ${a.cert_type}` : ""}</h3>
-                    <p className="text-sm text-muted">Submitted {fmt(a.submitted_at)}</p>
+                    <p className="text-sm text-muted">{a.status === "draft" || !a.submitted_at ? "Saved draft" : `Submitted ${fmt(a.submitted_at)}`}</p>
                   </div>
-                  <ApplicationsStatusChip status={a.status} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(() => { const link = workspaceHref(a); return link ? <CtaButton href={link.href} size="sm" variant={a.status === "draft" ? "primary" : "outline"}>{link.label}</CtaButton> : null; })()}
+                    <ApplicationsStatusChip status={a.status} />
+                  </div>
                 </div>
 
                 <Timeline status={a.status} />

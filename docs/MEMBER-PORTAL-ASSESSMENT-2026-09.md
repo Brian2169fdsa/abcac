@@ -14,8 +14,12 @@
 > `<html>` in the not-found page, the `CADC` directory filter, staff "Review …" tasks no longer showing on
 > the member dashboard, and `.env.example` now lists `CRON_SECRET` and `ANTHROPIC_API_KEY`. Two new
 > migrations (046 guard triggers, 047 retire pg_cron reminders) must be applied to the live database.
-> Still open from Track A: H2 (owner: live Stripe seed), H4 (forms workspace after payment), M3
-> (approval posture decision), M5 (CCS/CPRS hours, needs ABCAC), M13 (transcript export gate).
+> H4 (forms workspace after payment) was fixed the same day: the workspace now loads the member's
+> packet at any status, renders it read-only once submitted with a stage banner and reviewer note,
+> shows fee links only while the fee is outstanding, blocks a duplicate while one is in flight, and
+> Application Status links back to continue a draft or view a packet.
+> Still open from Track A: H2 (owner: live Stripe seed), M3 (approval posture decision), M5
+> (CCS/CPRS hours, needs ABCAC), M13 (transcript export gate).
 
 ---
 

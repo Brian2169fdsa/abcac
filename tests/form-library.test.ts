@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FORM_LIBRARY, FORM_WORKFLOWS, getFormDefinition, getFormWorkflow, getWorkflowForms } from "@/lib/form-library";
+import { FORM_LIBRARY, FORM_WORKFLOWS, getFormDefinition, getFormWorkflow, getWorkflowForApplication, getWorkflowForms } from "@/lib/form-library";
 
 describe("digital ABCAC form library", () => {
   it("catalogs every supplied original packet exactly once", () => {
@@ -38,5 +38,14 @@ describe("digital ABCAC form library", () => {
     for (const workflow of FORM_WORKFLOWS) {
       for (const formKey of workflow.formKeys) expect(getFormDefinition(formKey)).toBeDefined();
     }
+  });
+
+  it("maps an applications row back to the workflow that owns it", () => {
+    expect(getWorkflowForApplication("initial", "CAC")?.key).toBe("initial:cac");
+    expect(getWorkflowForApplication("initial_certification", "CADAC")?.key).toBe("initial:cadac");
+    expect(getWorkflowForApplication("renewal", "CAC/CADAC/AADC")?.key).toBe("renewal:counselor");
+    expect(getWorkflowForApplication("ceu_workshop", "Workshop Endorsement")?.key).toBe("ceu:workshop");
+    expect(getWorkflowForApplication("cert_sync", "CAC")).toBeUndefined();
+    expect(getWorkflowForApplication(null, "CAC")).toBeUndefined();
   });
 });

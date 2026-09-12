@@ -87,6 +87,29 @@ export function getFormWorkflow(key: string) {
 }
 
 /**
+ * Reverse lookup from an `applications` row (app_type + cert_type) to the
+ * digital-packet workflow that produced it, so Application Status can link a
+ * member back into the exact workspace to continue a draft or view a packet.
+ * Returns undefined for rows no packet workflow owns (e.g. cert_sync).
+ */
+export function getWorkflowForApplication(appType: string | null | undefined, certType: string | null | undefined) {
+  if (!appType) return undefined;
+  const type = String(appType);
+  const cert = String(certType ?? "");
+  return (
+    FORM_WORKFLOWS.find((workflow) => workflow.appType === type && workflow.certType === cert) ??
+    // Legacy/imported rows may carry the older app_type spelling.
+    (type === "initial_certification" ? FORM_WORKFLOWS.find((workflow) => workflow.appType === "initial" && workflow.certType === cert) : undefined)
+  );
+}
+
+/** Statuses at which a member may still edit a packet. Anything else is read-only. */
+export const EDITABLE_APPLICATION_STATUSES = ["draft"] as const;
+
+/** Statuses that mean ABCAC has the packet — a new one for the same workflow would be a duplicate. */
+export const IN_FLIGHT_APPLICATION_STATUSES = ["submitted", "under_review"] as const;
+
+/**
  * Fee products due at the END of each application workflow. After the packet
  * is submitted, the workspace shows these as the final "pay your fee" step,
  * deep-linking into the portal Payments page. Workflows without an entry

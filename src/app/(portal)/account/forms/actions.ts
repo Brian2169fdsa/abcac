@@ -95,7 +95,9 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     app_type: workflow.appType,
     cert_type: workflow.certType,
     status: input.status,
-    submitted_at: input.status === "submitted" ? new Date().toISOString() : undefined,
+    // Drafts have not been submitted — leave the timestamp null so Application
+    // Status does not show a "Submitted" date on an unsent packet.
+    submitted_at: input.status === "submitted" ? new Date().toISOString() : null,
     member_notes: JSON.stringify(details),
     attested: input.status === "submitted" && submissionMode === "digital",
     attested_at: input.status === "submitted" && submissionMode === "digital" ? new Date().toISOString() : null,
@@ -124,7 +126,7 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     });
   }
 
-  revalidatePath(`/account/forms?workflow=${encodeURIComponent(workflow.key)}`);
+  revalidatePath("/account/forms");
   revalidatePath("/account/applications");
   revalidatePath("/admin/applications");
   return { ok: true, id: data.id };
