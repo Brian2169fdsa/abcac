@@ -3,14 +3,14 @@ import { FORM_LIBRARY, FORM_WORKFLOWS, getFormDefinition, getFormWorkflow, getWo
 
 describe("digital ABCAC form library", () => {
   it("catalogs every supplied original packet exactly once", () => {
-    expect(FORM_LIBRARY).toHaveLength(15);
-    expect(new Set(FORM_LIBRARY.map((form) => form.key)).size).toBe(15);
-    expect(FORM_LIBRARY.reduce((total, form) => total + form.pages, 0)).toBe(169);
+    expect(FORM_LIBRARY).toHaveLength(16);
+    expect(new Set(FORM_LIBRARY.map((form) => form.key)).size).toBe(16);
+    expect(FORM_LIBRARY.reduce((total, form) => total + form.pages, 0)).toBe(181);
     expect(FORM_LIBRARY.every((form) => form.href.startsWith("/forms/library/") && form.href.endsWith(".pdf"))).toBe(true);
   });
 
-  it("provides all seven initial certification workflows", () => {
-    const credentials = ["cac", "cadac", "aadc", "cprs", "ccs", "ccjp", "cps"];
+  it("provides all eight initial certification workflows", () => {
+    const credentials = ["cac", "cadac", "aadc", "cprs", "ccs", "ccjp", "cps", "pra"];
     for (const credential of credentials) {
       const workflow = getFormWorkflow(`initial:${credential}`);
       expect(workflow?.appType).toBe("initial");
@@ -26,7 +26,7 @@ describe("digital ABCAC form library", () => {
 
   it("provides every renewal, board, and CEU workflow", () => {
     const keys = ["renewal:counselor", "renewal:cps", "renewal:ccs", "renewal:ccjp", "renewal:cprs", "board:member", "ceu:workshop", "testing:accommodations"];
-    expect(FORM_WORKFLOWS).toHaveLength(15);
+    expect(FORM_WORKFLOWS).toHaveLength(16);
     for (const key of keys) {
       const workflow = getFormWorkflow(key);
       expect(workflow).toBeDefined();

@@ -17,6 +17,7 @@ const INITIAL_CREDENTIALS: Array<{ value: string; label: string }> = [
   { value: "initial:ccjp", label: "CCJP — Certified Criminal Justice Professional" },
   { value: "initial:cprs", label: "CPRS — Certified Peer Recovery Specialist" },
   { value: "initial:cps", label: "CPS — Certified Prevention Specialist" },
+  { value: "initial:pra", label: "PR-A — Peer Recovery Associate" },
 ];
 
 const RENEWAL_CREDENTIALS: Array<{ value: string; label: string }> = [

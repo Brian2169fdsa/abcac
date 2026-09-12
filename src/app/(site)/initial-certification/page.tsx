@@ -26,10 +26,10 @@ export const metadata: Metadata = {
     "Apply for initial ABCAC certification — eligibility, credential levels, application steps, document submission, payment, and IC&RC exam registration.",
 };
 
-// Flip to false once public/forms/library/initial-pra.pdf (the real PR-A
-// Application Manual) is uploaded — swaps the PR-A section's CTA from
-// "email ABCAC to apply" to a direct manual download link.
-const PRA_MANUAL_PENDING = true;
+// The real PR-A Application Manual (public/forms/library/initial-pra.pdf,
+// built from the ABCAC-supplied source document) is live — the manual
+// download link and digital application workflow are both active.
+const PRA_MANUAL_PENDING = false;
 
 const credentials = [
   {
@@ -401,9 +401,14 @@ export default function InitialCertificationPage() {
                       <Mail className="h-3.5 w-3.5" aria-hidden /> Email ABCAC to Apply
                     </a>
                   ) : (
-                    <a href="/forms/library/initial-pra.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white">
-                      <FileCheck2 className="h-3.5 w-3.5" aria-hidden /> Download the PR-A Application Manual
-                    </a>
+                    <div className="flex flex-col gap-2">
+                      <CtaButton href="/account/forms?workflow=initial%3Apra" className="w-full justify-center">
+                        Start Digital Application <ArrowRight className="h-4 w-4" aria-hidden />
+                      </CtaButton>
+                      <a href="/forms/library/initial-pra.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white">
+                        <FileCheck2 className="h-3.5 w-3.5" aria-hidden /> Download the PR-A Application Manual
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>

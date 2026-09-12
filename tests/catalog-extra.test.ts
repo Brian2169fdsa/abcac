@@ -9,8 +9,8 @@ import {
 } from "@/lib/catalog";
 
 describe("getProducts", () => {
-  it("returns 13 products", () => {
-    expect(getProducts()).toHaveLength(13);
+  it("returns 14 products", () => {
+    expect(getProducts()).toHaveLength(14);
   });
 });
 

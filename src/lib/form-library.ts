@@ -36,6 +36,7 @@ export const FORM_LIBRARY: FormDefinition[] = [
   { key: "board-member", title: "ABCAC Board Member Application", shortTitle: "Board Member Application", category: "board", href: "/forms/library/board-member.pdf", pages: 3, description: "Board candidate background, experience, interests, disclosure, and signature." },
   { key: "ceu-workshop", title: "CEU Workshop Endorsement Application", shortTitle: "CEU Workshop Application", category: "ceu", href: "/forms/library/ceu-workshop.pdf", pages: 5, description: "Workshop provider, program, presenter, objectives, schedule, and endorsement information." },
   { key: "testing-special-accommodations", title: "Testing Special Accommodations Form", shortTitle: "Testing Accommodations", category: "testing", href: "/forms/library/testing-special-accommodations.pdf", pages: 2, description: "Request approved testing accommodations while preserving the original ABCAC form and supporting documentation requirements." },
+  { key: "initial-pra", title: "Peer Recovery Associate Application Manual", shortTitle: "PR-A Application", category: "initial", href: "/forms/library/initial-pra.pdf", pages: 12, description: "Peer Recovery Associate application, background, training and examination documentation, supervision agreement, lived experience attestation, and Code of Ethics affirmation." },
 ];
 
 export const INITIAL_PACKET_FOR_CREDENTIAL: Record<string, string[]> = {
@@ -46,6 +47,7 @@ export const INITIAL_PACKET_FOR_CREDENTIAL: Record<string, string[]> = {
   CCS: ["initial-ccs"],
   CCJP: ["initial-ccjp"],
   CPS: ["initial-cps"],
+  PRA: ["initial-pra"],
 };
 
 const STANDALONE_WORKFLOWS: FormWorkflow[] = [
@@ -132,6 +134,9 @@ export const WORKFLOW_FEES: Record<string, Array<{ slug: string; label: string }
 for (const key of ["initial:cadac", "initial:aadc", "initial:ccs", "initial:ccjp", "initial:cprs", "initial:cps"]) {
   WORKFLOW_FEES[key] = WORKFLOW_FEES["initial:cac"];
 }
+// PR-A has its own single flat application fee (see PRA-Application-Manual-2.docx) —
+// not the IC&RC exam-mode fee tiers the other initial credentials share.
+WORKFLOW_FEES["initial:pra"] = [{ slug: "peer-recovery-associate-application-fee", label: "Application fee" }];
 for (const key of ["renewal:cps", "renewal:ccs", "renewal:ccjp", "renewal:cprs"]) {
   WORKFLOW_FEES[key] = WORKFLOW_FEES["renewal:counselor"];
 }

@@ -141,6 +141,14 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
       priority: "high",
       adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/applications/${data.id}`,
     });
+    if (workflow.key === "initial:pra") {
+      const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/applications/${data.id}`;
+      void sendEmail({
+        to: "abcac@abcac.org",
+        subject: "New Peer Recovery Associate (PR-A) application submitted",
+        html: `<p>A ${submissionMode === "digital" ? "digital" : "uploaded paper"} Peer Recovery Associate (PR-A) application packet has been submitted for review.</p><p><a href="${adminUrl}">Open the application</a></p>`,
+      });
+    }
   }
 
   revalidatePath("/account/forms");

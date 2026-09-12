@@ -18,7 +18,7 @@ export function authHref(type: "login" | "signup", next = DEFAULT_PORTAL_PATH) {
 }
 
 export function getProductPortalDestination(slug: string) {
-  if (slug.startsWith("initial-certification") || slug.includes("certification-only")) {
+  if (slug.startsWith("initial-certification") || slug.includes("certification-only") || slug === "peer-recovery-associate-application-fee") {
     return "/account/certification";
   }
   if (slug === "certification-renewal-2-year-credential-renewal-fee") {
@@ -40,7 +40,7 @@ export function getProductPortalDestination(slug: string) {
 }
 
 export function applicationTypeForProduct(slug: string) {
-  if (slug.startsWith("initial-certification") || slug.includes("certification-only")) return "initial";
+  if (slug.startsWith("initial-certification") || slug.includes("certification-only") || slug === "peer-recovery-associate-application-fee") return "initial";
   if (slug === "certification-renewal-2-year-credential-renewal-fee") return "renewal";
   if (slug.startsWith("ceu-workshop-endorsement")) return "ceu_workshop";
   return null;
@@ -70,9 +70,14 @@ function priceLabel(prefix: string, slug: string): string {
   return product ? `${prefix} — ${formatPrice(product)}` : prefix;
 }
 
-export function paymentOptionsForApplication(appType: string, applicationId: string): PortalPaymentOption[] {
+export function paymentOptionsForApplication(appType: string, applicationId: string, certType?: string | null): PortalPaymentOption[] {
   const paymentHref = (slug: string) =>
     `/account/payments?product=${encodeURIComponent(slug)}&application=${encodeURIComponent(applicationId)}`;
+  if (appType === "initial" && certType === "PRA") {
+    // PR-A has its own single flat application fee, not the IC&RC exam-mode
+    // tiers the other initial credentials share (see PRA-Application-Manual-2.docx).
+    return [{ label: priceLabel("Application fee", "peer-recovery-associate-application-fee"), href: paymentHref("peer-recovery-associate-application-fee") }];
+  }
   if (appType === "initial") {
     return [
       { label: priceLabel("Application + in-person exam", "initial-certification-full-application-exam-fee"), href: paymentHref("initial-certification-full-application-exam-fee") },
