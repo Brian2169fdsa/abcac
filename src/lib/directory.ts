@@ -89,7 +89,6 @@ export async function searchDirectory(
 /** Distinct credential types offered (for the directory filter + display). */
 export const CREDENTIAL_TYPES = [
   "CAC",
-  "CADC",
   "CADAC",
   "AADC",
   "CCJP",

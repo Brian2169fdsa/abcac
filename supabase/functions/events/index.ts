@@ -18,7 +18,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FROM = Deno.env.get("RESEND_FROM_EMAIL") ?? "noreply@abcac.org";
-const PORTAL = Deno.env.get("VERCEL_URL") ?? "https://portal.abcac.org";
+const PORTAL = (Deno.env.get("SITE_URL") ?? "https://abcac.org") + "/account";
 
 Deno.serve(async (req) => {
   try {
@@ -126,7 +126,7 @@ async function lookupMember(admin: ReturnType<typeof createClient>, id?: string)
 
 async function adminEmails(admin: ReturnType<typeof createClient>) {
   const list: string[] = [];
-  const { data } = await admin.from("profiles").select("email").eq("portal_role", "admin");
+  const { data } = await admin.from("profiles").select("email").in("portal_role", ["admin", "superadmin"]);
   (data ?? []).forEach((r: { email: string }) => { if (r.email) list.push(r.email); });
   const fallback = Deno.env.get("ADMIN_EMAIL");
   if (!list.length && fallback) list.push(fallback);

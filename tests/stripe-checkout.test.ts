@@ -370,6 +370,32 @@ describe("POST /api/stripe/checkout", () => {
     expect("skip" in arg.metadata).toBe(false);
   });
 
+  it("never forwards reserved (webhook-authority) metadata keys from the client", async () => {
+    const res = await POST(req({
+      slug: "initial-cert",
+      metadata: {
+        invoice_id: "someone-elses-invoice",
+        payment_type: "testing",
+        testing_request_id: "tr-9",
+        reciprocity_request_id: "rr-9",
+        application_id: "app-9",
+        form_type: "invoice",
+        member_id: "victim",
+        note: "keep me",
+      },
+    }));
+    expect(res.status).toBe(200);
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.metadata.invoice_id).toBeUndefined();
+    expect(arg.metadata.testing_request_id).toBeUndefined();
+    expect(arg.metadata.reciprocity_request_id).toBeUndefined();
+    expect(arg.metadata.application_id).toBeUndefined();
+    expect(arg.metadata.payment_type).toBe("general");
+    expect(arg.metadata.form_type).toBe("general_payment");
+    expect(arg.metadata.member_id).toBe("member-1");
+    expect(arg.metadata.note).toBe("keep me");
+  });
+
   it("returns 500 checkout_failed when Stripe throws", async () => {
     sessionsCreate.mockRejectedValue(new Error("stripe down"));
     const res = await POST(req({ slug: "initial-cert" }));

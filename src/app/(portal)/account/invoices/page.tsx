@@ -22,10 +22,15 @@ function fmt(d: string | null) {
 }
 function money(c: number | null) { return "$" + ((c ?? 0) / 100).toFixed(2); }
 function isPaid(status: string | null) { return status === "paid"; }
+/** Closed by staff — not owed and not payable. */
+function isVoid(status: string | null) {
+  return ["void", "voided", "canceled", "cancelled"].includes(status ?? "");
+}
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({ searchParams }: { searchParams?: { paid?: string } }) {
   const supabase = createSupabaseServerClient();
   const __authUserId = await requireUserId();
+  const justPaid = searchParams?.paid === "1";
 
   const [{ data: invData }, { data: payData }, { data: profData }] = await Promise.all([
     supabase.from("invoices").select("*").eq("member_id", __authUserId).order("created_at", { ascending: false }),
@@ -40,7 +45,7 @@ export default async function InvoicesPage() {
     ? ([prof.first_name, prof.last_name].filter(Boolean).join(" ") || prof.email || "")
     : "";
 
-  const openInvoices = invoices.filter((inv) => !isPaid(inv.status));
+  const openInvoices = invoices.filter((inv) => !isPaid(inv.status) && !isVoid(inv.status));
   const amountDue = openInvoices.reduce((s, inv) => s + (inv.amount_cents ?? 0), 0);
   const totalPaid =
     invoices.filter((inv) => isPaid(inv.status)).reduce((s, inv) => s + (inv.amount_cents ?? 0), 0) +
@@ -50,6 +55,11 @@ export default async function InvoicesPage() {
     <>
       <PageHero eyebrow="Member Portal" title="Invoices & Receipts" intro="View and pay invoices issued by ABCAC, and download receipts for completed payments." />
       <Section compact>
+        {justPaid && (
+          <div role="status" className="mb-6 rounded-xl border border-success/40 bg-success/5 p-4 text-sm text-success">
+            Thank you — your payment was received. It can take a moment for the invoice below to show as paid; refresh if it still shows open.
+          </div>
+        )}
         {/* Summary stat tiles */}
         <div className="mb-6 grid gap-5 sm:grid-cols-3">
           <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">

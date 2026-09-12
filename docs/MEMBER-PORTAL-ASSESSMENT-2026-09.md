@@ -9,6 +9,14 @@
 > identical). Every finding below was verified by reading the code, and the highest-severity items
 > were re-verified by hand. Typecheck, lint, the 1,013-test suite, and a production build all pass.
 
+> **Status update, 2026-09-12 (quick-win pass, same branch):** C1, H1, H3 (minimum), H5, H6, M1, M4 (type
+> mismatch), M9, M10, M12, M15, M16 are fixed in code, plus the stale `/account/renew` link, the nested
+> `<html>` in the not-found page, the `CADC` directory filter, staff "Review …" tasks no longer showing on
+> the member dashboard, and `.env.example` now lists `CRON_SECRET` and `ANTHROPIC_API_KEY`. Two new
+> migrations (046 guard triggers, 047 retire pg_cron reminders) must be applied to the live database.
+> Still open from Track A: H2 (owner: live Stripe seed), H4 (forms workspace after payment), M3
+> (approval posture decision), M5 (CCS/CPRS hours, needs ABCAC), M13 (transcript export gate).
+
 ---
 
 ## 1. Bottom line

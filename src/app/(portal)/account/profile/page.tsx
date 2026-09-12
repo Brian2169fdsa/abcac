@@ -24,7 +24,7 @@ export default async function ProfilePage() {
   const supabase = createSupabaseServerClient();
   const __authUserId = await requireUserId();
   const [{ data: profile }, { data: prefs }] = await Promise.all([
-    supabase.from("profiles").select("first_name,middle_name,last_name,email,phone,date_of_birth,ssn_last4,address_line1,city,state,zip_code,cert_status").eq("id", __authUserId).maybeSingle(),
+    supabase.from("profiles").select("first_name,middle_name,last_name,email,phone,date_of_birth,ssn_last4,address_line1,city,state,zip_code,cert_status,account_status").eq("id", __authUserId).maybeSingle(),
     supabase.from("notification_preferences").select("*").eq("member_id", __authUserId).maybeSingle(),
   ]);
 
@@ -42,6 +42,10 @@ export default async function ProfilePage() {
     : DEFAULT_PREFS;
 
   const certStatus = (profile as { cert_status?: string | null })?.cert_status ?? "applying";
+  // Migration 036 pins the legal name once the account is approved — edits must
+  // go through the reviewed Name Change Request. Tell the member instead of
+  // letting the form report a "save" that the database quietly discards.
+  const namesLocked = (profile as { account_status?: string | null })?.account_status === "approved";
 
   // Key contact fields that signal a complete member profile.
   const completenessFields = [
@@ -87,7 +91,7 @@ export default async function ProfilePage() {
       </Section>
 
       <Section compact>
-        <ProfileForm profile={profileData} prefs={prefsData} />
+        <ProfileForm profile={profileData} prefs={prefsData} namesLocked={namesLocked} />
       </Section>
 
       <Section compact>

@@ -102,7 +102,7 @@ export async function saveCertificationSync(input: CertificationSyncInput): Prom
       detail: `Application ${data.id}. ${credentials.length} credentials; ${monthsForward} month(s) forward; expected payment $${(monthsForward * 15).toFixed(2)}; ${submissionMode} submission.`,
       priority: "high",
       status: "open",
-      visible_to_member: true,
+      visible_to_member: false,
     });
     void pushTaskToClickUp({
       title: "Review certification sync request",

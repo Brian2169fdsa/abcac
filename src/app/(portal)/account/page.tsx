@@ -125,7 +125,7 @@ export default async function AccountPage() {
           .select("id, app_type, cert_type, status, submitted_at")
           .eq("member_id", userId)
           .order("submitted_at", { ascending: false }),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", userId).eq("is_read", false),
+        supabase.from("messages").select("*", { count: "exact", head: true }).eq("member_id", userId).eq("is_read", false).neq("sender_role", "member"),
         supabase.from("document_requests").select("*", { count: "exact", head: true }).eq("member_id", userId).eq("status", "open"),
       ]);
       certifications = (certs as Certification[]) ?? [];

@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         to: member.email,
         subject,
         html: `<p>Hi ${member.first_name ?? "there"},</p><p>${message ?? subject}</p>
-               <p>You can view the details in your <a href="https://portal.abcac.org">ABCAC Member Portal</a>.</p>
+               <p>You can view the details in your <a href="https://abcac.org/account">ABCAC Member Portal</a>.</p>
                <p>— Arizona Board for Certification of Addiction Counselors</p>`,
       }),
     });

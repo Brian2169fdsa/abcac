@@ -30,6 +30,10 @@ export async function POST(req: Request) {
   if (!invoice) return NextResponse.json({ error: "invoice_not_found" }, { status: 404 });
   if (invoice.member_id !== user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (invoice.status === "paid") return NextResponse.json({ error: "already_paid" }, { status: 409 });
+  // Voided / cancelled invoices are closed by staff and must never be charged.
+  if (["void", "voided", "canceled", "cancelled"].includes(String(invoice.status ?? ""))) {
+    return NextResponse.json({ error: "invoice_not_payable" }, { status: 409 });
+  }
 
   const firstName = String(user.user_metadata?.first_name || user.user_metadata?.given_name || "Member").trim();
   const lastName = String(user.user_metadata?.last_name || user.user_metadata?.family_name || "Account holder").trim();

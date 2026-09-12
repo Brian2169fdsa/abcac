@@ -82,7 +82,7 @@ describe("decideRequest", () => {
 
     // Canonical profile name written: "Jane Q Doe" -> first "Jane", last "Q Doe".
     const profUpd = adminRef.current!.callsFor("profiles", "update")[0];
-    expect(profUpd.payload).toEqual({ first_name: "Jane", last_name: "Q Doe" });
+    expect(profUpd.payload).toEqual({ first_name: "Jane", middle_name: "Q", last_name: "Doe" });
     expect(profUpd.filters).toContainEqual({ col: "id", val: "m1" });
 
     // Audit row written with the composed action.

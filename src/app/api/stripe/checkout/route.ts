@@ -13,6 +13,31 @@ import {
 
 export const runtime = "nodejs";
 
+/**
+ * Metadata keys the Stripe webhook treats as authoritative. The server sets
+ * these from verified, member-owned records; clients can never supply them.
+ */
+const RESERVED_METADATA_KEYS = new Set([
+  "payment_type",
+  "payment_submission_id",
+  "form_type",
+  "linked_record_type",
+  "linked_record_id",
+  "invoice_id",
+  "reciprocity_request_id",
+  "testing_request_id",
+  "sync_application_id",
+  "application_id",
+  "exam_code",
+  "member_id",
+  "slug",
+  "product_name",
+  "credential_level",
+  "exam_mode",
+  "sync_months",
+  "portal_return_path",
+]);
+
 export async function POST(req: Request) {
   if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
@@ -204,10 +229,18 @@ export async function POST(req: Request) {
   }).select("id").single();
   if (submissionError || !paymentSubmission?.id) return NextResponse.json({ error: "payment_form_save_failed" }, { status: 500 });
 
+  // Caller-supplied metadata is informational only. Any key the webhook uses to
+  // decide WHAT a payment settles (invoice ids, request ids, payment_type…) is
+  // reserved and set exclusively by the server below — otherwise a member could
+  // buy a $25 item and have the webhook mark an unrelated record paid.
   const forwardedMetadata: Record<string, string> = {};
   if (parsed.metadata && typeof parsed.metadata === "object") {
-    for (const [key, value] of Object.entries(parsed.metadata)) if (value != null) forwardedMetadata[key] = String(value);
+    for (const [key, value] of Object.entries(parsed.metadata)) {
+      if (value == null || RESERVED_METADATA_KEYS.has(key)) continue;
+      forwardedMetadata[key] = String(value);
+    }
   }
+  forwardedMetadata.payment_type = "general";
   if (linkedRecordType === "reciprocity_requests") {
     forwardedMetadata.reciprocity_request_id = linkedRecordId!;
     forwardedMetadata.payment_type = "reciprocity";

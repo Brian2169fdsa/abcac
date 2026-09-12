@@ -602,6 +602,15 @@ export function getMemberExecutors(ctx: MemberToolContext): Record<string, ToolE
         throw new Error("Provide at least one of: name, phone, address, city, state, zip.");
       }
       if (input.name !== undefined) {
+        // Once an account is approved the legal name is pinned by the DB guard
+        // (036) — the write would "succeed" and change nothing. Route the member
+        // to the reviewed name-change request instead of pretending it worked.
+        const { data: me } = await sb.from("profiles").select("account_status").eq("id", uid).maybeSingle();
+        if ((me as { account_status?: string | null } | null)?.account_status === "approved") {
+          throw new Error(
+            "Your legal name is locked on an approved account. Submit a Name Change Request (Requests → Name Change) with supporting ID and ABCAC staff will update it.",
+          );
+        }
         const parts = String(input.name).trim().split(/\s+/);
         patch.first_name = parts.shift() ?? "";
         patch.last_name = parts.join(" ") || patch.first_name;

@@ -13,11 +13,11 @@ import {
 
 describe("parseType", () => {
   it("accepts a known credential type", () => {
-    expect(parseType("CADC")).toBe("CADC");
+    expect(parseType("CADAC")).toBe("CADAC");
   });
 
   it("is case-insensitive and normalizes to the canonical value", () => {
-    expect(parseType("cadc")).toBe("CADC");
+    expect(parseType("cadac")).toBe("CADAC");
   });
 
   it("returns 'all' for unknown or empty values", () => {
@@ -115,13 +115,13 @@ describe("buildQuery", () => {
   });
 
   it("serializes non-default filters", () => {
-    expect(buildQuery({ q: "Jane", type: "CADC", page: 3 })).toBe(
-      "?q=Jane&type=CADC&page=3",
+    expect(buildQuery({ q: "Jane", type: "CADAC", page: 3 })).toBe(
+      "?q=Jane&type=CADAC&page=3",
     );
   });
 
   it("applies overrides while preserving other filters", () => {
-    const current = { q: "Jane", type: "CADC", page: 1 };
-    expect(buildQuery(current, { page: 2 })).toBe("?q=Jane&type=CADC&page=2");
+    const current = { q: "Jane", type: "CADAC", page: 1 };
+    expect(buildQuery(current, { page: 2 })).toBe("?q=Jane&type=CADAC&page=2");
   });
 });

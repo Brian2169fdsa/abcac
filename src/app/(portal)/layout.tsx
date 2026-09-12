@@ -33,7 +33,10 @@ export default async function PortalLayout({ children }: { children: React.React
           .from("messages")
           .select("*", { count: "exact", head: true })
           .eq("member_id", userId)
-          .eq("is_read", false),
+          .eq("is_read", false)
+          // Only staff-authored messages count as unread for the member; their
+          // own outbound messages stay is_read=false until staff open them.
+          .neq("sender_role", "member"),
         fetchUnreadCount(supabase),
         fetchNotifications(supabase, { limit: 8 }),
       ]);

@@ -3,9 +3,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export default function NotFound() {
   return (
-    <html lang="en">
-      <body className="bg-bg text-ink">
-        <main className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
+    <main className="flex min-h-[70vh] bg-bg text-ink flex-col items-center justify-center px-5 text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-muted">
             {siteConfig.shortName}
           </p>
@@ -40,7 +38,5 @@ export default function NotFound() {
             {siteConfig.name}
           </p>
         </main>
-      </body>
-    </html>
   );
 }

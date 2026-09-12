@@ -8,6 +8,7 @@ import { AddOtherCertForm } from "@/components/portal-forms";
 import { ViewFileButton } from "@/components/view-file-button";
 import { buttonVariants } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { siteConfig } from "@/lib/site-config";
 
 export const metadata = { title: "Certifications" };
 export const dynamic = "force-dynamic";
@@ -199,13 +200,17 @@ export default async function CertificationsPage() {
         <div className="mt-6 rounded-xl border border-line bg-surface p-6">
           <h2 className="text-base font-semibold text-ink">IC&amp;RC International Certificate</h2>
           <p className="mt-2 text-sm text-muted">
-            If you hold a reciprocal-level ABCAC credential, you may order an IC&amp;RC International Certificate — a
-            globally recognized endorsement of your certification.
+            If you hold a reciprocal-level ABCAC credential, you may request an IC&amp;RC International Certificate — a
+            globally recognized endorsement of your certification. ABCAC processes these requests directly: email us to
+            confirm eligibility and receive the current request form and payment instructions.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/account/payments" className={buttonVariants({ variant: "accent", size: "sm" })}>
-              Order IC&amp;RC International Certificate
-            </Link>
+            <a
+              href={`${siteConfig.contact.emailHref}?subject=${encodeURIComponent("IC&RC International Certificate request")}`}
+              className={buttonVariants({ variant: "accent", size: "sm" })}
+            >
+              Email ABCAC to Request
+            </a>
             <Link href="/account/requests" className={buttonVariants({ variant: "outline", size: "sm" })}>
               Start a Reciprocity Transfer
             </Link>

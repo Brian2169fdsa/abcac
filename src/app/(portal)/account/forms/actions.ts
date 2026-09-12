@@ -114,7 +114,7 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
       detail: `${submissionMode === "digital" ? "Digital" : "Uploaded paper"} packet ${data.id} submitted for admin review.`,
       priority: "high",
       status: "open",
-      visible_to_member: true,
+      visible_to_member: false,
     });
     void pushTaskToClickUp({
       title: `Review ${workflow.title}`,

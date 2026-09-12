@@ -16,7 +16,16 @@ function LoginInner() {
   const params = useSearchParams();
   const next = safeInternalPath(params.get("next"));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // /auth/callback redirects here with ?error=… when an email link could not be
+  // exchanged for a session (expired, already used, or opened on another device).
+  const linkError = params.get("error");
+  const linkMessage =
+    linkError === "link_invalid"
+      ? "That sign-in link is invalid, has expired, or was opened in a different browser than the one you signed up in. Sign in below, or request a new link."
+      : linkError === "auth"
+        ? "We couldn't complete that sign-in link. Please sign in with your email and password."
+        : null;
+  const [error, setError] = useState<string | null>(linkMessage);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

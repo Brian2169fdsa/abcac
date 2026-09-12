@@ -24,9 +24,14 @@ export async function middleware(request: NextRequest) {
   const isPublicPortalFeature = path === "/account/certification-sync" || path === "/account/forms";
 
   const requestHeaders = new Headers(request.headers);
-  // Strip any client-supplied spoof of our trusted header.
+  // Strip any client-supplied spoof of our trusted header — on EVERY route, so a
+  // future requireUserId() consumer outside /account|/admin can never be fed a
+  // forged id.
   requestHeaders.delete("x-user-id");
   let response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  const isGatedArea = path.startsWith("/account") || path.startsWith("/admin");
+  if (!isGatedArea) return response;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -108,5 +113,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/admin/:path*"],
+  // Run on every page/API request (not static assets) so the x-user-id strip
+  // above is universal; only /account and /admin go on to session validation.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|pdf|txt|xml|woff2?)$).*)"],
 };

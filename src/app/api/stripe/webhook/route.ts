@@ -40,12 +40,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    if (event.type === "checkout.session.completed") {
-      await handleCheckoutCompleted(admin, event);
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      const outcome = await handleCheckoutCompleted(admin, event);
+      if (outcome === "duplicate") return NextResponse.json({ received: true, duplicate: true });
+    } else if (event.type === "checkout.session.expired" || event.type === "checkout.session.async_payment_failed") {
+      await handleCheckoutClosed(admin, event);
     } else if (event.type === "invoice.paid") {
       await handleInvoicePaid(admin, event);
     }
   } catch (err) {
+    if (err instanceof PaymentRecordError) {
+      // The payment row IS the record. If we could not write it, tell Stripe so
+      // it retries the delivery instead of silently losing the payment.
+      console.error("payments insert failed — asking Stripe to retry:", err.message);
+      return NextResponse.json({ error: "payment_record_failed" }, { status: 500 });
+    }
     console.error("webhook side-effect error", err);
     // Still 200 so Stripe doesn't retry forever; the payment row is the record.
   }
@@ -55,10 +64,44 @@ export async function POST(req: Request) {
 
 type Admin = ReturnType<typeof createSupabaseAdminClient>;
 
-async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
+/** Thrown when the `payments` insert fails for a reason other than a duplicate. */
+class PaymentRecordError extends Error {}
+
+async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event): Promise<"recorded" | "duplicate" | "skipped"> {
   const session = event.data.object as Stripe.Checkout.Session;
   const meta = session.metadata ?? {};
   const memberId = session.client_reference_id || meta.member_id || null;
+  // `form_type` is set exclusively by our checkout routes (never by the client),
+  // so it is the authority on WHAT this session settles. Every branch below
+  // requires the matching form_type — metadata ids alone are never enough.
+  const formType = meta.form_type ?? "";
+
+  // Delayed payment methods (ACH, bank debit) complete the session before the
+  // money clears; Stripe follows up with async_payment_succeeded / _failed.
+  if (session.payment_status === "unpaid") {
+    console.warn("checkout session completed but unpaid — waiting for async payment", session.id);
+    return "skipped";
+  }
+
+  // Record the payment FIRST. The UNIQUE(stripe_event_id) constraint makes this
+  // the idempotency point: a redelivered event stops here before any side effect
+  // (emails, tasks, record updates) can run twice.
+  const recorded = await writePayment(admin, {
+    member_id: memberId,
+    payment_submission_id: meta.payment_submission_id || null,
+    stripe_session_id: session.id,
+    stripe_event_id: event.id,
+    slug: meta.slug ?? "",
+    product_name: meta.product_name ?? "",
+    amount_cents: session.amount_total ?? 0,
+    currency: session.currency ?? "usd",
+    mode: session.mode === "subscription" ? "subscription" : "payment",
+    credential_level: meta.credential_level || null,
+    exam_mode: meta.exam_mode || null,
+    status: "paid",
+  });
+  if (recorded === "duplicate") return "duplicate";
+
   const paymentSubmission = await markPaymentSubmissionPaid(admin, meta.payment_submission_id, {
     stripeSessionId: session.id,
     amountCents: session.amount_total ?? 0,
@@ -69,18 +112,18 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   // flip the reciprocity_requests row to paid and record the session id. The
   // update is idempotent — re-running it just re-sets the same values, and the
   // event-level idempotency guard above already prevents duplicate processing.
-  if (meta.payment_type === "reciprocity" && meta.reciprocity_request_id) {
+  if (formType === "reciprocity_request" && meta.payment_type === "reciprocity" && meta.reciprocity_request_id && memberId) {
     try {
       await admin.from("reciprocity_requests").update({
         payment_status: "paid",
         stripe_session_id: session.id,
-      }).eq("id", meta.reciprocity_request_id);
+      }).eq("id", meta.reciprocity_request_id).eq("member_id", memberId);
     } catch (err) {
       console.error("reciprocity mark-paid skipped:", err);
     }
   }
 
-  if (meta.payment_type === "testing" && meta.testing_request_id && memberId) {
+  if (formType === "testing_preregistration" && meta.payment_type === "testing" && meta.testing_request_id && memberId) {
     try {
       const now = new Date().toISOString();
       await admin.from("testing_requests").update({
@@ -115,33 +158,20 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     }
   }
 
-  // If this checkout was paying an admin-issued invoice, mark it paid.
-  if (meta.invoice_id) {
+  // If this checkout was paying an admin-issued invoice (only /api/stripe/invoice-checkout
+  // sets form_type "invoice"), mark it paid — scoped to the paying member.
+  if (formType === "invoice" && meta.invoice_id && memberId) {
     try {
       await admin.from("invoices").update({
         status: "paid",
         paid_at: new Date().toISOString(),
         stripe_payment_intent: String(session.payment_intent ?? ""),
-      }).eq("id", meta.invoice_id);
+      }).eq("id", meta.invoice_id).eq("member_id", memberId);
     } catch (err) {
       console.error("invoice mark-paid skipped:", err);
     }
   }
 
-  await writePayment(admin, {
-    member_id: memberId,
-    payment_submission_id: meta.payment_submission_id || null,
-    stripe_session_id: session.id,
-    stripe_event_id: event.id,
-    slug: meta.slug ?? "",
-    product_name: meta.product_name ?? "",
-    amount_cents: session.amount_total ?? 0,
-    currency: session.currency ?? "usd",
-    mode: session.mode === "subscription" ? "subscription" : "payment",
-    credential_level: meta.credential_level || null,
-    exam_mode: meta.exam_mode || null,
-    status: "paid",
-  });
   await sendPaymentEmails(admin, {
     memberId,
     paymentSubmission,
@@ -166,7 +196,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
 
   // Application-packet fee (initial cert, renewal, CEU workshop): advance the
   // linked application into the review queue so admin sees it as fee-paid.
-  if (meta.payment_type === "application_fee" && memberId && meta.application_id) {
+  if (formType === "application_fee" && meta.payment_type === "application_fee" && memberId && meta.application_id) {
     try {
       await admin.from("applications").update({ status: "under_review" })
         .eq("id", meta.application_id)
@@ -187,7 +217,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   // Certification Sync payment advances the linked request to the review queue.
   // It does NOT change credential dates or enable sync by itself; ABCAC staff (or
   // the guarded automation workflow, when explicitly enabled) completes review.
-  if (meta.slug === "certification-sync" && memberId && meta.sync_application_id) {
+  if (formType === "certification_sync" && meta.slug === "certification-sync" && memberId && meta.sync_application_id) {
     try {
       await admin.from("applications").update({ status: "under_review" })
         .eq("id", meta.sync_application_id)
@@ -200,6 +230,26 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event) {
     } catch (err) {
       console.error("sync request payment reconciliation skipped:", err);
     }
+  }
+  return "recorded";
+}
+
+/**
+ * A Checkout Session that expired (24h unpaid) or whose delayed payment failed.
+ * Close the intake record so Admin → Finance does not show it as pending forever;
+ * the member's workflow record (application / testing request) stays payable.
+ */
+async function handleCheckoutClosed(admin: Admin, event: Stripe.Event) {
+  const session = event.data.object as Stripe.Checkout.Session;
+  const submissionId = session.metadata?.payment_submission_id;
+  if (!submissionId) return;
+  try {
+    await admin.from("payment_submissions")
+      .update({ status: "cancelled", stripe_session_id: session.id })
+      .eq("id", submissionId)
+      .in("status", ["draft", "checkout_created"]);
+  } catch (err) {
+    console.error("payment submission close skipped:", err);
   }
 }
 
@@ -276,9 +326,17 @@ interface PaymentRow {
   status: string;
 }
 
-async function writePayment(admin: Admin, row: PaymentRow) {
+/**
+ * Insert the payment row. Returns "duplicate" when UNIQUE(stripe_event_id)
+ * rejects a redelivered event; throws PaymentRecordError on any other failure so
+ * the route can answer 5xx and Stripe retries.
+ */
+async function writePayment(admin: Admin, row: PaymentRow): Promise<"ok" | "duplicate"> {
   const { error } = await admin.from("payments").insert(row);
-  if (error) console.error("payments insert failed:", error.message);
+  if (!error) return "ok";
+  const code = (error as { code?: string }).code;
+  if (code === "23505" || /duplicate key|unique/i.test(error.message ?? "")) return "duplicate";
+  throw new PaymentRecordError(error.message ?? "payments insert failed");
 }
 
 interface PaymentSubmission {
