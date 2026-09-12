@@ -13,11 +13,56 @@ const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"] as co
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
 
-export function IssueCertForm({ members, defaultMemberId }: { members: { id: string; label: string }[]; defaultMemberId?: string }) {
+/** An approved initial/renewal application with no certificate issued for it yet. */
+export interface PendingIssuance {
+  id: string;
+  certType: string;
+  appType: string;
+  reviewedAt: string | null;
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Adds `months` calendar months to an ISO date, returned as an ISO date. */
+function addMonthsISO(dateISO: string, months: number): string {
+  const d = new Date(dateISO + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+export function IssueCertForm({
+  members,
+  defaultMemberId,
+  pendingApplications = [],
+  scheduleMonths = {},
+}: {
+  members: { id: string; label: string }[];
+  defaultMemberId?: string;
+  /** Approved applications for this member still awaiting a certificate. */
+  pendingApplications?: PendingIssuance[];
+  /** credential_type -> renewal_cycle_months, from cert_schedules (falls back to 24). */
+  scheduleMonths?: Record<string, number>;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [sourceApplicationId, setSourceApplicationId] = useState<string | null>(null);
+  const [credential, setCredential] = useState("");
+  const [issuedDate, setIssuedDate] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
+
+  function quickIssue(app: PendingIssuance) {
+    const issued = todayISO();
+    const months = scheduleMonths[app.certType] ?? 24;
+    setSourceApplicationId(app.id);
+    setCredential(app.certType);
+    setIssuedDate(issued);
+    setExpirationDate(addMonthsISO(issued, months));
+    setMsg(null);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,11 +71,8 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
 
     const f = e.currentTarget;
     const memberId = (f.elements.namedItem("member") as HTMLSelectElement).value;
-    const credential = (f.elements.namedItem("credential") as HTMLSelectElement).value;
     const certNumber = (f.elements.namedItem("cert_number") as HTMLInputElement).value.trim();
     const icRcLevel = (f.elements.namedItem("ic_rc_level") as HTMLInputElement).value.trim();
-    const issuedDate = (f.elements.namedItem("issued_date") as HTMLInputElement).value;
-    const expirationDate = (f.elements.namedItem("expiration_date") as HTMLInputElement).value;
     const file = (f.elements.namedItem("certificate_file") as HTMLInputElement).files?.[0];
 
     if (!memberId || !credential) {
@@ -73,16 +115,21 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
         }
       }
 
-      const { error } = await supabase.from("certifications").insert({
-        member_id: memberId,
-        cert_type: credential,
-        cert_number: certNumber || null,
-        ic_rc_level: icRcLevel || null,
-        issued_date: issuedDate || null,
-        expiration_date: expirationDate || null,
-        certificate_url: certificatePath,
-        status: "active",
-      });
+      const { data: inserted, error } = await supabase
+        .from("certifications")
+        .insert({
+          member_id: memberId,
+          cert_type: credential,
+          cert_number: certNumber || null,
+          ic_rc_level: icRcLevel || null,
+          issued_date: issuedDate || null,
+          expiration_date: expirationDate || null,
+          certificate_url: certificatePath,
+          status: "active",
+          source_application_id: sourceApplicationId,
+        })
+        .select("id")
+        .single();
 
       if (error) {
         setMsg("Failed: " + error.message);
@@ -96,12 +143,16 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
           admin_id: user?.id,
           action: "certification_issued",
           target_table: "certifications",
-          target_id: null,
-          details: { member_id: memberId, cert_type: credential },
+          target_id: inserted?.id ?? null,
+          details: { member_id: memberId, cert_type: credential, source_application_id: sourceApplicationId },
         });
       } catch { /* best-effort */ }
 
       f.reset();
+      setCredential("");
+      setIssuedDate("");
+      setExpirationDate("");
+      setSourceApplicationId(null);
       setMsg(`${credential} certification issued successfully.`);
       setIsError(false);
       router.refresh();
@@ -112,6 +163,27 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
 
   return (
     <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-line bg-surface p-6">
+      {pendingApplications.length > 0 && (
+        <div className="rounded-lg border border-brand/20 bg-brand/[0.04] p-4">
+          <div className="mb-2 text-sm font-semibold text-ink">Approved — awaiting a certificate</div>
+          <div className="flex flex-wrap gap-2">
+            {pendingApplications.map((app) => (
+              <button
+                key={app.id}
+                type="button"
+                onClick={() => quickIssue(app)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  sourceApplicationId === app.id ? "border-brand bg-brand text-white" : "border-brand/30 bg-white text-brand hover:bg-brand/10"
+                }`}
+              >
+                Issue {app.certType} ({app.appType === "renewal" ? "renewal" : "initial"})
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">Fills the credential, issue date, and expiration below from that application. Confirm the certificate number, then issue.</p>
+        </div>
+      )}
+
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold">Member</span>
         <select name="member" className={field} defaultValue={defaultMemberId ?? ""}>
@@ -124,7 +196,7 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
 
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold">Credential</span>
-        <select name="credential" className={field} defaultValue="">
+        <select name="credential" className={field} value={credential} onChange={(e) => setCredential(e.target.value)}>
           <option value="" disabled>— Select credential —</option>
           {CREDENTIALS.map((c) => (
             <option key={c} value={c}>{c}</option>
@@ -146,11 +218,11 @@ export function IssueCertForm({ members, defaultMemberId }: { members: { id: str
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold">Issued Date</span>
-          <input name="issued_date" type="date" className={field} />
+          <input name="issued_date" type="date" className={field} value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} />
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold">Expiration Date</span>
-          <input name="expiration_date" type="date" className={field} />
+          <input name="expiration_date" type="date" className={field} value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} />
         </label>
       </div>
 

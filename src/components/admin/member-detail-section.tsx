@@ -8,13 +8,16 @@ export function MemberDetailSection({
   title,
   description,
   children,
+  id,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
+  /** Anchor id so other pages can deep-link here (e.g. #certifications). */
+  id?: string;
 }) {
   return (
-    <section className="mb-8">
+    <section id={id} className={id ? "mb-8 scroll-mt-20" : "mb-8"}>
       <h2 className="text-lg font-semibold">{title}</h2>
       {description && <p className="mb-3 mt-0.5 text-sm text-muted">{description}</p>}
       <div className={description ? "" : "mt-3"}>{children}</div>

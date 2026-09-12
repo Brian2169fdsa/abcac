@@ -42,6 +42,18 @@ export default async function AdminApplications() {
     for (const fee of paidFees ?? []) if (fee.linked_record_id) paidApplicationIds.add(fee.linked_record_id);
   }
 
+  // Certificate-issuance indicator: an approved initial/renewal application
+  // with no certifications row pointing back at it yet still needs one.
+  const issuedApplicationIds = new Set<string>();
+  if (rows.length) {
+    const { data: issued } = await sb
+      .from("certifications")
+      .select("source_application_id")
+      .not("source_application_id", "is", null)
+      .in("source_application_id", rows.map((a: any) => a.id));
+    for (const row of issued ?? []) if (row.source_application_id) issuedApplicationIds.add(row.source_application_id);
+  }
+
   return (
     <>
       <h1 className="text-2xl font-bold">Applications</h1>
@@ -74,6 +86,11 @@ export default async function AdminApplications() {
                   )}
                   {digital && <div className="mt-1 text-xs">{digital.workflowTitle} · {title(digital.submissionMode ?? "digital")} · {digital.documents?.reduce((total, document) => total + (document.annotations?.length ?? 0), 0) ?? 0} mark(s){digital.paperFileName ? ` · ${digital.paperFileName}` : ""}</div>}
                   {sync?.plan && a.status === "under_review" && <div className="mt-2"><ApplyCertSyncButton applicationId={a.id} /></div>}
+                  {["initial", "initial_certification", "renewal"].includes(a.app_type) && a.status === "approved" && a.cert_type && !issuedApplicationIds.has(a.id) && (
+                    <Link href={`/admin/members/${a.member_id}#certifications`} className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-200">
+                      Needs certificate →
+                    </Link>
+                  )}
                 </td>
                 <td className="px-5 py-3 text-muted">{a.signature_name ? `✓ ${a.signature_name}` : "—"}</td>
                 <td className="px-5 py-3">{!["initial", "renewal", "ceu_workshop", "cert_sync"].includes(a.app_type) ? <span className="text-muted">—</span> : paidApplicationIds.has(a.id) ? <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Fee paid</span> : <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Unpaid</span>}</td>

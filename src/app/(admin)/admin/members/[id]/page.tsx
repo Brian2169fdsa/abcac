@@ -204,6 +204,19 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
   const primarySchedule = findScheduleFor(schedules as CertSchedule[], primaryCredential);
   const requirements = requirementsFromSchedule(primarySchedule);
 
+  // Approved initial/renewal applications with no certificate issued for them
+  // yet (tracked via certifications.source_application_id, migration 049) —
+  // surfaced as one-click "Issue" shortcuts on the form below.
+  const issuedApplicationIds = new Set(
+    (certs as any[]).map((c) => c.source_application_id).filter((id): id is string => Boolean(id)),
+  );
+  const pendingIssuance = (applications as any[])
+    .filter((a) => ["initial", "initial_certification", "renewal"].includes(a.app_type) && a.status === "approved" && a.cert_type && !issuedApplicationIds.has(a.id))
+    .map((a) => ({ id: a.id as string, certType: a.cert_type as string, appType: a.app_type as string, reviewedAt: a.reviewed_at as string | null }));
+  const scheduleMonths = Object.fromEntries(
+    (schedules as CertSchedule[]).map((s) => [s.credential_type, s.renewal_cycle_months ?? 24]),
+  ) as Record<string, number>;
+
   const compliance = computeCompliance(
     (ceuRecords as any[]).map((r) => ({ hours: r.hours ?? null, category: r.category ?? null, status: r.status ?? null })),
     requirements,
@@ -434,7 +447,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
       </MemberDetailSection>
 
       {/* 3. Certifications + Other Certifications + Issue cert */}
-      <MemberDetailSection title="Certifications">
+      <MemberDetailSection title="Certifications" id="certifications">
         <DataTable
           head={["Credential", "Number", "Level", "Issued", "Expires", "Sync", "Status"]}
           rows={(certs as any[]).map((c) => [
@@ -450,7 +463,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         />
         <div className="mt-4">
           <div className="mb-2 text-sm font-semibold">Issue a certification to this member</div>
-          <IssueCertForm members={memberOption} defaultMemberId={memberId} />
+          <IssueCertForm members={memberOption} defaultMemberId={memberId} pendingApplications={pendingIssuance} scheduleMonths={scheduleMonths} />
         </div>
         <div className="mt-4">
           <div className="mb-2 text-sm font-semibold">Manage existing certifications</div>
