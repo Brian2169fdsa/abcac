@@ -98,6 +98,7 @@ async function handleCheckoutCompleted(admin: Admin, event: Stripe.Event): Promi
     mode: session.mode === "subscription" ? "subscription" : "payment",
     credential_level: meta.credential_level || null,
     exam_mode: meta.exam_mode || null,
+    application_id: meta.application_id || meta.sync_application_id || null,
     status: "paid",
   });
   if (recorded === "duplicate") return "duplicate";
@@ -299,6 +300,7 @@ async function handleInvoicePaid(admin: Admin, event: Stripe.Event) {
     mode: "subscription",
     credential_level: null,
     exam_mode: null,
+    application_id: meta.application_id || meta.sync_application_id || null,
     status: "paid",
   });
   await sendPaymentEmails(admin, {
@@ -323,6 +325,7 @@ interface PaymentRow {
   mode: "payment" | "subscription";
   credential_level: string | null;
   exam_mode: string | null;
+  application_id?: string | null;
   status: string;
 }
 

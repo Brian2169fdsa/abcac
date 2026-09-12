@@ -17,7 +17,6 @@ interface Application {
   id: string; app_type: string | null; cert_type: string | null; status: string | null;
   submitted_at: string | null; reviewed_at: string | null; est_completion: string | null; admin_notes: string | null;
 }
-interface Payment { slug: string | null; product_name: string | null; created_at: string | null; }
 interface PaymentSubmission { linked_record_id: string | null; status: string | null; }
 
 function fmt(d: string | null) {
@@ -38,14 +37,13 @@ function stageIndex(status: string | null): number {
   }
 }
 
-// Loosely associate a recorded payment with an application by type.
-function feePaid(applicationId: string, appType: string | null, payments: Payment[], submissions: PaymentSubmission[]): boolean {
-  if (submissions.some((submission) => submission.linked_record_id === applicationId && submission.status === "paid")) return true;
-  const slugs = payments.map((p) => p.slug ?? "");
-  if (appType === "cert_sync") return slugs.includes("certification-sync");
-  if (appType === "renewal") return slugs.some((s) => s.includes("renewal"));
-  if (appType === "initial") return slugs.some((s) => s.startsWith("initial-certification") || s.includes("certification-only"));
-  return payments.length > 0;
+// Exact match only: a payment_submissions row whose linked_record_id is this
+// exact application, paid. (Every application-fee checkout requires this link
+// server-side — see productRequiresApplication in the checkout route — so
+// there is no longer a legacy case to fall back to a same-type/any-payment
+// guess for, which could mark the wrong one of two same-type applications paid.)
+function feePaid(applicationId: string, submissions: PaymentSubmission[]): boolean {
+  return submissions.some((submission) => submission.linked_record_id === applicationId && submission.status === "paid");
 }
 
 /** Deep link back into the workspace (or dedicated page) that owns this application. */
@@ -104,14 +102,12 @@ export default async function ApplicationsPage() {
   const __authUserId = await requireUserId();
   const uid = __authUserId;
 
-  const [{ data: apps }, { data: pays }, { data: paymentSubmissions }, { count: docCount }] = await Promise.all([
+  const [{ data: apps }, { data: paymentSubmissions }, { count: docCount }] = await Promise.all([
     supabase.from("applications").select("*").eq("member_id", uid).order("submitted_at", { ascending: false }),
-    supabase.from("payments").select("slug,product_name,created_at").eq("member_id", uid),
     supabase.from("payment_submissions").select("linked_record_id,status").eq("member_id", uid).eq("linked_record_type", "applications"),
     supabase.from("documents").select("*", { count: "exact", head: true }).eq("member_id", uid),
   ]);
   const applications = (apps as Application[]) ?? [];
-  const payments = (pays as Payment[]) ?? [];
   const submissions = (paymentSubmissions as PaymentSubmission[]) ?? [];
 
   return (
@@ -148,12 +144,12 @@ export default async function ApplicationsPage() {
                     <div className="text-muted">Fee</div>
                     <div
                       className={`font-semibold ${
-                        feePaid(a.id, a.app_type, payments, submissions)
+                        feePaid(a.id, submissions)
                           ? "text-success"
                           : "text-amber-600"
                       }`}
                     >
-                      {feePaid(a.id, a.app_type, payments, submissions) ? "Paid" : "Not recorded"}
+                      {feePaid(a.id, submissions) ? "Paid" : "Not recorded"}
                     </div>
                   </div>
                   <div className="rounded-lg border border-line bg-bg p-3 text-sm">
@@ -173,10 +169,10 @@ export default async function ApplicationsPage() {
                   </div>
                 )}
 
-                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id).length > 0 && (
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id).length > 0 && (
                   <div className="mt-4"><PaymentsPausedNotice compact /></div>
                 )}
-                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && paymentsEnabled && (
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && paymentsEnabled && (
                   <div className="mt-4 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
                     <p className="text-sm font-semibold text-ink">Complete the payment linked to this application</p>
                     <p className="mt-1 text-sm text-muted">Choose the correct option below. The payment will be recorded against this exact application.</p>

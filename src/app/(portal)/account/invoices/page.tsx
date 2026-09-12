@@ -15,7 +15,7 @@ interface Invoice {
 }
 interface Payment {
   id: string; product_name: string | null; amount_cents: number | null;
-  status: string | null; created_at: string | null; stripe_session_id: string | null;
+  status: string | null; created_at: string | null; stripe_session_id: string | null; mode: string | null;
 }
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -34,7 +34,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams?: { 
 
   const [{ data: invData }, { data: payData }, { data: profData }] = await Promise.all([
     supabase.from("invoices").select("*").eq("member_id", __authUserId).order("created_at", { ascending: false }),
-    supabase.from("payments").select("id,product_name,amount_cents,status,created_at,stripe_session_id").eq("member_id", __authUserId).order("created_at", { ascending: false }),
+    supabase.from("payments").select("id,product_name,amount_cents,status,created_at,stripe_session_id,mode").eq("member_id", __authUserId).order("created_at", { ascending: false }),
     supabase.from("profiles").select("first_name,last_name,email").eq("id", __authUserId).maybeSingle(),
   ]);
 
@@ -45,6 +45,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams?: { 
     ? ([prof.first_name, prof.last_name].filter(Boolean).join(" ") || prof.email || "")
     : "";
 
+  // A recurring product on file (Certification Sync, annual CEU-provider fee)
+  // means the member has a Stripe subscription to manage — surface the
+  // Billing Portal so they can update the card, view invoices, or cancel.
+  const hasSubscription = payments.some((p) => p.mode === "subscription");
   const openInvoices = invoices.filter((inv) => !isPaid(inv.status) && !isVoid(inv.status));
   const amountDue = openInvoices.reduce((s, inv) => s + (inv.amount_cents ?? 0), 0);
   const totalPaid =
@@ -55,6 +59,17 @@ export default async function InvoicesPage({ searchParams }: { searchParams?: { 
     <>
       <PageHero eyebrow="Member Portal" title="Invoices & Receipts" intro="View and pay invoices issued by ABCAC, and download receipts for completed payments." />
       <Section compact>
+        {hasSubscription && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
+            <p className="text-sm text-ink">
+              Manage the card on file, view Stripe&apos;s billing history, or cancel a recurring subscription
+              (Certification Sync, or the annual CEU-provider credential fee).
+            </p>
+            <a href="/api/stripe/portal" className="shrink-0 rounded-lg border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10">
+              Manage billing &amp; subscriptions
+            </a>
+          </div>
+        )}
         {justPaid && (
           <div role="status" className="mb-6 rounded-xl border border-success/40 bg-success/5 p-4 text-sm text-success">
             Thank you — your payment was received. It can take a moment for the invoice below to show as paid; refresh if it still shows open.

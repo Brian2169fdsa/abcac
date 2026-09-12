@@ -1,3 +1,5 @@
+import { formatPrice, getProductBySlug } from "@/lib/catalog";
+
 const DEFAULT_PORTAL_PATH = "/account";
 
 export function safeInternalPath(value: string | null | undefined, fallback = DEFAULT_PORTAL_PATH) {
@@ -57,24 +59,35 @@ export function productRequiresDedicatedWorkflow(slug: string) {
 
 export type PortalPaymentOption = { label: string; href: string };
 
+/**
+ * "<prefix> — $price" for a catalog slug, with the price read from the
+ * catalog (src/data/products.json) — the same source of truth Stripe
+ * checkout prices off — instead of hand-typed here where it could drift.
+ * Falls back to the bare prefix if the slug isn't in the catalog.
+ */
+function priceLabel(prefix: string, slug: string): string {
+  const product = getProductBySlug(slug);
+  return product ? `${prefix} — ${formatPrice(product)}` : prefix;
+}
+
 export function paymentOptionsForApplication(appType: string, applicationId: string): PortalPaymentOption[] {
   const paymentHref = (slug: string) =>
     `/account/payments?product=${encodeURIComponent(slug)}&application=${encodeURIComponent(applicationId)}`;
   if (appType === "initial") {
     return [
-      { label: "Application + in-person exam — $375", href: paymentHref("initial-certification-full-application-exam-fee") },
-      { label: "Application + remote exam — $425", href: paymentHref("initial-certification-full-application-exam-fee-remote-proctored-exam") },
-      { label: "Certification only — $150", href: paymentHref("certification-certification-only-fee-already-passed-icrc-exam") },
+      { label: priceLabel("Application + in-person exam", "initial-certification-full-application-exam-fee"), href: paymentHref("initial-certification-full-application-exam-fee") },
+      { label: priceLabel("Application + remote exam", "initial-certification-full-application-exam-fee-remote-proctored-exam"), href: paymentHref("initial-certification-full-application-exam-fee-remote-proctored-exam") },
+      { label: priceLabel("Certification only", "certification-certification-only-fee-already-passed-icrc-exam"), href: paymentHref("certification-certification-only-fee-already-passed-icrc-exam") },
     ];
   }
   if (appType === "renewal") {
-    return [{ label: "Two-year credential renewal — $150", href: paymentHref("certification-renewal-2-year-credential-renewal-fee") }];
+    return [{ label: priceLabel("Two-year credential renewal", "certification-renewal-2-year-credential-renewal-fee"), href: paymentHref("certification-renewal-2-year-credential-renewal-fee") }];
   }
   if (appType === "ceu_workshop") {
     return [
-      { label: "Up to 8 contact hours — $250", href: paymentHref("ceu-workshop-endorsement-up-to-8-contact-hours") },
-      { label: "9–15 contact hours — $375", href: paymentHref("ceu-workshop-endorsement-9-15-contact-hours") },
-      { label: "More than 15 contact hours — $500", href: paymentHref("ceu-workshop-endorsement-more-than-15-contact-hours") },
+      { label: priceLabel("Up to 8 contact hours", "ceu-workshop-endorsement-up-to-8-contact-hours"), href: paymentHref("ceu-workshop-endorsement-up-to-8-contact-hours") },
+      { label: priceLabel("9–15 contact hours", "ceu-workshop-endorsement-9-15-contact-hours"), href: paymentHref("ceu-workshop-endorsement-9-15-contact-hours") },
+      { label: priceLabel("More than 15 contact hours", "ceu-workshop-endorsement-more-than-15-contact-hours"), href: paymentHref("ceu-workshop-endorsement-more-than-15-contact-hours") },
     ];
   }
   return [];

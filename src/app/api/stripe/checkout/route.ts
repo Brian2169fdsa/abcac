@@ -295,7 +295,15 @@ export async function POST(req: Request) {
       line_items: lineItems,
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}${portalReturnPath}`,
-      ...(existingStripeCustomerId ? { customer: existingStripeCustomerId } : { customer_email: intake.email }),
+      ...(existingStripeCustomerId
+        ? { customer: existingStripeCustomerId }
+        // Guest one-time checkout does not create a Stripe Customer object by
+        // default, which would leave stripe_customer_id permanently unset and
+        // break the Billing Portal link (/api/stripe/portal) for a member
+        // whose only charges were one-time payments. Subscription mode always
+        // creates a customer on its own and rejects this param, so it's only
+        // needed for "payment" mode.
+        : { customer_email: intake.email, ...(product.mode === "payment" ? { customer_creation: "always" as const } : {}) }),
       ...(memberId ? { client_reference_id: memberId } : {}),
       metadata: checkoutMetadata,
       ...(product.mode === "subscription" ? { subscription_data: { metadata: checkoutMetadata } } : {}),

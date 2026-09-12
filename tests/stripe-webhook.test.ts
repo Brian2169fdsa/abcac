@@ -198,6 +198,68 @@ describe("POST /api/stripe/webhook", () => {
     expect(sendEmail.mock.calls[1][0]).toMatchObject({ to: "abcac@abcac.org" });
   });
 
+  it("populates payments.application_id from an application_fee checkout", async () => {
+    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" } } });
+    constructEvent.mockReturnValue({
+      id: "evt_appfee",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_appfee",
+          client_reference_id: "user-1",
+          amount_total: 37500,
+          currency: "usd",
+          mode: "payment",
+          metadata: {
+            slug: "initial-certification-full-application-exam-fee",
+            product_name: "Initial Certification",
+            member_id: "user-1",
+            payment_type: "application_fee",
+            form_type: "application_fee",
+            application_id: "app-42",
+          },
+        },
+      },
+    });
+
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+
+    const insert = adminClient.calls.find((c) => c.table === "payments" && c.op === "insert");
+    expect(insert!.payload).toMatchObject({ application_id: "app-42" });
+  });
+
+  it("populates payments.application_id from a certification_sync checkout via sync_application_id", async () => {
+    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" } } });
+    constructEvent.mockReturnValue({
+      id: "evt_sync",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_sync",
+          client_reference_id: "user-1",
+          amount_total: 1500,
+          currency: "usd",
+          mode: "subscription",
+          metadata: {
+            slug: "certification-sync",
+            product_name: "Certification Sync",
+            member_id: "user-1",
+            payment_type: "cert_sync",
+            form_type: "certification_sync",
+            sync_application_id: "app-sync-9",
+          },
+        },
+      },
+    });
+
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+
+    const insert = adminClient.calls.find((c) => c.table === "payments" && c.op === "insert");
+    expect(insert!.payload).toMatchObject({ application_id: "app-sync-9" });
+  });
+
   it("marks a reciprocity request paid when metadata flags it", async () => {
     constructEvent.mockReturnValue({
       id: "evt_recip",
