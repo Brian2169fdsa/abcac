@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     "Apply for initial ABCAC certification — eligibility, credential levels, application steps, document submission, payment, and IC&RC exam registration.",
 };
 
+// Flip to false once public/forms/library/initial-pra.pdf (the real PR-A
+// Application Manual) is uploaded — swaps the PR-A section's CTA from
+// "email ABCAC to apply" to a direct manual download link.
+const PRA_MANUAL_PENDING = true;
+
 const credentials = [
   {
     code: "CAC",
@@ -342,30 +347,69 @@ export default function InitialCertificationPage() {
             ))}
           </div>
 
-          {/* CPRS-A: new entry-level pathway, announced ahead of the full requirements/application
-              packet. Anchor target for the homepage banner — kept honest rather than inventing
-              hours, forms, or a fee that ABCAC has not yet published. */}
-          <div id="cprs-a" className="mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-brand/15 bg-surface shadow-[0_18px_45px_-38px_rgba(13,34,63,0.5)]">
+          {/* Peer Recovery Associate (PR-A): new IC&RC-partnered credential.
+              Anchor target for the homepage banner. The application manual PDF
+              still needs to be uploaded (see PRA_MANUAL_PENDING below) before
+              the download link and digital-fill workflow can go live. */}
+          <div id="pr-a" className="mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-brand/15 bg-surface shadow-[0_18px_45px_-38px_rgba(13,34,63,0.5)]">
             <div className="h-1.5 bg-brand" />
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand">CPRS-A</span>
-                  <h3 className="mt-4 text-xl">Certified Peer Recovery Specialist–Associate</h3>
+                  <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand">PR-A</span>
+                  <h3 className="mt-4 text-xl">Peer Recovery Associate (PR-A)</h3>
                 </div>
-                <span className="rounded-full border border-brand/20 bg-brand/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand">New · Details coming soon</span>
+                <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-success">Now Accepting Applications</span>
               </div>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-                Arizona&apos;s entry-level peer credential (IC&amp;RC PR-A Reciprocal). No degree and no experience
-                hours required — and your training and supervised practice count toward the full CPRS.
+                The Peer Recovery Associate credential is for individuals with lived experience in mental health and/or
+                substance use recovery who provide peer support services in Arizona. This credential is offered in
+                partnership with IC&amp;RC and is recognized across all IC&amp;RC member boards.
               </p>
-              <p className="mt-4 text-sm leading-relaxed text-muted">
-                ABCAC is finalizing the full requirements, application manual, and fee for CPRS-A. Contact our office
-                to be notified as soon as the application opens, or to ask whether your current training qualifies.
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="font-semibold text-ink">Requirements</div>
+                  <ul className="mt-2 space-y-2 text-sm leading-relaxed text-muted">
+                    {[
+                      "Personal lived experience with a mental health and/or substance use condition",
+                      "40 hours of training through an AHCCCS-recognized Peer Support Employment Training Program (including 6 hours of ethics)",
+                      "Passing score on the board-approved examination",
+                      "Completed Supervision Agreement",
+                      "Signed Code of Ethics Affirmation",
+                      "$150 application fee",
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 fill-brand/10 text-brand" aria-hidden />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex flex-col justify-between gap-4 rounded-xl border border-line bg-bg p-4">
+                  <div>
+                    <div className="font-semibold text-ink">Application Manual</div>
+                    {PRA_MANUAL_PENDING ? (
+                      <p className="mt-1 text-sm leading-relaxed text-muted">
+                        The application manual is being finalized for upload. Email ABCAC to request the current version and start your application now.
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm leading-relaxed text-muted">Download the Peer Recovery Associate Application Manual for full instructions and forms.</p>
+                    )}
+                  </div>
+                  {PRA_MANUAL_PENDING ? (
+                    <a href={`mailto:${siteConfig.contact.email}?subject=${encodeURIComponent("Peer Recovery Associate (PR-A) application")}`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white">
+                      <Mail className="h-3.5 w-3.5" aria-hidden /> Email ABCAC to Apply
+                    </a>
+                  ) : (
+                    <a href="/forms/library/initial-pra.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-brand/20 bg-brand/[0.05] px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white">
+                      <FileCheck2 className="h-3.5 w-3.5" aria-hidden /> Download the PR-A Application Manual
+                    </a>
+                  )}
+                </div>
+              </div>
+              <p className="mt-5 text-sm text-muted">
+                Questions? Contact us at <a href={siteConfig.contact.emailHref} className="font-semibold text-brand">{siteConfig.contact.email}</a> | {siteConfig.contact.phone}
               </p>
-              <CtaButton href="/contact" variant="outline" className="mt-5">
-                Contact ABCAC about CPRS-A <ArrowRight className="h-4 w-4" aria-hidden />
-              </CtaButton>
             </div>
           </div>
 
