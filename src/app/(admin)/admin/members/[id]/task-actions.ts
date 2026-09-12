@@ -4,11 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/auth/roles";
 
-// Per-member task actions — the ClickUp replacement. Admins create/edit/complete/
-// delete tasks on a member's record. Every action RE-CHECKS the caller's
-// portal_role server-side on the cookie-bound session — the client never carries
-// authorization. Mirrors cockpit-actions.ts: requireCaller() → isAdminRole gate →
-// createSupabaseAdminClient() write → admin_audit_log → revalidatePath.
+// Task actions — the ClickUp replacement. Admins create/edit/complete/delete
+// tasks either on a member's record (memberId set) or as a general internal
+// staff to-do shown only in the Agent workspace's task queue (memberId null —
+// member_tasks.member_id is nullable, migration 056). Every action RE-CHECKS
+// the caller's portal_role server-side on the cookie-bound session — the
+// client never carries authorization. Mirrors cockpit-actions.ts:
+// requireCaller() → isAdminRole gate → createSupabaseAdminClient() write →
+// admin_audit_log → revalidatePath.
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -55,16 +58,23 @@ type TaskFields = {
   visibleToMember?: boolean;
 };
 
+/** Always refresh the Agent workspace's task queue; also refresh the member page when there is one. */
+function revalidateTaskViews(memberId: string | null) {
+  if (memberId) revalidatePath(MEMBER_PAGE(memberId));
+  revalidatePath("/admin/agent");
+}
+
 /**
- * Create a task for a member. ADMIN-GATED. Sets `created_by` to the caller.
- * `completed_at` is left to the DB trigger.
+ * Create a task, optionally attached to a member (null = a general internal
+ * staff task, shown only in the Agent workspace). ADMIN-GATED. Sets
+ * `created_by` to the caller. `completed_at` is left to the DB trigger.
  */
 export async function createMemberTask(
-  memberId: string,
+  memberId: string | null,
   fields: TaskFields,
 ): Promise<ActionResult> {
   const title = (fields.title ?? "").trim();
-  if (!memberId || !title) return { ok: false, error: "bad_request" };
+  if (!title) return { ok: false, error: "bad_request" };
 
   const caller = await requireCaller();
   if (!caller.ok) return caller;
@@ -79,7 +89,7 @@ export async function createMemberTask(
       detail: (fields.detail ?? "").trim() || null,
       due_date: normDate(fields.dueDate),
       priority: normPriority(fields.priority),
-      visible_to_member: Boolean(fields.visibleToMember),
+      visible_to_member: memberId ? Boolean(fields.visibleToMember) : false,
       status: "open",
       created_by: caller.userId,
     })
@@ -99,7 +109,7 @@ export async function createMemberTask(
     /* best-effort */
   }
 
-  revalidatePath(MEMBER_PAGE(memberId));
+  revalidateTaskViews(memberId);
   return { ok: true };
 }
 
@@ -109,10 +119,10 @@ export async function createMemberTask(
  */
 export async function setMemberTaskStatus(
   taskId: string,
-  memberId: string,
+  memberId: string | null,
   status: string,
 ): Promise<ActionResult> {
-  if (!taskId || !memberId) return { ok: false, error: "bad_request" };
+  if (!taskId) return { ok: false, error: "bad_request" };
   if (!VALID_STATUSES.includes(status as TaskStatus)) {
     return { ok: false, error: "bad_request" };
   }
@@ -122,11 +132,8 @@ export async function setMemberTaskStatus(
   if (!isAdminRole(caller.role)) return { ok: false, error: "forbidden" };
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
-    .from("member_tasks")
-    .update({ status })
-    .eq("id", taskId)
-    .eq("member_id", memberId);
+  const query = admin.from("member_tasks").update({ status }).eq("id", taskId);
+  const { error } = await (memberId ? query.eq("member_id", memberId) : query.is("member_id", null));
   if (error) return { ok: false, error: error.message };
 
   try {
@@ -141,7 +148,7 @@ export async function setMemberTaskStatus(
     /* best-effort */
   }
 
-  revalidatePath(MEMBER_PAGE(memberId));
+  revalidateTaskViews(memberId);
   return { ok: true };
 }
 
@@ -150,28 +157,28 @@ export async function setMemberTaskStatus(
  */
 export async function updateMemberTask(
   taskId: string,
-  memberId: string,
+  memberId: string | null,
   fields: TaskFields,
 ): Promise<ActionResult> {
   const title = (fields.title ?? "").trim();
-  if (!taskId || !memberId || !title) return { ok: false, error: "bad_request" };
+  if (!taskId || !title) return { ok: false, error: "bad_request" };
 
   const caller = await requireCaller();
   if (!caller.ok) return caller;
   if (!isAdminRole(caller.role)) return { ok: false, error: "forbidden" };
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
+  const query = admin
     .from("member_tasks")
     .update({
       title,
       detail: (fields.detail ?? "").trim() || null,
       due_date: normDate(fields.dueDate),
       priority: normPriority(fields.priority),
-      visible_to_member: Boolean(fields.visibleToMember),
+      visible_to_member: memberId ? Boolean(fields.visibleToMember) : false,
     })
-    .eq("id", taskId)
-    .eq("member_id", memberId);
+    .eq("id", taskId);
+  const { error } = await (memberId ? query.eq("member_id", memberId) : query.is("member_id", null));
   if (error) return { ok: false, error: error.message };
 
   try {
@@ -186,7 +193,7 @@ export async function updateMemberTask(
     /* best-effort */
   }
 
-  revalidatePath(MEMBER_PAGE(memberId));
+  revalidateTaskViews(memberId);
   return { ok: true };
 }
 
@@ -195,20 +202,17 @@ export async function updateMemberTask(
  */
 export async function deleteMemberTask(
   taskId: string,
-  memberId: string,
+  memberId: string | null,
 ): Promise<ActionResult> {
-  if (!taskId || !memberId) return { ok: false, error: "bad_request" };
+  if (!taskId) return { ok: false, error: "bad_request" };
 
   const caller = await requireCaller();
   if (!caller.ok) return caller;
   if (!isAdminRole(caller.role)) return { ok: false, error: "forbidden" };
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
-    .from("member_tasks")
-    .delete()
-    .eq("id", taskId)
-    .eq("member_id", memberId);
+  const query = admin.from("member_tasks").delete().eq("id", taskId);
+  const { error } = await (memberId ? query.eq("member_id", memberId) : query.is("member_id", null));
   if (error) return { ok: false, error: error.message };
 
   try {
@@ -223,6 +227,6 @@ export async function deleteMemberTask(
     /* best-effort */
   }
 
-  revalidatePath(MEMBER_PAGE(memberId));
+  revalidateTaskViews(memberId);
   return { ok: true };
 }

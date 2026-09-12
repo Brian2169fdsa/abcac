@@ -16,7 +16,7 @@ const area =
 
 export type MemberTask = {
   id: string;
-  member_id: string;
+  member_id: string | null;
   title: string;
   detail: string | null;
   status: "open" | "in_progress" | "done" | "cancelled" | string;
@@ -25,6 +25,10 @@ export type MemberTask = {
   visible_to_member: boolean | null;
   created_at?: string | null;
   completed_at?: string | null;
+  /** Set only by the multi-member Agent workspace view — the owning member's
+   *  display name, or null for a general (member_id-less) staff task. Omitted
+   *  entirely on the single-member cockpit panel, where it would be redundant. */
+  member_name?: string | null;
 };
 
 type Feedback = { ok: boolean; text: string } | null;
@@ -109,7 +113,7 @@ function PriorityChip({ priority }: { priority: string }) {
  * plus the member's task list with status cycling, edit, and delete. All writes
  * go through admin-gated server actions; this component only carries UI state.
  */
-export function MemberTasksPanel({ memberId, tasks }: { memberId: string; tasks: MemberTask[] }) {
+export function MemberTasksPanel({ memberId, tasks }: { memberId: string | null; tasks: MemberTask[] }) {
   const sorted = useMemo(() => sortTasks(tasks), [tasks]);
 
   return (
@@ -130,7 +134,7 @@ export function MemberTasksPanel({ memberId, tasks }: { memberId: string; tasks:
   );
 }
 
-function AddTaskForm({ memberId }: { memberId: string }) {
+function AddTaskForm({ memberId }: { memberId: string | null }) {
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -142,7 +146,7 @@ function AddTaskForm({ memberId }: { memberId: string }) {
     const detail = (form.elements.namedItem("detail") as HTMLTextAreaElement).value.trim();
     const dueDate = (form.elements.namedItem("due_date") as HTMLInputElement).value;
     const priority = (form.elements.namedItem("priority") as HTMLSelectElement).value;
-    const visibleToMember = (form.elements.namedItem("visible_to_member") as HTMLInputElement).checked;
+    const visibleToMember = (form.elements.namedItem("visible_to_member") as HTMLInputElement | null)?.checked ?? false;
     if (!title) {
       setFeedback({ ok: false, text: "Enter a task title." });
       return;
@@ -180,10 +184,12 @@ function AddTaskForm({ memberId }: { memberId: string }) {
           </select>
         </label>
       </div>
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input type="checkbox" name="visible_to_member" className="h-4 w-4 rounded border-line" disabled={pending} />
-        Visible to member
-      </label>
+      {memberId && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" name="visible_to_member" className="h-4 w-4 rounded border-line" disabled={pending} />
+          Visible to member
+        </label>
+      )}
       {feedback && (
         <p className={`text-sm ${feedback.ok ? "text-success" : "text-red-600"}`}>{feedback.text}</p>
       )}
@@ -240,6 +246,11 @@ function TaskRow({ task }: { task: MemberTask }) {
             <span className={`text-sm font-semibold ${completed ? "text-muted line-through" : "text-ink"}`}>
               {task.title}
             </span>
+            {task.member_name !== undefined && (
+              <span className="inline-flex items-center rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
+                {task.member_name ?? "General"}
+              </span>
+            )}
             <PriorityChip priority={task.priority} />
             <span className="inline-flex items-center rounded-full border border-line px-2 py-0.5 text-xs font-semibold capitalize text-muted">
               {STATUS_LABEL[task.status] ?? task.status}

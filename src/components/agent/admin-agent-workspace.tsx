@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Send, Loader2, Sparkles, TrendingUp, ChevronRight, Eye } from "lucide-react";
+import { Send, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/assistant/markdown";
 import {
@@ -14,6 +14,7 @@ import {
   StatusPill,
   formatMoneyCompact,
 } from "@/components/agent/charts";
+import { MemberTasksPanel, type MemberTask } from "@/components/admin/member-tasks-panel";
 import type { AdminAnalytics, TrendPoint } from "@/lib/admin-analytics";
 import { formatUsd } from "@/lib/format";
 
@@ -29,23 +30,6 @@ export interface AgentMember {
   activeCerts: number;
   /** ISO timestamp the profile was created. */
   joined: string | null;
-}
-
-export type AgentTaskPriority = "low" | "normal" | "high";
-
-/** An open row from `member_tasks` — the staff work queue. */
-export interface AgentTask {
-  id: string;
-  memberId: string;
-  memberName: string;
-  title: string;
-  detail: string | null;
-  priority: AgentTaskPriority;
-  status: "open" | "in_progress";
-  /** ISO due date (date-only), if set. */
-  dueDate: string | null;
-  visibleToMember: boolean;
-  createdAt: string;
 }
 
 /** Deterministic date label (UTC) so server and client markup always agree. */
@@ -282,41 +266,42 @@ function ArtifactAttention(a: AdminAnalytics): ReactNode {
   );
 }
 
-const PRIORITY_DOT: Record<AgentTaskPriority, string> = {
+const PRIORITY_DOT: Record<string, string> = {
   high: "bg-[#C0432F]",
   normal: "bg-[#C8741F]",
   low: "bg-[#8A8F98]",
 };
 
-const PRIORITY_LABEL: Record<AgentTaskPriority, string> = {
+const PRIORITY_LABEL: Record<string, string> = {
   high: "High",
   normal: "Normal",
   low: "Low",
 };
 
-function ArtifactTasks({ tasks }: { tasks: AgentTask[] }): ReactNode {
-  const highCount = tasks.filter((t) => t.priority === "high").length;
-  const visibleCount = tasks.filter((t) => t.visibleToMember).length;
+function ArtifactTasks({ tasks }: { tasks: MemberTask[] }): ReactNode {
+  const open = tasks.filter((t) => t.status === "open" || t.status === "in_progress");
+  const highCount = open.filter((t) => t.priority === "high").length;
+  const generalCount = open.filter((t) => !t.member_id).length;
 
   return (
     <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
       <div className="text-[12px] font-semibold uppercase tracking-wide text-muted">
-        Open tasks — {tasks.length}
+        Open tasks — {open.length}
       </div>
-      {tasks.length ? (
+      {open.length ? (
         <div className="space-y-3">
-          {tasks.map((t) => (
+          {open.map((t) => (
             <div key={t.id} className="flex items-start gap-3 rounded-lg border border-line bg-bg/40 p-3">
               <span
-                className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[t.priority])}
-                title={`${PRIORITY_LABEL[t.priority]} priority`}
-                aria-label={`${PRIORITY_LABEL[t.priority]} priority`}
+                className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[t.priority] ?? PRIORITY_DOT.normal)}
+                title={`${PRIORITY_LABEL[t.priority] ?? "Normal"} priority`}
+                aria-label={`${PRIORITY_LABEL[t.priority] ?? "Normal"} priority`}
               />
               <div>
                 <p className="text-[13px] font-semibold text-ink">{t.title}</p>
                 {t.detail && <p className="mt-0.5 text-[12px] text-muted">{t.detail}</p>}
                 <p className="mt-1 text-[11px] text-muted">
-                  {t.memberName} · {t.dueDate ? `Due ${formatDate(t.dueDate)}` : `Added ${formatDate(t.createdAt)}`}
+                  {t.member_name ?? "General"} · {t.due_date ? `Due ${formatDate(t.due_date)}` : `Added ${formatDate(t.created_at ?? null)}`}
                 </p>
               </div>
             </div>
@@ -328,9 +313,9 @@ function ArtifactTasks({ tasks }: { tasks: AgentTask[] }): ReactNode {
         </p>
       )}
       <InsightCallout>
-        {tasks.length === 0
-          ? "No open member tasks right now."
-          : `${tasks.length} open task${tasks.length === 1 ? "" : "s"} — ${highCount} high priority, ${visibleCount} visible to members. Work them from the queue on the right or from each member's profile.`}
+        {open.length === 0
+          ? "No open tasks right now."
+          : `${open.length} open task${open.length === 1 ? "" : "s"} — ${highCount} high priority, ${generalCount} general (not tied to a member). Work them from the queue on the right or from each member's profile.`}
       </InsightCallout>
     </div>
   );
@@ -358,7 +343,7 @@ type ArtifactKey =
 interface WorkspaceData {
   analytics: AdminAnalytics;
   members: AgentMember[];
-  tasks: AgentTask[];
+  tasks: MemberTask[];
 }
 
 const ARTIFACT_REGISTRY: Record<ArtifactKey, { label: string; render: (d: WorkspaceData) => ReactNode }> = {
@@ -520,68 +505,12 @@ interface ArtifactMessage {
 
 type ChatMessage = TextMessage | ArtifactMessage;
 
-// ── Task rail (right column, real member_tasks) ──────────────────────────────
+// ── Task rail (right column, real member_tasks — add/complete/edit/delete,
+//    both member-tied and general staff tasks) ───────────────────────────────
 
-function TaskQueueCard({ task }: { task: AgentTask }) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border bg-surface p-4 transition-shadow hover:shadow-sm",
-        task.priority === "high" ? "border-[#C0432F]/30" : "border-line",
-      )}
-    >
-      {/* Header row */}
-      <div className="flex items-start gap-2">
-        <span
-          className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[task.priority])}
-          title={`${PRIORITY_LABEL[task.priority]} priority`}
-          aria-label={`${PRIORITY_LABEL[task.priority]} priority`}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold leading-snug text-ink">{task.title}</p>
-          {task.detail && (
-            <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{task.detail}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Meta row */}
-      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
-        <span className="font-medium text-ink/70">{task.memberName}</span>
-        <span aria-hidden>·</span>
-        <span>
-          {task.dueDate
-            ? `Due ${formatDate(task.dueDate)}`
-            : task.status === "in_progress"
-              ? "In progress"
-              : "No due date"}
-        </span>
-      </div>
-
-      {/* Shared-with-member affordance */}
-      {task.visibleToMember && (
-        <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-[#1F5FA8]/8 px-2 py-0.5 text-[11px] font-medium text-[#1F5FA8]">
-          <Eye className="h-3 w-3" aria-hidden />
-          Visible to member
-        </div>
-      )}
-
-      {/* Action */}
-      <div className="mt-3">
-        <a
-          href={`/admin/members/${task.memberId}`}
-          className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium text-ink/75 transition-colors hover:border-ink/40 hover:text-ink"
-        >
-          Open member
-          <ChevronRight className="h-3 w-3" aria-hidden />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-function TaskQueueRail({ tasks }: { tasks: AgentTask[] }) {
-  const highCount = tasks.filter((t) => t.priority === "high").length;
+function TaskQueueRail({ tasks }: { tasks: MemberTask[] }) {
+  const openCount = tasks.filter((t) => t.status === "open" || t.status === "in_progress").length;
+  const highCount = tasks.filter((t) => (t.status === "open" || t.status === "in_progress") && t.priority === "high").length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -591,7 +520,7 @@ function TaskQueueRail({ tasks }: { tasks: AgentTask[] }) {
           Task Queue
         </h2>
         <span className="text-[12px] text-muted">
-          {tasks.length} task{tasks.length === 1 ? "" : "s"}
+          {openCount} open
           {highCount > 0 && (
             <>
               {" · "}
@@ -601,16 +530,7 @@ function TaskQueueRail({ tasks }: { tasks: AgentTask[] }) {
         </span>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-3">
-        {tasks.length ? (
-          tasks.map((task) => <TaskQueueCard key={task.id} task={task} />)
-        ) : (
-          <p className="rounded-xl border border-dashed border-line bg-surface px-4 py-8 text-center text-[13px] text-muted">
-            No open tasks — the queue is clear.
-          </p>
-        )}
-      </div>
+      <MemberTasksPanel memberId={null} tasks={tasks} />
     </div>
   );
 }
