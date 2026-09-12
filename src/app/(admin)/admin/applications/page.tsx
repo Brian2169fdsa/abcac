@@ -54,6 +54,15 @@ export default async function AdminApplications() {
     for (const row of issued ?? []) if (row.source_application_id) issuedApplicationIds.add(row.source_application_id);
   }
 
+  // Testing accommodations requests carry a testing_request_id — resolve the
+  // linked exam pre-registration so staff see exactly which exam it is for.
+  const linkedTestingRequests = new Map<string, { examCode: string; testingMode: string }>();
+  const testingRequestIds = rows.filter((a: any) => a.testing_request_id).map((a: any) => a.testing_request_id);
+  if (testingRequestIds.length) {
+    const { data: linked } = await sb.from("testing_requests").select("id,exam_code,testing_mode").in("id", testingRequestIds);
+    for (const request of linked ?? []) linkedTestingRequests.set(request.id, { examCode: request.exam_code, testingMode: request.testing_mode });
+  }
+
   return (
     <>
       <h1 className="text-2xl font-bold">Applications</h1>
@@ -85,6 +94,17 @@ export default async function AdminApplications() {
                     </div>
                   )}
                   {digital && <div className="mt-1 text-xs">{digital.workflowTitle} · {title(digital.submissionMode ?? "digital")} · {digital.documents?.reduce((total, document) => total + (document.annotations?.length ?? 0), 0) ?? 0} mark(s){digital.paperFileName ? ` · ${digital.paperFileName}` : ""}</div>}
+                  {a.app_type === "testing_accommodations" && (
+                    <div className="mt-1 text-xs">
+                      {a.testing_request_id && linkedTestingRequests.has(a.testing_request_id) ? (
+                        <Link href={`/admin/testing/${a.testing_request_id}`} className="font-semibold text-brand hover:underline">
+                          For: {linkedTestingRequests.get(a.testing_request_id)!.examCode} · {linkedTestingRequests.get(a.testing_request_id)!.testingMode === "remote" ? "Remote" : "In person"} →
+                        </Link>
+                      ) : (
+                        <span className="text-amber-700">Not linked to a pre-registration</span>
+                      )}
+                    </div>
+                  )}
                   {sync?.plan && a.status === "under_review" && <div className="mt-2"><ApplyCertSyncButton applicationId={a.id} /></div>}
                   {["initial", "initial_certification", "renewal"].includes(a.app_type) && a.status === "approved" && a.cert_type && !issuedApplicationIds.has(a.id) && (
                     <Link href={`/admin/members/${a.member_id}#certifications`} className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-200">

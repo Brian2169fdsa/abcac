@@ -18,6 +18,8 @@ export type SaveDigitalApplicationInput = {
   documents: DigitalFormDocument[];
   paperDocumentPath?: string | null;
   paperFileName?: string | null;
+  /** testing:accommodations only — which of the member's own exam pre-registrations this request is for. */
+  testingRequestId?: string | null;
 };
 
 export type ActionResult = { ok: true; id: string; message?: string; shareUrl?: string } | { ok: false; error: string };
@@ -69,6 +71,20 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     return { ok: false, error: "Upload your completed paper packet before submitting it." };
   }
 
+  // testing:accommodations only — the linked exam pre-registration must belong
+  // to this member. Never trust the client's id past that ownership check.
+  let testingRequestId: string | null = null;
+  if (workflow.appType === "testing_accommodations" && input.testingRequestId) {
+    const { data: testingRequest } = await admin
+      .from("testing_requests")
+      .select("id")
+      .eq("id", input.testingRequestId)
+      .eq("member_id", memberId)
+      .maybeSingle();
+    if (!testingRequest) return { ok: false, error: "Select one of your own exam pre-registrations." };
+    testingRequestId = testingRequest.id;
+  }
+
   const details: DigitalApplicationDetails = {
     version: 1,
     requestKind: "digital_application_packet",
@@ -102,6 +118,7 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     attested: input.status === "submitted" && submissionMode === "digital",
     attested_at: input.status === "submitted" && submissionMode === "digital" ? new Date().toISOString() : null,
     signature_name: documents.flatMap((document) => document.annotations).find((annotation) => annotation.type === "signature" && annotation.author === "applicant")?.value || null,
+    ...(workflow.appType === "testing_accommodations" ? { testing_request_id: testingRequestId } : {}),
   };
   const query = input.id
     ? admin.from("applications").update(row).eq("id", input.id).eq("member_id", memberId).select("id").single()

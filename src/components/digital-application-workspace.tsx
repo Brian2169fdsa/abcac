@@ -35,6 +35,8 @@ export function DigitalApplicationWorkspace({
   submittedAt = null,
   canStartNew = false,
   otherPackets = [],
+  testingRequests = [],
+  initialTestingRequestId = null,
 }: {
   workflowKey: string;
   workflowTitle: string;
@@ -56,6 +58,9 @@ export function DigitalApplicationWorkspace({
   canStartNew?: boolean;
   /** Other packets for the same workflow (history), so nothing is hidden. */
   otherPackets?: Array<{ id: string; status: string; submittedAt: string | null }>;
+  /** testing:accommodations only — the member's own exam pre-registrations to link this request to. */
+  testingRequests?: Array<{ id: string; examCode: string; testingMode: string; status: string }>;
+  initialTestingRequestId?: string | null;
 }) {
   const [applicationId, setApplicationId] = useState(initialApplicationId);
   const [status, setStatus] = useState(initialStatus);
@@ -77,6 +82,8 @@ export function DigitalApplicationWorkspace({
   const [detectedFields, setDetectedFields] = useState<Record<string, SmartFormField[]>>({});
   const [signatureFieldId, setSignatureFieldId] = useState("");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const isTestingAccommodations = workflowKey === "testing:accommodations";
+  const [testingRequestId, setTestingRequestId] = useState(initialTestingRequestId ?? "");
   // Anything past "draft" is read-only for the member. "submitted" still awaits
   // the fee; under_review / approved / rejected are ABCAC's stages.
   const locked = status !== null && status !== "draft";
@@ -159,7 +166,7 @@ export function DigitalApplicationWorkspace({
 
   async function save(status: "draft" | "submitted") {
     setBusy(status === "draft" ? "save" : "submit"); setError(null); setMessage(null);
-    const result = await saveDigitalApplication({ id: applicationId, workflowKey, submissionMode: mode, status, documents, paperDocumentPath: paperPath, paperFileName: paperName });
+    const result = await saveDigitalApplication({ id: applicationId, workflowKey, submissionMode: mode, status, documents, paperDocumentPath: paperPath, paperFileName: paperName, testingRequestId: isTestingAccommodations ? (testingRequestId || null) : undefined });
     if (!result.ok) setError(result.error);
     else { setApplicationId(result.id); setStatus(status); setMessage(status === "draft" ? "Draft saved. You can safely leave and return later." : "Application submitted to ABCAC for review."); }
     setBusy(null);
@@ -195,6 +202,32 @@ export function DigitalApplicationWorkspace({
           <div className="flex rounded-full border border-line bg-bg p-1"><button type="button" disabled={locked} onClick={() => setMode("digital")} className={`rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed ${mode === "digital" ? "bg-brand text-white" : "text-muted"}`}>Digital form</button><button type="button" disabled={locked} onClick={() => setMode("paper")} className={`rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed ${mode === "paper" ? "bg-brand text-white" : "text-muted"}`}>Paper upload</button></div>
         </div>
       </div>
+
+      {isTestingAccommodations && (
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          <h3 className="text-base font-semibold">Which exam pre-registration is this for?</h3>
+          {testingRequests.length > 0 ? (
+            <>
+              <p className="mt-1 text-sm text-muted">Link this accommodations request to one of your exam pre-registrations so ABCAC knows exactly which upcoming exam it applies to.</p>
+              <select
+                value={testingRequestId}
+                onChange={(event) => setTestingRequestId(event.target.value)}
+                disabled={locked}
+                className="mt-3 h-11 w-full max-w-md rounded-lg border border-line bg-bg px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <option value="">Not linked to a specific pre-registration</option>
+                {testingRequests.map((request) => (
+                  <option key={request.id} value={request.id}>
+                    {request.examCode} · {request.testingMode === "remote" ? "Remote proctored" : "In person"} · {request.status.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-muted">You have not started an exam pre-registration yet. You can still submit this request, or <Link href="/account/testing" className="font-semibold text-brand">start your pre-registration</Link> first and link it here.</p>
+          )}
+        </div>
+      )}
 
       {locked && stage && (
         <div className={`rounded-2xl border p-5 sm:p-6 ${status === "rejected" ? "border-red-200 bg-red-50" : status === "approved" ? "border-success/30 bg-success/5" : "border-info/30 bg-info/5"}`}>

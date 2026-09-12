@@ -15,7 +15,7 @@ function parseDetails(notes: string | null): DigitalApplicationDetails | null {
   try { const details = JSON.parse(notes) as DigitalApplicationDetails; return details.requestKind === "digital_application_packet" ? details : null; } catch { return null; }
 }
 
-export default async function FormsPage({ searchParams }: { searchParams: { credential?: string; workflow?: string; application?: string; new?: string } }) {
+export default async function FormsPage({ searchParams }: { searchParams: { credential?: string; workflow?: string; application?: string; new?: string; testingRequestId?: string } }) {
   const memberId = await requireUserId();
   const credential = (searchParams.credential ?? "").toUpperCase();
   const requestedKey = searchParams.workflow ?? (credential ? `initial:${credential.toLowerCase()}` : "");
@@ -33,7 +33,7 @@ export default async function FormsPage({ searchParams }: { searchParams: { cred
   // blank duplicate instead.
   const { data: rows } = await admin
     .from("applications")
-    .select("id,status,member_notes,submitted_at,reviewed_at,admin_notes,est_completion")
+    .select("id,status,member_notes,submitted_at,reviewed_at,admin_notes,est_completion,testing_request_id")
     .eq("member_id", memberId)
     .eq("app_type", workflow.appType)
     .eq("cert_type", workflow.certType)
@@ -66,6 +66,23 @@ export default async function FormsPage({ searchParams }: { searchParams: { cred
   const packet = getWorkflowForms(workflow);
   const canStartNew = !inFlight && Boolean(application) && application?.status !== "draft";
 
+  // testing:accommodations only — offer the member's own exam pre-registrations
+  // so this request can be linked to the specific one it is for.
+  let testingRequests: Array<{ id: string; examCode: string; testingMode: string; status: string }> = [];
+  let initialTestingRequestId: string | null = null;
+  if (workflow.appType === "testing_accommodations") {
+    const { data: memberTestingRequests } = await admin
+      .from("testing_requests")
+      .select("id,exam_code,testing_mode,status")
+      .eq("member_id", memberId)
+      .order("created_at", { ascending: false });
+    testingRequests = (memberTestingRequests ?? []).map((r) => ({ id: r.id, examCode: r.exam_code, testingMode: r.testing_mode, status: r.status }));
+    const requestedTestingRequestId = searchParams.testingRequestId ?? "";
+    initialTestingRequestId =
+      (application as { testing_request_id?: string | null } | null)?.testing_request_id ??
+      (requestedTestingRequestId && testingRequests.some((r) => r.id === requestedTestingRequestId) ? requestedTestingRequestId : null);
+  }
+
   return (
     <>
       <PageHero eyebrow="Digital application" title={workflow.title} intro="Complete the unchanged ABCAC forms online, save your draft, return later, and invite supervisors or attestors when their signatures are required." />
@@ -87,6 +104,8 @@ export default async function FormsPage({ searchParams }: { searchParams: { cred
           submittedAt={application?.submitted_at ?? null}
           canStartNew={canStartNew}
           otherPackets={packets.filter((row) => row.id !== application?.id).map((row) => ({ id: row.id, status: row.status ?? "draft", submittedAt: row.submitted_at ?? null }))}
+          testingRequests={testingRequests}
+          initialTestingRequestId={initialTestingRequestId}
         />
       </Section>
     </>
