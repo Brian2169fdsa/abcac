@@ -214,3 +214,61 @@ export async function inviteApplicationSigner(input: {
   revalidatePath("/account/forms");
   return { ok: true, id: data.id, shareUrl, message: sent ? "Invitation emailed." : "Invitation created. Copy the secure link to the signer." };
 }
+
+/** Withdraws a not-yet-signed signer invitation, freeing its reserved signature line for a new invite. */
+export async function revokeApplicationSigner(requestId: string): Promise<ActionResult> {
+  const memberId = await requireUserId();
+  const admin = createSupabaseAdminClient();
+  const { data: request } = await admin
+    .from("application_signer_requests")
+    .select("id,status")
+    .eq("id", requestId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (!request) return { ok: false, error: "Signer request not found." };
+  if (request.status === "signed") return { ok: false, error: "This signer has already submitted their section." };
+  if (request.status !== "revoked") {
+    const { error } = await admin.from("application_signer_requests").update({ status: "revoked" }).eq("id", requestId);
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/account/forms");
+  return { ok: true, id: requestId, message: "Signer invitation withdrawn." };
+}
+
+/** Re-invites a signer with a fresh secure link and a reset 30-day expiration, and re-sends the email. */
+export async function resendApplicationSigner(requestId: string): Promise<ActionResult> {
+  const memberId = await requireUserId();
+  const admin = createSupabaseAdminClient();
+  const { data: request } = await admin
+    .from("application_signer_requests")
+    .select("id,status,signer_name,signer_email,signer_role")
+    .eq("id", requestId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (!request) return { ok: false, error: "Signer request not found." };
+  if (request.status === "signed") return { ok: false, error: "This signer has already submitted their section." };
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const { error } = await admin
+    .from("application_signer_requests")
+    .update({
+      token_hash: tokenHash,
+      status: "invited",
+      invited_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      opened_at: null,
+    })
+    .eq("id", requestId);
+  if (error) return { ok: false, error: error.message };
+
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const shareUrl = `${origin}/sign/application/${token}`;
+  const sent = await sendEmail({
+    to: request.signer_email,
+    subject: `ABCAC ${request.signer_role} form request`,
+    html: `<p>Hello ${escapeHtml(request.signer_name)},</p><p>An ABCAC applicant has asked you to complete and sign a portion of an application packet as <strong>${escapeHtml(request.signer_role)}</strong>.</p><p><a href="${shareUrl}">Open the secure form request</a></p><p>This private link is intended only for you.</p>`,
+  });
+  revalidatePath("/account/forms");
+  return { ok: true, id: requestId, shareUrl, message: sent ? "New invitation emailed." : "New invitation created. Copy the secure link to the signer." };
+}
