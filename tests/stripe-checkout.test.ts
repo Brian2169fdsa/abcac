@@ -226,6 +226,34 @@ describe("POST /api/stripe/checkout", () => {
     expect(arg.metadata.portal_return_path).toBe("/account/certification-sync");
   });
 
+  it("ignores a client-sent quantity and charges the server-computed plan's month count instead", async () => {
+    getProductBySlug.mockReturnValue({
+      ...PRODUCT,
+      slug: "certification-sync",
+      name: "Certification Sync",
+      category: "Service",
+    });
+    serverClient = fakeProfileClient({
+      user: { id: "member-1", email: "jamie@example.com" },
+      syncApplication: {
+        id: "sync-1",
+        member_id: "member-1",
+        app_type: "cert_sync",
+        cert_type: "Multiple credentials",
+        status: "submitted",
+        // Server-computed at submission time (save-certification-sync.ts) — the
+        // authoritative month count, independent of whatever the client requests.
+        member_notes: JSON.stringify({ plan: { totalMonths: 3, targetExpiration: "2027-01-01", items: [], totalFeeCents: 4500 } }),
+      },
+    });
+    // A tampered/stale client asks for 60 months — must be ignored.
+    const res = await POST(req({ slug: "certification-sync", syncApplicationId: "sync-1", quantity: 60 }));
+    expect(res.status).toBe(200);
+    const arg = sessionsCreate.mock.calls[0][0];
+    expect(arg.line_items).toEqual([{ price: "price_123", quantity: 3 }]);
+    expect(arg.metadata.sync_months).toBe("3");
+  });
+
   it("rejects a dedicated workflow product without its member-owned request", async () => {
     getProductBySlug.mockReturnValue({
       ...PRODUCT,

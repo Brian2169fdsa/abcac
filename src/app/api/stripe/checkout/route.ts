@@ -86,6 +86,9 @@ export async function POST(req: Request) {
   let linkedRecordId: string | null = null;
   let formPayload: Record<string, unknown> = {};
   let testingRequest: any = null;
+  // Certification-sync only: the server-computed month count from the stored
+  // plan, when one exists — set below, and overrides any client-sent quantity.
+  let syncPlanMonths: number | null = null;
   let intake = normalizePaymentIntake(parsed.paymentForm);
 
   if (!parsed.testingRequestId && (typeof slug !== "string" || !slug)) {
@@ -138,6 +141,14 @@ export async function POST(req: Request) {
       linkedRecordId = data.id;
       let details: Record<string, unknown> = {};
       try { details = JSON.parse(data.member_notes || "{}"); } catch { /* keep verified application summary only */ }
+      // Authoritative month count: the plan the server itself computed at
+      // submission time from the member's own certifications (cert-sync-apply.ts /
+      // save-certification-sync.ts). A paper submission has no stored plan and
+      // falls back to the client-supplied quantity below — same as before.
+      const planTotalMonths = (details as { plan?: { totalMonths?: unknown } }).plan?.totalMonths;
+      if (typeof planTotalMonths === "number" && Number.isFinite(planTotalMonths) && planTotalMonths > 0) {
+        syncPlanMonths = Math.trunc(planTotalMonths);
+      }
       const fullName = String(details.fullName || "").trim().split(/\s+/);
       intake = normalizePaymentIntake({
         firstName: profile?.first_name || fullName[0],
@@ -203,7 +214,7 @@ export async function POST(req: Request) {
   if (!priceId) return NextResponse.json({ error: "price_not_found" }, { status: 503 });
 
   const checkoutQuantity = slug === "certification-sync"
-    ? Number.isInteger(parsed.quantity) && parsed.quantity! >= 1 && parsed.quantity! <= 120 ? parsed.quantity! : 1
+    ? syncPlanMonths ?? (Number.isInteger(parsed.quantity) && parsed.quantity! >= 1 && parsed.quantity! <= 120 ? parsed.quantity! : 1)
     : 1;
   const lineItems = [{ price: priceId, quantity: checkoutQuantity }];
   if (testingRequest?.seeks_abcac_credential) {
