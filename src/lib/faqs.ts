@@ -19,7 +19,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: "Is ABCAC certification recognized in other states?",
-    a: "ABCAC is an IC&RC member board. Eligible, current credentials may transfer through formal reciprocity when both ABCAC and the destination member board offer the credential at a reciprocal level. The receiving board may have additional requirements or fees.",
+    a: "Yes. ABCAC is a member of the International Certification & Reciprocity Consortium (IC&RC), which allows certified professionals to transfer their credentials to 57 other member boards across the U.S. and internationally through a formal reciprocity process.",
   },
   {
     q: "How do I start the certification process?",
