@@ -1,6 +1,8 @@
 import { AppStatusControl } from "@/components/admin/app-status-control";
+import { ApplyCertSyncButton } from "@/components/admin/apply-cert-sync-button";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseStoredCertSyncPlan } from "@/lib/automation/workflows/cert-sync-apply";
 
 export const dynamic = "force-dynamic";
 function fmt(d: string | null) { return d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"; }
@@ -9,8 +11,9 @@ function title(s: string | null) { return (s ?? "").replace(/_/g, " ").replace(/
 function syncDetails(notes: string | null) {
   if (!notes) return null;
   try {
-    const details = JSON.parse(notes) as { requestKind?: string; submissionMode?: string; credentials?: unknown[]; monthsForward?: number; totalAmountCents?: number; paperFileName?: string | null };
-    return details.requestKind === "certification_sync" ? details : null;
+    const details = JSON.parse(notes) as { requestKind?: string; submissionMode?: string; paperFileName?: string | null };
+    if (details.requestKind !== "certification_sync") return null;
+    return { ...details, plan: parseStoredCertSyncPlan(notes) };
   } catch { return null; }
 }
 
@@ -62,8 +65,15 @@ export default async function AdminApplications() {
                 <td className="px-5 py-3 text-muted">{title(a.app_type)}</td>
                 <td className="px-5 py-3 text-muted">
                   <div>{a.cert_type ?? "—"}</div>
-                  {sync && <div className="mt-1 text-xs">{sync.credentials?.length ?? 0} credential(s) · {sync.monthsForward ?? 0} month(s) · ${((sync.totalAmountCents ?? 0) / 100).toFixed(2)} · {title(sync.submissionMode ?? "digital")}{sync.paperFileName ? ` · ${sync.paperFileName}` : ""}</div>}
+                  {sync && (
+                    <div className="mt-1 text-xs">
+                      {sync.plan
+                        ? <>{sync.plan.items.length} credential(s) → {fmt(sync.plan.targetExpiration)} · {sync.plan.totalMonths} month(s) · ${(sync.plan.totalFeeCents / 100).toFixed(2)}</>
+                        : "no computed plan (legacy or paper)"} · {title(sync.submissionMode ?? "digital")}{sync.paperFileName ? ` · ${sync.paperFileName}` : ""}
+                    </div>
+                  )}
                   {digital && <div className="mt-1 text-xs">{digital.workflowTitle} · {title(digital.submissionMode ?? "digital")} · {digital.documents?.reduce((total, document) => total + (document.annotations?.length ?? 0), 0) ?? 0} mark(s){digital.paperFileName ? ` · ${digital.paperFileName}` : ""}</div>}
+                  {sync?.plan && a.status === "under_review" && <div className="mt-2"><ApplyCertSyncButton applicationId={a.id} /></div>}
                 </td>
                 <td className="px-5 py-3 text-muted">{a.signature_name ? `✓ ${a.signature_name}` : "—"}</td>
                 <td className="px-5 py-3">{!["initial", "renewal", "ceu_workshop", "cert_sync"].includes(a.app_type) ? <span className="text-muted">—</span> : paidApplicationIds.has(a.id) ? <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Fee paid</span> : <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Unpaid</span>}</td>
