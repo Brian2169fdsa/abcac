@@ -15,6 +15,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/lib/site-config";
 import { DAY_MS } from "./time";
 import { isPrintProduct, printTaskMarker, PRINT_PRODUCT_SLUG } from "./workflows/print-request";
+import { applyCertSyncPlan } from "./workflows/cert-sync-apply";
 
 export interface ExecResult {
   ok: boolean;
@@ -520,71 +521,33 @@ export const REGISTRY: Record<string, Executor> = {
     };
   },
 
-  // Approve a cert_sync application (cert_sync). TWO-step, mirroring what a
-  // human does: (a) enable Certification Sync on the member's certifications —
-  // the same `sync_enabled = true` flip the Stripe webhook performs on a sync
-  // payment, scoped to rows where it's still false so a re-run touches
-  // nothing — then (b) mark the application approved with the same write
-  // conventions as set_application_status. The member id is re-read from the
-  // application row at execute time (never trusted from args). Idempotent —
-  // already-approved is an ok no-op; M1 — any other non-pending status (e.g. a
-  // human rejected it after staging) is `state_moved`.
+  // Approve a cert_sync application. Delegates to applyCertSyncPlan(), the
+  // same function the admin cockpit's manual "Apply synchronized dates"
+  // button calls — real target expiration date, computed and stored from the
+  // member's own certifications at submission time, not a blanket
+  // sync_enabled flip. M1 — any non-pending status (e.g. a human rejected it
+  // after staging) is `state_moved`; already-approved is an ok no-op.
   enable_cert_sync: async (admin, args) => {
     const id = str(args.applicationId ?? args.id);
     if (!id) return { ok: false, error: "bad_args" };
     const { data: appData } = await admin
       .from("applications")
-      .select("id,member_id,app_type,status")
+      .select("id,member_id,app_type,status,member_notes")
       .eq("id", id)
       .maybeSingle();
     if (!appData) return { ok: false, error: "not_found" };
-    const app = appData as { id: string; member_id: string | null; app_type: string | null; status: string | null };
-    if (app.app_type !== "cert_sync") return { ok: false, error: "bad_state", before: { application: app } };
-    // M1 — re-validate at execute time: already approved is a success no-op
-    // (sync was enabled when it was approved).
-    if (app.status === "approved") {
-      return { ok: true, before: { application: app }, after: { applicationId: id, status: "approved" } };
-    }
+    const app = appData as { id: string; member_id: string | null; app_type: string | null; status: string | null; member_notes: string | null };
     const expect = str(args.expectStatus ?? args.fromStatus);
-    if (expect && app.status !== expect) return { ok: false, error: "state_moved", before: { application: app } };
-    if (app.status !== "submitted" && app.status !== "under_review") {
+    if (expect && app.status !== expect && app.status !== "approved") {
       return { ok: false, error: "state_moved", before: { application: app } };
     }
-    if (!app.member_id) return { ok: false, error: "bad_state", before: { application: app } };
 
-    // (a) Enable sync on the member's certifications — re-read, and only flip
-    // rows where it's still off (idempotent; nothing to sync fails closed).
-    const { data: certData } = await admin
-      .from("certifications")
-      .select("id,sync_enabled")
-      .eq("member_id", app.member_id);
-    const certs = (certData as { id: string; sync_enabled: boolean | null }[] | null) ?? [];
-    if (certs.length === 0) return { ok: false, error: "no_certifications", before: { application: app } };
-    const toEnable = certs.filter((c) => !c.sync_enabled).map((c) => c.id);
-    if (toEnable.length > 0) {
-      const { error: syncErr } = await admin
-        .from("certifications")
-        .update({ sync_enabled: true })
-        .eq("member_id", app.member_id)
-        .eq("sync_enabled", false); // only rows still off — re-runs touch nothing
-      if (syncErr) return { ok: false, error: syncErr.message, before: { application: app, certifications: certs } };
-    }
-
-    // (b) Approve the application (same write as set_application_status).
-    const { error: appErr } = await admin
-      .from("applications")
-      .update({ status: "approved", reviewed_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("status", app.status); // guard: lose the race rather than re-decide
-    if (appErr) {
-      // Sync flags may already be flipped (idempotent) but the approval failed —
-      // surface it so the run is marked failed and a human reconciles.
-      return { ok: false, error: `application_update_failed:${appErr.message}`, before: { application: app, certifications: certs } };
-    }
+    const result = await applyCertSyncPlan(admin, app);
+    if (!result.ok) return { ok: false, error: result.error, before: { application: app } };
     return {
       ok: true,
-      before: { application: app, certifications: certs },
-      after: { applicationId: id, status: "approved", syncEnabledCertIds: toEnable },
+      before: { application: app },
+      after: { applicationId: id, status: "approved", syncedCertIds: result.appliedCertIds, targetExpiration: result.targetExpiration },
     };
   },
 };

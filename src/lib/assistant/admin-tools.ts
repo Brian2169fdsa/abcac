@@ -510,15 +510,15 @@ export function getAdminExecutors(ctx: AdminToolContext): Record<string, ToolExe
       if (!memberId || !description || !(amountCents > 0)) {
         throw new Error("member_id, description, and a positive amount_cents are required.");
       }
-      const invoiceNumber = "INV-" + Date.now().toString(36).toUpperCase();
-      const { error } = await admin.from("invoices").insert({
-        member_id: memberId,
-        invoice_number: invoiceNumber,
-        description,
-        amount_cents: amountCents,
-        status: "unpaid",
-      });
+      // invoice_number is assigned atomically by the DB (set_invoice_number
+      // trigger / invoice_number_seq) — never computed client-side.
+      const { data: inserted, error } = await admin
+        .from("invoices")
+        .insert({ member_id: memberId, description, amount_cents: amountCents, status: "unpaid" })
+        .select("invoice_number")
+        .single();
       if (error) throw new Error(error.message);
+      const invoiceNumber = inserted?.invoice_number ?? "invoice";
       await audit("invoice_created", "invoices", null, {
         member_id: memberId,
         amount_cents: amountCents,

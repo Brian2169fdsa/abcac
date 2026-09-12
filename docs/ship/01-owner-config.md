@@ -77,9 +77,9 @@ One project, ref `ajgqqfggdctmcqhbmptb`. Migrations are the source of truth.
 
 ## F. Edge Functions + scheduled automation 🟠
 
-- [ ] 🟠 Deploy `admin-notify`, `events`, `scheduled-reminders` (the deployed reminder engine).
+- [ ] 🟠 Deploy `admin-notify` and `events` only. **Do not deploy `scheduled-reminders`** — reminders run from the Vercel cron (`/api/cron/reminders`, deduplicated, in-portal + email). Migration 047 removes the old pg_cron schedule.
 - [ ] 🟠 Create Vault secrets `edge_functions_url` + `service_role_key` (gate the DB notify triggers).
-- [ ] 🟠 Confirm the `abcac-daily-reminders` pg_cron job (created by migration 003) is present.
+- [ ] 🟠 Confirm the `abcac-daily-reminders` pg_cron job is **absent** after migration 047 (`select jobname from cron.job;`). Two engines on the same schedule would double-send every reminder.
 - [ ] 🟢 **Do not** also run the optional n8n `ABCAC-01-RENEWAL-ALERTS` workflow — run one reminder
   path, not both (double-send risk). Prefer the Edge Function / Vercel cron.
 

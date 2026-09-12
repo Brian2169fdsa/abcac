@@ -1,22 +1,27 @@
 // ABCAC — cert_sync deterministic rule (zero-model).
 //
-// Certification Sync today: a member pays $15 for each month moved forward and the Stripe webhook
-// flips `certifications.sync_enabled = true` for the member; admins can also
-// toggle the flag per-cert on the member-detail page (cert-actions.ts). A
-// cert_sync APPLICATION is the paperwork side of that flow — what a human admin
-// does to approve one is exactly two writes: enable sync on the member's
-// certifications and mark the application approved. This rule automates that
-// happy path via ONE staged executor (`enable_cert_sync`) so both effects land
-// (or fail) together. A member with NO certifications has nothing to sync —
-// decisively escalate. Multiple pending cert_sync applications for the same
-// member look unusual (double-submit / double-bill risk) — escalate with an
-// anomaly flag instead of guessing which one to approve.
+// Certification Sync: the member selects two or more of their own active
+// certifications; the portal computes a real plan (target expiration date +
+// per-credential month shift) from their actual expiration dates and stores
+// it on the application at submission. Approving one is exactly two writes,
+// both applying that stored plan: set every selected certification's
+// expiration date to the target and flip sync_enabled, then mark the
+// application approved. This rule automates that happy path via ONE staged
+// executor (`enable_cert_sync`, in registry.ts) which delegates to
+// applyCertSyncPlan() — the same function the admin cockpit's manual "Apply
+// synchronized dates" button uses. A request with no valid stored plan (a
+// paper upload, or one saved before this plan format existed) has nothing an
+// automated rule can safely apply — decisively escalate. Multiple pending
+// cert_sync applications for the same member look unusual (double-submit /
+// double-bill risk) — escalate with an anomaly flag instead of guessing which
+// one to approve.
 //
 // The sweep pre-filters to submitted/under_review cert_sync applications; this
 // rule re-validates state before staging anything.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DispatchInput, RuleResult } from "../types";
+import { parseStoredCertSyncPlan } from "./cert-sync-apply";
 
 export const CERT_SYNC_RULE_VERSION = "certsync-1";
 
@@ -34,11 +39,7 @@ interface AppRow {
   member_id: string | null;
   app_type: string | null;
   status: string | null;
-}
-
-interface CertRow {
-  id: string;
-  sync_enabled: boolean | null;
+  member_notes: string | null;
 }
 
 export async function certSyncRule(
@@ -49,7 +50,7 @@ export async function certSyncRule(
 
   const { data } = await admin
     .from("applications")
-    .select("id,member_id,app_type,status")
+    .select("id,member_id,app_type,status,member_notes")
     .eq("id", input.entityId)
     .maybeSingle();
   const app = data as AppRow | null;
@@ -58,21 +59,20 @@ export async function certSyncRule(
   if (app.app_type !== CERT_SYNC_APP_TYPE) return null;
   if (!CERT_SYNC_PENDING_STATUSES.includes(app.status ?? "")) return null;
 
-  // The member must have something to sync. No certifications → decisive
-  // escalate; enabling sync (or approving) would be meaningless.
-  const { data: certData } = await admin
-    .from("certifications")
-    .select("id,sync_enabled")
-    .eq("member_id", app.member_id);
-  const certs = (certData as CertRow[] | null) ?? [];
-  if (certs.length === 0) {
+  // The application must carry a real, computed plan (target date + at least
+  // two credential ids) to apply automatically. A paper upload, or a legacy
+  // submission saved before this plan format existed, has nothing an
+  // automated rule can safely apply — decisive escalate.
+  const plan = parseStoredCertSyncPlan(app.member_notes);
+  if (!plan) {
     return {
       decisive: true,
       tier: "escalate",
       ruleVersion: CERT_SYNC_RULE_VERSION,
-      anomalies: ["no_certifications"],
+      anomalies: ["no_sync_plan"],
       summary:
-        "Cert-sync application but the member has no certifications — nothing to sync; review manually.",
+        "Cert-sync application has no computed synchronization plan (paper upload, or saved before " +
+        "the digital plan format existed) — review and apply manually.",
     };
   }
 
@@ -98,9 +98,8 @@ export async function certSyncRule(
     };
   }
 
-  // Happy path — one executor stages BOTH effects: enable sync on the member's
-  // certifications (only rows where it's still off) and approve the application.
-  const toEnable = certs.filter((c) => !c.sync_enabled).length;
+  // Happy path — one executor applies the stored plan (real target date on
+  // each selected certification) and approves the application.
   return {
     decisive: true,
     tier: "auto",
@@ -114,7 +113,7 @@ export async function certSyncRule(
       },
     },
     summary:
-      `Cert-sync application clean — enabling Certification Sync on ` +
-      `${toEnable} of ${certs.length} certification(s) and approving the application.`,
+      `Cert-sync application clean — synchronizing ${plan.items.length} certification(s) to ` +
+      `${plan.targetExpiration} and approving the application.`,
   };
 }

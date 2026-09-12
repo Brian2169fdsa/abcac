@@ -3,8 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Shield } from "lucide-react";
-import { PORTAL_NAV, type PortalNavItem } from "@/components/portal/portal-nav-config";
+import { PORTAL_NAV, type PortalNavGroup, type PortalNavItem } from "@/components/portal/portal-nav-config";
 import { cn } from "@/lib/utils";
+import { paymentsEnabled } from "@/lib/feature-flags";
+
+/** Paid-only destinations that disappear from the nav while payments are paused. */
+const PAID_ONLY_HREFS = new Set(["/account/certification-sync", "/account/payments"]);
+
+/** What a pending-approval member can reach while staff review the account. */
+const RESTRICTED_NAV: PortalNavGroup[] = [
+  { items: [{ label: "Home", href: "/account" }] },
+  { heading: "Getting started", items: [{ label: "Complete Your Profile", href: "/account/onboarding" }] },
+  { divider: true, items: [{ label: "Account Settings", href: "/account/settings" }] },
+];
 
 /**
  * Decide whether a nav item is "active" for the current pathname.
@@ -65,14 +76,17 @@ export function PortalSidebar({
   open,
   onClose,
   isAdmin = false,
+  restricted = false,
   className,
 }: {
   open?: boolean;
   onClose?: () => void;
   isAdmin?: boolean;
+  restricted?: boolean;
   className?: string;
 }) {
   const activeHref = useActiveHref();
+  const nav = restricted ? RESTRICTED_NAV : PORTAL_NAV;
 
   // Track the first item per shared href so duplicates don't all highlight.
   const seen = new Set<string>();
@@ -95,14 +109,19 @@ export function PortalSidebar({
           Admin Console
         </Link>
       )}
-      {PORTAL_NAV.map((group, gi) => (
+      {restricted && (
+        <p className="mx-4 mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Your account is awaiting ABCAC approval. Finish your profile and we will notify you when the full portal opens.
+        </p>
+      )}
+      {nav.map((group, gi) => (
         <div key={gi} className={cn(group.divider && "mt-2 border-t border-line pt-2")}>
           {group.heading && (
             <div className="px-6 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-strong">
               {group.heading}
             </div>
           )}
-          {group.items.map((item) => {
+          {group.items.filter((item) => paymentsEnabled || !PAID_ONLY_HREFS.has(item.href)).map((item) => {
             const isActiveHref = item.href === activeHref;
             const firstForHref = !seen.has(item.href);
             seen.add(item.href);

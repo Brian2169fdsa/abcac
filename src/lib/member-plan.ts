@@ -213,7 +213,7 @@ export function buildMemberPlan(input: MemberPlanInput): PlanStep[] {
       // "done" doesn't apply to renewal — it's an ongoing obligation. Treat an
       // upcoming/overdue renewal as actionable, a far-off one as not-yet-started.
       status: overdue || dueSoon ? "in_progress" : "todo",
-      href: "/account/renew",
+      href: "/account/certification",
       priority: overdue ? "high" : dueSoon ? "high" : "low",
     });
   }

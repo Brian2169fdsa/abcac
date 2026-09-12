@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { getProductBySlug, getPriceId } from "@/lib/catalog";
@@ -13,7 +14,33 @@ import {
 
 export const runtime = "nodejs";
 
+/**
+ * Metadata keys the Stripe webhook treats as authoritative. The server sets
+ * these from verified, member-owned records; clients can never supply them.
+ */
+const RESERVED_METADATA_KEYS = new Set([
+  "payment_type",
+  "payment_submission_id",
+  "form_type",
+  "linked_record_type",
+  "linked_record_id",
+  "invoice_id",
+  "reciprocity_request_id",
+  "testing_request_id",
+  "sync_application_id",
+  "application_id",
+  "exam_code",
+  "member_id",
+  "slug",
+  "product_name",
+  "credential_level",
+  "exam_mode",
+  "sync_months",
+  "portal_return_path",
+]);
+
 export async function POST(req: Request) {
+  if (!paymentsEnabled) return NextResponse.json({ error: "payments_paused" }, { status: 503 });
   if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
   let parsed: {
@@ -204,10 +231,18 @@ export async function POST(req: Request) {
   }).select("id").single();
   if (submissionError || !paymentSubmission?.id) return NextResponse.json({ error: "payment_form_save_failed" }, { status: 500 });
 
+  // Caller-supplied metadata is informational only. Any key the webhook uses to
+  // decide WHAT a payment settles (invoice ids, request ids, payment_type…) is
+  // reserved and set exclusively by the server below — otherwise a member could
+  // buy a $25 item and have the webhook mark an unrelated record paid.
   const forwardedMetadata: Record<string, string> = {};
   if (parsed.metadata && typeof parsed.metadata === "object") {
-    for (const [key, value] of Object.entries(parsed.metadata)) if (value != null) forwardedMetadata[key] = String(value);
+    for (const [key, value] of Object.entries(parsed.metadata)) {
+      if (value == null || RESERVED_METADATA_KEYS.has(key)) continue;
+      forwardedMetadata[key] = String(value);
+    }
   }
+  forwardedMetadata.payment_type = "general";
   if (linkedRecordType === "reciprocity_requests") {
     forwardedMetadata.reciprocity_request_id = linkedRecordId!;
     forwardedMetadata.payment_type = "reciprocity";
@@ -260,7 +295,15 @@ export async function POST(req: Request) {
       line_items: lineItems,
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}${portalReturnPath}`,
-      ...(existingStripeCustomerId ? { customer: existingStripeCustomerId } : { customer_email: intake.email }),
+      ...(existingStripeCustomerId
+        ? { customer: existingStripeCustomerId }
+        // Guest one-time checkout does not create a Stripe Customer object by
+        // default, which would leave stripe_customer_id permanently unset and
+        // break the Billing Portal link (/api/stripe/portal) for a member
+        // whose only charges were one-time payments. Subscription mode always
+        // creates a customer on its own and rejects this param, so it's only
+        // needed for "payment" mode.
+        : { customer_email: intake.email, ...(product.mode === "payment" ? { customer_creation: "always" as const } : {}) }),
       ...(memberId ? { client_reference_id: memberId } : {}),
       metadata: checkoutMetadata,
       ...(product.mode === "subscription" ? { subscription_data: { metadata: checkoutMetadata } } : {}),

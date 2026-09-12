@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { requestOrigin } from "@/lib/request-origin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -7,6 +8,7 @@ export const runtime = "nodejs";
 
 // Creates a Stripe Checkout Session to pay an admin-issued invoice.
 export async function POST(req: Request) {
+  if (!paymentsEnabled) return NextResponse.json({ error: "payments_paused" }, { status: 503 });
   if (!isStripeConfigured) return NextResponse.json({ error: "payments_not_configured" }, { status: 503 });
 
   let parsed: { invoice_id?: string };
@@ -30,6 +32,10 @@ export async function POST(req: Request) {
   if (!invoice) return NextResponse.json({ error: "invoice_not_found" }, { status: 404 });
   if (invoice.member_id !== user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (invoice.status === "paid") return NextResponse.json({ error: "already_paid" }, { status: 409 });
+  // Voided / cancelled invoices are closed by staff and must never be charged.
+  if (["void", "voided", "canceled", "cancelled"].includes(String(invoice.status ?? ""))) {
+    return NextResponse.json({ error: "invoice_not_payable" }, { status: 409 });
+  }
 
   const firstName = String(user.user_metadata?.first_name || user.user_metadata?.given_name || "Member").trim();
   const lastName = String(user.user_metadata?.last_name || user.user_metadata?.family_name || "Account holder").trim();

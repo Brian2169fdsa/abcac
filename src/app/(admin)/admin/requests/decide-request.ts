@@ -89,13 +89,18 @@ export async function decideRequest(
   if (decision === "approve" && table === "name_change_requests" && row?.member_id) {
     const fullName = String(row.new_name ?? "").trim();
     if (fullName) {
+      // "First Last" → first/last, middle cleared. "First Middle Last…" → the
+      // second token is the middle name and the remainder is the last name
+      // (multi-word surnames are the less common case; staff can correct in the
+      // member cockpit). Always write middle_name so a stale one is not kept.
       const parts = fullName.split(/\s+/);
       const firstName = parts[0];
-      const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+      const middleName = parts.length > 2 ? parts[1] : null;
+      const lastName = parts.length > 2 ? parts.slice(2).join(" ") : parts.length > 1 ? parts.slice(1).join(" ") : "";
       try {
         await admin
           .from("profiles")
-          .update({ first_name: firstName, last_name: lastName })
+          .update({ first_name: firstName, middle_name: middleName, last_name: lastName })
           .eq("id", row.member_id);
       } catch (err) {
         console.error("name change profile update skipped:", err);

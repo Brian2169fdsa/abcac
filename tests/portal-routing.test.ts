@@ -55,7 +55,7 @@ describe("portal routing", () => {
     const renewal = paymentOptionsForApplication("renewal", "renew-1");
     expect(renewal).toEqual([
       {
-        label: "Two-year credential renewal — $150",
+        label: "Two-year credential renewal — $150.00",
         href: "/account/payments?product=certification-renewal-2-year-credential-renewal-fee&application=renew-1",
       },
     ]);

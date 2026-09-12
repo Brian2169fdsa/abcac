@@ -60,10 +60,12 @@ export function CertificationSyncCalculator() {
       </div>
 
       <p className="mt-4 rounded-xl bg-brand/[0.06] p-4 text-sm leading-relaxed text-muted">
-        Example: moving a credential 6 months forward costs $90. This service is not a $15 monthly subscription.
+        Example: moving a credential 6 months forward costs $90. This service is not a $15 monthly subscription. In
+        your account, select the credentials to synchronize and ABCAC calculates the exact months and fee from their
+        real expiration dates.
       </p>
-      <CtaButton href={portalGatewayHref(`/account/certification-sync?months=${months}`)} size="lg" className="mt-6 w-full justify-center">
-        Start sync request for {months} {months === 1 ? "month" : "months"}
+      <CtaButton href={portalGatewayHref("/account/certification-sync")} size="lg" className="mt-6 w-full justify-center">
+        Start your sync request
       </CtaButton>
     </div>
   );

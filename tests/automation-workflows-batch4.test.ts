@@ -22,10 +22,22 @@ function client(map: (t: string, op: Op) => QueryResult): FakeClient {
   return makeClient({ id: "admin" }, map);
 }
 
-const APP = { id: "app-1", member_id: "m1", app_type: "cert_sync", status: "submitted" };
-const CERTS = [
-  { id: "c-1", sync_enabled: false },
-  { id: "c-2", sync_enabled: true },
+const PLAN_NOTES = JSON.stringify({
+  requestKind: "certification_sync",
+  plan: {
+    targetExpiration: "2026-12-01",
+    items: [
+      { id: "c-1", monthsForward: 6 },
+      { id: "c-2", monthsForward: 0 },
+    ],
+    totalMonths: 6,
+    totalFeeCents: 9000,
+  },
+});
+const APP = { id: "app-1", member_id: "m1", app_type: "cert_sync", status: "submitted", member_notes: PLAN_NOTES };
+const ACTIVE_CERTS = [
+  { id: "c-1", status: "active" },
+  { id: "c-2", status: "active" },
 ];
 
 /**
@@ -35,13 +47,11 @@ const CERTS = [
  */
 function ruleClient(opts: {
   app?: Record<string, unknown> | null;
-  certs?: Record<string, unknown>[];
   pending?: Record<string, unknown>[];
 }): FakeClient {
   let appCalls = 0;
   return client((t) => {
     if (t === "applications") return appCalls++ === 0 ? { data: opts.app ?? null } : { data: opts.pending ?? [{ id: "app-1" }] };
-    if (t === "certifications") return { data: opts.certs ?? [] };
     return { data: null };
   });
 }
@@ -59,13 +69,13 @@ describe("certSyncRule", () => {
     expect(await certSyncRule(ruleClient({ app: APP }).client, { ...INPUT, entityId: undefined })).toBeNull();
   });
 
-  it("decisively escalates when the member has no certifications (nothing to sync)", async () => {
-    const r = await certSyncRule(ruleClient({ app: { ...APP, status: "under_review" }, certs: [] }).client, INPUT);
+  it("decisively escalates when the application has no valid stored plan (paper upload, or legacy shape)", async () => {
+    const r = await certSyncRule(ruleClient({ app: { ...APP, status: "under_review", member_notes: null } }).client, INPUT);
     expect(r?.decisive).toBe(true);
     expect(r?.tier).toBe("escalate");
     expect(r?.action).toBeUndefined();
-    expect(r?.anomalies).toContain("no_certifications");
-    expect(String(r?.summary)).toContain("nothing to sync");
+    expect(r?.anomalies).toContain("no_sync_plan");
+    expect(String(r?.summary)).toContain("no computed synchronization plan");
     expect(r?.ruleVersion).toBe(CERT_SYNC_RULE_VERSION);
   });
 
@@ -73,7 +83,6 @@ describe("certSyncRule", () => {
     const r = await certSyncRule(
       ruleClient({
         app: { ...APP, status: "under_review" },
-        certs: CERTS,
         pending: [{ id: "app-1" }, { id: "app-2" }],
       }).client,
       INPUT,
@@ -86,13 +95,13 @@ describe("certSyncRule", () => {
   });
 
   it("happy path: stages enable_cert_sync (auto) targeting this application and member", async () => {
-    const r = await certSyncRule(ruleClient({ app: { ...APP, status: "under_review" }, certs: CERTS }).client, INPUT);
+    const r = await certSyncRule(ruleClient({ app: { ...APP, status: "under_review" } }).client, INPUT);
     expect(r?.decisive).toBe(true);
     expect(r?.tier).toBe("auto");
     expect(r?.ruleVersion).toBe(CERT_SYNC_RULE_VERSION);
     expect(r?.action?.handler).toBe("enable_cert_sync");
     expect(r?.action?.args).toMatchObject({ applicationId: "app-1", memberId: "m1", expectStatus: "under_review" });
-    expect(String(r?.summary)).toContain("1 of 2 certification(s)");
+    expect(String(r?.summary)).toContain("synchronizing 2 certification(s) to 2026-12-01");
   });
 });
 
@@ -117,17 +126,16 @@ describe("enable_cert_sync executor", () => {
     ).toMatchObject({ ok: false, error: "bad_state" });
   });
 
-  it("performs BOTH writes: flips sync only on still-off certs, then approves the application", async () => {
-    const c = execClient({ app: APP, certs: CERTS });
+  it("performs BOTH writes: applies the stored target date to every plan certification, then approves", async () => {
+    const c = execClient({ app: APP, certs: ACTIVE_CERTS });
     const res = await REGISTRY.enable_cert_sync(c.client, { applicationId: "app-1", memberId: "m1", expectStatus: "submitted" });
     expect(res.ok).toBe(true);
-    expect(res.after).toMatchObject({ applicationId: "app-1", status: "approved", syncEnabledCertIds: ["c-1"] });
+    expect(res.after).toMatchObject({ applicationId: "app-1", status: "approved", syncedCertIds: ["c-1", "c-2"], targetExpiration: "2026-12-01" });
 
     const certUpd = c.callsFor("certifications", "update")[0];
-    expect(certUpd.payload).toEqual({ sync_enabled: true });
+    expect(certUpd.payload).toEqual({ expiration_date: "2026-12-01", sync_enabled: true });
     expect(certUpd.filters).toContainEqual({ col: "member_id", val: "m1" });
-    // idempotency: the write only touches rows where sync is still off
-    expect(certUpd.filters).toContainEqual({ col: "sync_enabled", val: false });
+    expect(certUpd.filters).toContainEqual({ col: "id", val: ["c-1", "c-2"] });
 
     const appUpd = c.callsFor("applications", "update")[0];
     expect(appUpd.payload).toMatchObject({ status: "approved" });
@@ -137,13 +145,11 @@ describe("enable_cert_sync executor", () => {
     expect(appUpd.filters).toContainEqual({ col: "status", val: "submitted" });
   });
 
-  it("skips the cert write (but still approves) when every cert already has sync on", async () => {
-    const c = execClient({ app: APP, certs: [{ id: "c-1", sync_enabled: true }] });
+  it("fails closed when a plan certification is no longer active at execute time", async () => {
+    const c = execClient({ app: APP, certs: [{ id: "c-1", status: "expired" }, { id: "c-2", status: "active" }] });
     const res = await REGISTRY.enable_cert_sync(c.client, { applicationId: "app-1" });
-    expect(res.ok).toBe(true);
-    expect(res.after).toMatchObject({ syncEnabledCertIds: [] });
-    expect(c.callsFor("certifications", "update")).toHaveLength(0);
-    expect(c.callsFor("applications", "update")).toHaveLength(1);
+    expect(res).toMatchObject({ ok: false, error: "certifications_changed" });
+    expect(c.callsFor("applications", "update")).toHaveLength(0);
   });
 
   it("is idempotent: an already-approved application is an ok no-op (no writes)", async () => {
@@ -157,22 +163,22 @@ describe("enable_cert_sync executor", () => {
 
   it("refuses when a human moved the application (state_moved), with no writes", async () => {
     for (const status of ["rejected", "withdrawn"]) {
-      const c = execClient({ app: { ...APP, status }, certs: CERTS });
+      const c = execClient({ app: { ...APP, status }, certs: ACTIVE_CERTS });
       const res = await REGISTRY.enable_cert_sync(c.client, { applicationId: "app-1", expectStatus: "submitted" });
       expect(res).toMatchObject({ ok: false, error: "state_moved" });
       expect(c.callsFor("certifications", "update")).toHaveLength(0);
       expect(c.callsFor("applications", "update")).toHaveLength(0);
     }
     // expectStatus mismatch between two still-pending states is also a move
-    const c = execClient({ app: { ...APP, status: "under_review" }, certs: CERTS });
+    const c = execClient({ app: { ...APP, status: "under_review" }, certs: ACTIVE_CERTS });
     const res = await REGISTRY.enable_cert_sync(c.client, { applicationId: "app-1", expectStatus: "submitted" });
     expect(res).toMatchObject({ ok: false, error: "state_moved" });
   });
 
-  it("fails closed when the member has no certifications at execute time", async () => {
-    const c = execClient({ app: APP, certs: [] });
+  it("fails closed when the application has no valid stored plan", async () => {
+    const c = execClient({ app: { ...APP, member_notes: null } });
     const res = await REGISTRY.enable_cert_sync(c.client, { applicationId: "app-1" });
-    expect(res).toMatchObject({ ok: false, error: "no_certifications" });
+    expect(res).toMatchObject({ ok: false, error: "no_plan" });
     expect(c.callsFor("applications", "update")).toHaveLength(0);
   });
 });

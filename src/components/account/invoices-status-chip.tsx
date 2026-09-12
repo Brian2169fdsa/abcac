@@ -8,12 +8,15 @@ const TONES: Record<string, string> = {
   succeeded: "bg-green-100 text-green-800",
   complete: "bg-green-100 text-green-800",
   open: "bg-amber-100 text-amber-800",
+  unpaid: "bg-amber-100 text-amber-800",
   pending: "bg-amber-100 text-amber-800",
   processing: "bg-info/10 text-info",
   overdue: "bg-red-100 text-red-700",
   failed: "bg-red-100 text-red-700",
   void: "bg-line text-muted",
+  voided: "bg-line text-muted",
   canceled: "bg-line text-muted",
+  cancelled: "bg-line text-muted",
 };
 
 export function InvoicesStatusChip({ status }: { status: string | null | undefined }) {

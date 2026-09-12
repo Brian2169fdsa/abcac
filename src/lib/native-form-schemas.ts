@@ -401,9 +401,9 @@ export function listNativeFields(schema: NativeFormSchema): Array<NativeField & 
 }
 
 /**
- * Signature fields exposed to the "invite signer" picker, in the same
- * SmartFormField shape the PDF detector produces so the workspace and signer
- * flow work identically for native forms.
+ * Every signature field in a schema, in the same SmartFormField shape the PDF
+ * detector produces so the workspace and signer flow work identically for
+ * native forms.
  */
 export function getNativeSignatureFields(schema: NativeFormSchema): SmartFormField[] {
   return schema.sections.flatMap((section) =>
@@ -420,6 +420,18 @@ export function getNativeSignatureFields(schema: NativeFormSchema): SmartFormFie
         label: `${section.title} — ${field.label}`,
       })),
   );
+}
+
+/**
+ * Signature fields exposed to the "invite signer" picker — only fields inside
+ * a `signerSection` qualify, since those are the lines meant for an invited
+ * supervisor/evaluator/reference. Signature fields the applicant signs
+ * themselves (ethics attestations, residency certification, authorized
+ * signature, etc.) live outside any signerSection and must never be offered
+ * to an outside signer.
+ */
+export function getSignerInviteFields(schema: NativeFormSchema): SmartFormField[] {
+  return getNativeSignatureFields({ ...schema, sections: schema.sections.filter((section) => section.signerSection) });
 }
 
 /** Labels of required fields that have no value yet (used before confirming a form). */

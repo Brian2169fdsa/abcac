@@ -61,6 +61,7 @@ function makeAdmin(opts: {
     };
     b.select = () => b;
     b.eq = () => b;
+    b.in = () => b;
     b.maybeSingle = async () => {
       if (table === "payments") return { data: reads.payments ?? null };
       if (table === "profiles") return { data: reads.profile ?? null };
@@ -197,6 +198,68 @@ describe("POST /api/stripe/webhook", () => {
     expect(sendEmail.mock.calls[1][0]).toMatchObject({ to: "abcac@abcac.org" });
   });
 
+  it("populates payments.application_id from an application_fee checkout", async () => {
+    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" } } });
+    constructEvent.mockReturnValue({
+      id: "evt_appfee",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_appfee",
+          client_reference_id: "user-1",
+          amount_total: 37500,
+          currency: "usd",
+          mode: "payment",
+          metadata: {
+            slug: "initial-certification-full-application-exam-fee",
+            product_name: "Initial Certification",
+            member_id: "user-1",
+            payment_type: "application_fee",
+            form_type: "application_fee",
+            application_id: "app-42",
+          },
+        },
+      },
+    });
+
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+
+    const insert = adminClient.calls.find((c) => c.table === "payments" && c.op === "insert");
+    expect(insert!.payload).toMatchObject({ application_id: "app-42" });
+  });
+
+  it("populates payments.application_id from a certification_sync checkout via sync_application_id", async () => {
+    adminClient = makeAdmin({ reads: { profile: { email: "m@example.com", first_name: "Jo" } } });
+    constructEvent.mockReturnValue({
+      id: "evt_sync",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_sync",
+          client_reference_id: "user-1",
+          amount_total: 1500,
+          currency: "usd",
+          mode: "subscription",
+          metadata: {
+            slug: "certification-sync",
+            product_name: "Certification Sync",
+            member_id: "user-1",
+            payment_type: "cert_sync",
+            form_type: "certification_sync",
+            sync_application_id: "app-sync-9",
+          },
+        },
+      },
+    });
+
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+
+    const insert = adminClient.calls.find((c) => c.table === "payments" && c.op === "insert");
+    expect(insert!.payload).toMatchObject({ application_id: "app-sync-9" });
+  });
+
   it("marks a reciprocity request paid when metadata flags it", async () => {
     constructEvent.mockReturnValue({
       id: "evt_recip",
@@ -209,6 +272,7 @@ describe("POST /api/stripe/webhook", () => {
           currency: "usd",
           mode: "payment",
           metadata: {
+            form_type: "reciprocity_request",
             payment_type: "reciprocity",
             reciprocity_request_id: "rr-7",
             member_id: "user-1",
@@ -235,7 +299,7 @@ describe("POST /api/stripe/webhook", () => {
           amount_total: 15000,
           currency: "usd",
           mode: "payment",
-          metadata: { invoice_id: "inv-1", member_id: "user-1" },
+          metadata: { form_type: "invoice", invoice_id: "inv-1", member_id: "user-1" },
         },
       },
     });
@@ -250,7 +314,7 @@ describe("POST /api/stripe/webhook", () => {
     constructEvent.mockReturnValue({
       id: "evt_testing",
       type: "checkout.session.completed",
-      data: { object: { id: "cs_testing", client_reference_id: "user-1", amount_total: 22500, currency: "usd", mode: "payment", metadata: { payment_type: "testing", testing_request_id: "tr-1", exam_code: "ADC", member_id: "user-1" } } },
+      data: { object: { id: "cs_testing", client_reference_id: "user-1", amount_total: 22500, currency: "usd", mode: "payment", metadata: { form_type: "testing_preregistration", payment_type: "testing", testing_request_id: "tr-1", exam_code: "ADC", member_id: "user-1" } } },
     });
     await POST(req());
     expect(adminClient.calls.find((c) => c.table === "testing_requests" && c.op === "update")?.payload).toMatchObject({ payment_status: "paid", status: "paid", stripe_session_id: "cs_testing" });
@@ -270,6 +334,7 @@ describe("POST /api/stripe/webhook", () => {
           currency: "usd",
           mode: "payment",
           metadata: {
+            form_type: "certification_sync",
             slug: "certification-sync",
             member_id: "user-1",
             sync_months: "6",
@@ -289,6 +354,130 @@ describe("POST /api/stripe/webhook", () => {
     });
 
     expect(adminClient.calls.find((c) => c.table === "certifications" && c.op === "update")).toBeUndefined();
+  });
+
+
+  // ---- Hardening: authority comes from server-set form_type, never from ids alone
+  it("ignores invoice_id on a general product checkout (form_type is not invoice)", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_forged_inv",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_forged",
+          client_reference_id: "user-1",
+          amount_total: 2500,
+          currency: "usd",
+          mode: "payment",
+          metadata: { form_type: "general_payment", slug: "printed-certificate-copy", invoice_id: "someone-elses-invoice", member_id: "user-1" },
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(adminClient.calls.find((c) => c.table === "invoices" && c.op === "update")).toBeUndefined();
+    // The payment itself is still recorded.
+    expect(adminClient.calls.find((c) => c.table === "payments" && c.op === "insert")).toBeTruthy();
+  });
+
+  it("ignores reciprocity/testing/application markers without the matching form_type", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_forged_multi",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_forged2",
+          client_reference_id: "user-1",
+          amount_total: 2500,
+          currency: "usd",
+          mode: "payment",
+          metadata: {
+            form_type: "general_payment",
+            payment_type: "testing",
+            testing_request_id: "tr-9",
+            reciprocity_request_id: "rr-9",
+            application_id: "app-9",
+            member_id: "user-1",
+          },
+        },
+      },
+    });
+    await POST(req());
+    expect(adminClient.calls.find((c) => c.table === "testing_requests")).toBeUndefined();
+    expect(adminClient.calls.find((c) => c.table === "reciprocity_requests")).toBeUndefined();
+    expect(adminClient.calls.find((c) => c.table === "applications")).toBeUndefined();
+  });
+
+  it("skips an unpaid (delayed payment method) session and records nothing yet", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_unpaid",
+      type: "checkout.session.completed",
+      data: {
+        object: { id: "cs_unpaid", client_reference_id: "user-1", payment_status: "unpaid", amount_total: 15000, currency: "usd", mode: "payment", metadata: { form_type: "invoice", invoice_id: "inv-1", member_id: "user-1" } },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(adminClient.calls.find((c) => c.table === "payments" && c.op === "insert")).toBeUndefined();
+    expect(adminClient.calls.find((c) => c.table === "invoices" && c.op === "update")).toBeUndefined();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("records the payment before any side effect and stops on a duplicate insert", async () => {
+    adminClient = makeAdmin();
+    adminClient.from = vi.fn((table: string) => {
+      const b: Record<string, unknown> = {};
+      b.insert = (payload: unknown) => {
+        adminClient.calls.push({ table, op: "insert", payload });
+        return table === "payments" ? { error: { code: "23505", message: "duplicate key value violates unique constraint" } } : { error: null };
+      };
+      b.update = (payload: unknown) => { adminClient.calls.push({ table, op: "update", payload }); return b; };
+      b.select = () => b; b.eq = () => b; b.in = () => b;
+      b.maybeSingle = async () => ({ data: null });
+      return b;
+    }) as typeof adminClient.from;
+    constructEvent.mockReturnValue({
+      id: "evt_dup_race",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_dup", client_reference_id: "user-1", amount_total: 15000, currency: "usd", mode: "payment", metadata: { form_type: "invoice", invoice_id: "inv-1", member_id: "user-1" } } },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ duplicate: true });
+    expect(adminClient.calls.find((c) => c.table === "invoices" && c.op === "update")).toBeUndefined();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 so Stripe retries when the payments insert fails for a real reason", async () => {
+    adminClient = makeAdmin();
+    adminClient.from = vi.fn((table: string) => {
+      const b: Record<string, unknown> = {};
+      b.insert = () => (table === "payments" ? { error: { code: "XX000", message: "connection refused" } } : { error: null });
+      b.update = () => b; b.select = () => b; b.eq = () => b; b.in = () => b;
+      b.maybeSingle = async () => ({ data: null });
+      return b;
+    }) as typeof adminClient.from;
+    constructEvent.mockReturnValue({
+      id: "evt_db_down",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_db", client_reference_id: "user-1", amount_total: 15000, currency: "usd", mode: "payment", metadata: { form_type: "general_payment", member_id: "user-1" } } },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(500);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("closes the intake record when a checkout session expires", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_expired",
+      type: "checkout.session.expired",
+      data: { object: { id: "cs_exp", metadata: { payment_submission_id: "ps-77" } } },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    const update = adminClient.calls.find((c) => c.table === "payment_submissions" && c.op === "update");
+    expect(update?.payload).toMatchObject({ status: "cancelled", stripe_session_id: "cs_exp" });
+    expect(adminClient.calls.find((c) => c.table === "payments")).toBeUndefined();
   });
 
   it("writes a payment row on invoice.paid (renewal)", async () => {

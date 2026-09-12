@@ -11,6 +11,7 @@ import {
   Sparkles,
   ShieldCheck,
   Quote,
+  ArrowRight,
 } from "lucide-react";
 import { Section } from "@/components/section";
 import { StatCard } from "@/components/stat-card";
@@ -130,6 +131,25 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* New credential announcement */}
+      <Section compact className="bg-surface">
+        <div className="flex flex-col gap-5 rounded-2xl border border-brand/15 bg-gradient-to-br from-brand/[0.06] to-surface p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.08] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-brand">
+              New Credential · IC&amp;RC PR-A Reciprocal
+            </span>
+            <h3 className="mt-3">Certified Peer Recovery Specialist–Associate (CPRS-A)</h3>
+            <p className="mt-2 max-w-2xl text-muted">
+              Arizona&apos;s entry-level peer credential. No degree and no experience hours required — and your
+              training and supervised practice count toward the full CPRS.
+            </p>
+          </div>
+          <CtaButton href="/initial-certification#cprs-a" size="lg" className="shrink-0 whitespace-nowrap">
+            Learn about the CPRS-A <ArrowRight className="h-4 w-4" aria-hidden />
+          </CtaButton>
+        </div>
+      </Section>
 
       {/* Stat band */}
       <section className="relative z-10 px-4 pb-14 pt-6 sm:-mt-5 sm:px-6 sm:pt-0 lg:-mt-7 lg:px-8">

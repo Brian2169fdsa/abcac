@@ -342,6 +342,33 @@ export default function InitialCertificationPage() {
             ))}
           </div>
 
+          {/* CPRS-A: new entry-level pathway, announced ahead of the full requirements/application
+              packet. Anchor target for the homepage banner — kept honest rather than inventing
+              hours, forms, or a fee that ABCAC has not yet published. */}
+          <div id="cprs-a" className="mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-brand/15 bg-surface shadow-[0_18px_45px_-38px_rgba(13,34,63,0.5)]">
+            <div className="h-1.5 bg-brand" />
+            <div className="p-6 sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand">CPRS-A</span>
+                  <h3 className="mt-4 text-xl">Certified Peer Recovery Specialist–Associate</h3>
+                </div>
+                <span className="rounded-full border border-brand/20 bg-brand/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand">New · Details coming soon</span>
+              </div>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+                Arizona&apos;s entry-level peer credential (IC&amp;RC PR-A Reciprocal). No degree and no experience
+                hours required — and your training and supervised practice count toward the full CPRS.
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-muted">
+                ABCAC is finalizing the full requirements, application manual, and fee for CPRS-A. Contact our office
+                to be notified as soon as the application opens, or to ask whether your current training qualifies.
+              </p>
+              <CtaButton href="/contact" variant="outline" className="mt-5">
+                Contact ABCAC about CPRS-A <ArrowRight className="h-4 w-4" aria-hidden />
+              </CtaButton>
+            </div>
+          </div>
+
           <div className="mt-8 grid gap-4 rounded-3xl bg-info p-6 text-white sm:p-8 md:grid-cols-3">
             {[
               { icon: FileCheck2, title: "Application guidance", text: "Complete the general and credential-specific forms, upload required documents, and submit payment." },

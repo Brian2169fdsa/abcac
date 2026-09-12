@@ -22,13 +22,16 @@ export function CreateInvoiceForm({ members, defaultMemberId }: { members: Membe
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const invoiceNumber = "INV-" + Date.now().toString(36).toUpperCase();
       const amount_cents = Math.round(amount * 100);
-      const { error } = await supabase.from("invoices").insert({
-        member_id: memberId, invoice_number: invoiceNumber, description: desc,
-        amount_cents, status: "unpaid",
-      });
+      // invoice_number is assigned atomically by the DB (set_invoice_number
+      // trigger / invoice_number_seq) — never computed client-side.
+      const { data: inserted, error } = await supabase
+        .from("invoices")
+        .insert({ member_id: memberId, description: desc, amount_cents, status: "unpaid" })
+        .select("invoice_number")
+        .single();
       if (error) { setMsg("Failed: " + error.message); return; }
+      const invoiceNumber = inserted?.invoice_number ?? "invoice";
       try {
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.from("admin_audit_log").insert({

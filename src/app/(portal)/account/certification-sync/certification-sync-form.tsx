@@ -1,22 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 import Link from "next/link";
-import { CheckCircle2, Download, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Download, Loader2, Upload } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { saveCertificationSync, type CertificationSyncInput, type SyncCredentialInput } from "./save-certification-sync";
+import { buildCertSyncPlan, type SyncEligibleCertification } from "@/lib/cert-sync";
+import { saveCertificationSync, type CertificationSyncInput } from "./save-certification-sync";
 
 const field = "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
-const emptyCredential = (): SyncCredentialInput => ({ type: "", number: "", expirationDate: "" });
+
+type StoredPlan = {
+  targetExpiration: string;
+  items: Array<{ id: string; certType: string | null; certNumber: string | null; oldExpiration: string; monthsForward: number }>;
+  totalMonths: number;
+  totalFeeCents: number;
+};
 
 type Details = {
   submissionMode?: "digital" | "paper";
   fullName?: string;
   phone?: string;
-  credentials?: SyncCredentialInput[];
-  monthsForward?: number;
-  targetExpirationDate?: string;
+  plan?: StoredPlan | null;
   paperDocumentPath?: string | null;
   paperFileName?: string | null;
 };
@@ -33,26 +40,29 @@ function readDetails(request: ExistingRequest): Details {
   try { return JSON.parse(request.member_notes) as Details; } catch { return {}; }
 }
 
+function fmtDate(d: string) {
+  return new Date(d + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
 export function CertificationSyncForm({
   request,
+  certifications,
   preferredMode,
-  preferredMonths,
   profile,
 }: {
   request: ExistingRequest;
+  certifications: SyncEligibleCertification[];
   preferredMode: "digital" | "paper";
-  preferredMonths: number;
   profile: { fullName: string; phone: string };
 }) {
   const saved = readDetails(request);
   const [requestId, setRequestId] = useState(request?.id ?? null);
   const [requestStatus, setRequestStatus] = useState(request?.status ?? "draft");
+  const [savedPlan, setSavedPlan] = useState<StoredPlan | null>(saved.plan ?? null);
   const [mode, setMode] = useState<"digital" | "paper">(saved.submissionMode ?? preferredMode);
   const [fullName, setFullName] = useState(saved.fullName ?? profile.fullName);
   const [phone, setPhone] = useState(saved.phone ?? profile.phone);
-  const [credentials, setCredentials] = useState<SyncCredentialInput[]>(saved.credentials?.length ? saved.credentials : [emptyCredential(), emptyCredential()]);
-  const [monthsForward, setMonthsForward] = useState(saved.monthsForward ?? preferredMonths);
-  const [targetExpirationDate, setTargetExpirationDate] = useState(saved.targetExpirationDate ?? "");
+  const [selectedIds, setSelectedIds] = useState<string[]>(saved.plan?.items.map((item) => item.id) ?? []);
   const [signatureName, setSignatureName] = useState(request?.signature_name ?? "");
   const [paperDocumentPath, setPaperDocumentPath] = useState(saved.paperDocumentPath ?? null);
   const [paperFileName, setPaperFileName] = useState(saved.paperFileName ?? null);
@@ -62,11 +72,18 @@ export function CertificationSyncForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const total = Math.max(1, monthsForward) * 15;
   const pending = requestStatus === "submitted" || requestStatus === "under_review";
 
-  function updateCredential(index: number, patch: Partial<SyncCredentialInput>) {
-    setCredentials((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
+  // Live preview computed the same way the server will compute it authoritatively
+  // on save — nothing here is trusted for the actual charge.
+  const preview = useMemo(() => {
+    const selected = certifications.filter((c) => selectedIds.includes(c.id));
+    const result = buildCertSyncPlan(selected);
+    return result.ok ? result.plan : null;
+  }, [certifications, selectedIds]);
+
+  function toggle(id: string) {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : current.length >= 6 ? current : [...current, id]));
   }
 
   async function uploadPaperFile() {
@@ -104,9 +121,7 @@ export function CertificationSyncForm({
       submissionMode: mode,
       fullName,
       phone,
-      credentials,
-      monthsForward,
-      targetExpirationDate,
+      certificationIds: selectedIds,
       signatureName,
       paperDocumentPath: uploaded?.path ?? paperDocumentPath,
       paperFileName: uploaded?.fileName ?? paperFileName,
@@ -127,8 +142,9 @@ export function CertificationSyncForm({
       if (!result.ok) throw new Error(result.error);
       setRequestId(result.id);
       setRequestStatus(result.status);
+      setSavedPlan(result.plan);
       setMessage(status === "draft" ? "Draft saved. You can safely leave and return later." : "Request submitted. Continue to secure payment to complete the request.");
-      return result.id;
+      return { id: result.id, plan: result.plan };
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to save your request.");
       return null;
@@ -137,8 +153,10 @@ export function CertificationSyncForm({
     }
   }
 
-  async function checkout(id = requestId) {
-    if (!id) return;
+  async function checkout(id: string | null, plan: StoredPlan | null) {
+    if (!id || !paymentsEnabled) return;
+    const months = plan?.totalMonths ?? savedPlan?.totalMonths;
+    if (!months) return;
     setError(null);
     setBusy("pay");
     try {
@@ -147,13 +165,13 @@ export function CertificationSyncForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: "certification-sync",
-          quantity: monthsForward,
+          quantity: months,
           syncApplicationId: id,
         }),
       });
       const data = await response.json();
       if (!response.ok || !data.url) {
-        if (["payments_not_configured", "price_not_found"].includes(data.error)) {
+        if (["payments_not_configured", "price_not_found", "payments_paused"].includes(data.error)) {
           setMessage("Your request is saved and visible to ABCAC. Online payment is coming soon; staff can follow up without you re-entering the form.");
           return;
         }
@@ -168,20 +186,62 @@ export function CertificationSyncForm({
   }
 
   async function submitAndPay() {
-    const id = pending ? requestId : await save("submitted");
-    if (id) await checkout(id);
+    if (pending) { await checkout(requestId, savedPlan); return; }
+    const result = await save("submitted");
+    if (result) await checkout(result.id, result.plan);
+  }
+
+  // Not enough active credentials to sync at all — say so plainly rather than
+  // showing a checklist that can never produce a valid request.
+  if (mode === "digital" && certifications.length < 2 && !pending) {
+    return (
+      <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
+        <h2 className="text-2xl">You need two active credentials to sync</h2>
+        <p className="mt-2 text-muted">
+          Certification Sync aligns two or more of your active ABCAC credentials to a single renewal date.{" "}
+          {certifications.length === 0
+            ? "Your account doesn't show any active certifications yet."
+            : "Your account shows only one active certification right now."}
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/account/certifications" className={buttonVariants({ variant: "outline" })}>View your certifications</Link>
+          <button type="button" onClick={() => setMode("paper")} className="text-sm font-semibold text-brand hover:underline self-center">
+            Or upload a completed paper request instead →
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (pending) {
+    const total = savedPlan ? savedPlan.totalFeeCents / 100 : 0;
     return (
       <div className="rounded-2xl border border-success/30 bg-success/5 p-6 sm:p-8">
         <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
         <h2 className="mt-4 text-2xl">Your sync request is saved</h2>
-        <p className="mt-2 text-muted">ABCAC can now see this request in the admin queue. Complete the one-time ${total.toFixed(2)} payment if you have not already paid.</p>
+        {savedPlan ? (
+          <>
+            <p className="mt-2 text-muted">
+              ABCAC will align {savedPlan.items.length} credential{savedPlan.items.length !== 1 ? "s" : ""} to a new expiration
+              date of <strong>{fmtDate(savedPlan.targetExpiration)}</strong> once approved. Complete the one-time ${total.toFixed(2)} payment if you have not already paid.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm">
+              {savedPlan.items.map((item) => (
+                <li key={item.id} className="flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5">
+                  <span className="font-semibold">{item.certType ?? "Credential"}{item.certNumber ? ` · ${item.certNumber}` : ""}</span>
+                  <span className="text-muted">{fmtDate(item.oldExpiration)} {item.monthsForward > 0 ? `→ ${fmtDate(savedPlan.targetExpiration)} (${item.monthsForward} mo.)` : "(already at target)"}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="mt-2 text-muted">ABCAC can now see this paper request in the admin queue.</p>
+        )}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" onClick={() => checkout()} disabled={busy === "pay"}>{busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Pay $${total.toFixed(2)} securely`}</Button>
+          {paymentsEnabled && savedPlan && <Button size="lg" onClick={() => checkout(requestId, savedPlan)} disabled={busy === "pay"}>{busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Pay $${total.toFixed(2)} securely`}</Button>}
           <Link href="/account/applications" className={buttonVariants({ variant: "outline", size: "lg" })}>Track request status</Link>
         </div>
+        {!paymentsEnabled && <div className="mt-6"><PaymentsPausedNotice compact /></div>}
         {message && <p className="mt-4 rounded-lg border border-line bg-surface p-3 text-sm text-muted">{message}</p>}
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       </div>
@@ -202,20 +262,41 @@ export function CertificationSyncForm({
 
       {mode === "digital" ? (
         <div className="mt-7">
-          <div className="flex items-center justify-between gap-4">
-            <div><h3>Certifications to synchronize</h3><p className="mt-1 text-sm text-muted">Enter at least two active ABCAC credentials.</p></div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setCredentials((current) => [...current, emptyCredential()])} disabled={credentials.length >= 6}><Plus className="h-4 w-4" aria-hidden /> Add</Button>
+          <div>
+            <h3>Certifications to synchronize</h3>
+            <p className="mt-1 text-sm text-muted">Select two or more of your active credentials. The one expiring soonest moves forward to match the latest.</p>
           </div>
-          <div className="mt-4 space-y-3">
-            {credentials.map((credential, index) => (
-              <div key={index} className="grid gap-3 rounded-xl border border-line bg-bg p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
-                <label><span className="mb-1 block text-xs font-semibold text-muted">Credential type</span><input value={credential.type} onChange={(event) => updateCredential(index, { type: event.target.value })} className={field} placeholder="CADAC, CCJP, AADC…" /></label>
-                <label><span className="mb-1 block text-xs font-semibold text-muted">Certification number</span><input value={credential.number} onChange={(event) => updateCredential(index, { number: event.target.value })} className={field} /></label>
-                <label><span className="mb-1 block text-xs font-semibold text-muted">Expiration date</span><input type="date" value={credential.expirationDate} onChange={(event) => updateCredential(index, { expirationDate: event.target.value })} className={field} /></label>
-                <Button type="button" variant="ghost" className="h-11 w-11 self-end px-0" onClick={() => setCredentials((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={credentials.length <= 2} aria-label={`Remove certification ${index + 1}`}><Trash2 className="h-4 w-4" aria-hidden /></Button>
+          <div className="mt-4 space-y-2">
+            {certifications.map((cert) => {
+              const checked = selectedIds.includes(cert.id);
+              return (
+                <label key={cert.id} className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-4 transition-colors ${checked ? "border-brand bg-brand/[0.04]" : "border-line bg-bg"}`}>
+                  <span className="flex items-center gap-3">
+                    <input type="checkbox" className="h-4 w-4 accent-brand" checked={checked} onChange={() => toggle(cert.id)} />
+                    <span>
+                      <span className="block font-semibold text-ink">{cert.cert_type ?? "Credential"}{cert.cert_number ? ` · ${cert.cert_number}` : ""}</span>
+                      <span className="block text-xs text-muted">Expires {cert.expiration_date ? fmtDate(cert.expiration_date) : "—"}</span>
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          {preview && (
+            <div className="mt-5 rounded-xl border border-accent/30 bg-accent/10 p-5">
+              <p className="font-semibold text-ink">New expiration date for all selected credentials: {fmtDate(preview.targetExpiration)}</p>
+              <ul className="mt-3 space-y-1.5 text-sm text-muted">
+                {preview.items.map((item) => (
+                  <li key={item.id}>{item.certType ?? "Credential"}: {fmtDate(item.oldExpiration)} {item.monthsForward > 0 ? `→ moves forward ${item.monthsForward} month${item.monthsForward !== 1 ? "s" : ""}` : "(no change — already at target)"}</li>
+                ))}
+              </ul>
+              <div className="mt-4 flex items-center justify-between border-t border-accent/30 pt-4">
+                <span className="font-semibold">One-time synchronization fee</span>
+                <span className="text-2xl font-bold text-brand">${(preview.totalFeeCents / 100).toFixed(2)}</span>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-7 rounded-xl border border-line bg-bg p-5">
@@ -230,17 +311,10 @@ export function CertificationSyncForm({
         </div>
       )}
 
-      <div className="mt-7 grid gap-4 rounded-xl border border-accent/30 bg-accent/10 p-5 sm:grid-cols-2">
-        <label><span className="mb-1.5 block text-sm font-semibold">Months moved forward *</span><input type="number" min="1" max="120" value={monthsForward} onChange={(event) => setMonthsForward(Math.max(1, Number(event.target.value) || 1))} className={field} /></label>
-        <label><span className="mb-1.5 block text-sm font-semibold">Requested unified expiration date</span><input type="date" value={targetExpirationDate} onChange={(event) => setTargetExpirationDate(event.target.value)} className={field} /></label>
-        <div className="sm:col-span-2 flex items-center justify-between gap-4 border-t border-accent/30 pt-4"><span className="font-semibold">One-time synchronization fee</span><span className="text-2xl font-bold text-brand">${total.toFixed(2)}</span></div>
-      </div>
-
       {mode === "digital" && (
         <div className="mt-7 rounded-xl border border-line bg-bg p-5">
-          <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={attested} onChange={(event) => setAttested(event.target.checked)} className="mt-1 h-4 w-4" /><span className="text-muted">I request that ABCAC synchronize the listed credentials, and I certify that the information is accurate.</span></label>
+          <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={attested} onChange={(event) => setAttested(event.target.checked)} className="mt-1 h-4 w-4" /><span className="text-muted">I request that ABCAC synchronize the selected credentials, and I certify that the information is accurate.</span></label>
           <label className="mt-4 block"><span className="mb-1.5 block text-sm font-semibold">Electronic signature (type your full name) *</span><input value={signatureName} onChange={(event) => setSignatureName(event.target.value)} className={field} /></label>
-          <p className="mt-3 text-xs text-muted">Third-party attestations and multi-signer routing are coming soon. This request does not require an outside attestor.</p>
         </div>
       )}
 
@@ -248,7 +322,9 @@ export function CertificationSyncForm({
       {error && <p className="mt-5 text-sm text-red-600">{error}</p>}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Button type="button" variant="outline" size="lg" onClick={() => save("draft")} disabled={busy !== null}>{busy === "save" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save draft"}</Button>
-        <Button type="button" size="lg" onClick={submitAndPay} disabled={busy !== null}>{busy === "submit" || busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : `Submit and pay $${total.toFixed(2)}`}</Button>
+        <Button type="button" size="lg" onClick={submitAndPay} disabled={busy !== null || (mode === "digital" && !preview)}>
+          {busy === "submit" || busy === "pay" ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : paymentsEnabled && preview ? `Submit and pay $${(preview.totalFeeCents / 100).toFixed(2)}` : "Submit request"}
+        </Button>
       </div>
       <p className="mt-3 text-xs text-muted">Your draft and documents are stored privately in your ABCAC account.</p>
     </div>

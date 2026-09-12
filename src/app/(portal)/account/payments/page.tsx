@@ -6,6 +6,8 @@ import { PageHero } from "@/components/page-hero";
 import { Section } from "@/components/section";
 import { PortalProductPay } from "@/components/portal-product-pay";
 import { buttonVariants } from "@/components/ui/button";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 import {
   applicationTypeForProduct,
   productRequiresApplication,
@@ -71,7 +73,8 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
         intro="Pay ABCAC fees securely from your account. Your details are pre-filled, every payment is attached to your member record, and receipts appear under Invoices & Receipts."
       />
       <Section compact>
-        {invalidApplicationPayment && (
+        {!paymentsEnabled && <div className="mb-8"><PaymentsPausedNotice /></div>}
+        {paymentsEnabled && invalidApplicationPayment && (
           <div className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
             <p className="font-bold">Submit the related form before paying this fee.</p>
             <p className="mt-1 leading-relaxed">
@@ -91,7 +94,7 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
           <Link className="font-semibold text-brand hover:text-brand-600" href="/account/invoices">Invoices &amp; receipts</Link>
         </div>
 
-        <div className="space-y-10">
+        {paymentsEnabled && <div className="space-y-10">
           {categories.map((category) => (
             <div key={category}>
               <h2 className="mb-4 text-2xl">{category}</h2>
@@ -108,7 +111,7 @@ export default async function PortalPaymentsPage({ searchParams }: { searchParam
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         <div className="mt-10 rounded-xl border border-line bg-bg p-5 text-sm text-muted">
           Prefer to pay by check or money order? Mail it payable to &ldquo;ABCAC&rdquo; at PO Box 83165, Phoenix, AZ 85071 —

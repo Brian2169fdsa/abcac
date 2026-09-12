@@ -6,6 +6,9 @@ import { CtaButton } from "@/components/cta-button";
 import { ApplicationsStatusChip } from "@/components/account/applications-status-chip";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { paymentOptionsForApplication } from "@/lib/portal-routing";
+import { getWorkflowForApplication } from "@/lib/form-library";
+import { paymentsEnabled } from "@/lib/feature-flags";
+import { PaymentsPausedNotice } from "@/components/payments-paused-notice";
 
 export const metadata = { title: "Application Status" };
 export const dynamic = "force-dynamic";
@@ -14,7 +17,6 @@ interface Application {
   id: string; app_type: string | null; cert_type: string | null; status: string | null;
   submitted_at: string | null; reviewed_at: string | null; est_completion: string | null; admin_notes: string | null;
 }
-interface Payment { slug: string | null; product_name: string | null; created_at: string | null; }
 interface PaymentSubmission { linked_record_id: string | null; status: string | null; }
 
 function fmt(d: string | null) {
@@ -35,17 +37,32 @@ function stageIndex(status: string | null): number {
   }
 }
 
-// Loosely associate a recorded payment with an application by type.
-function feePaid(applicationId: string, appType: string | null, payments: Payment[], submissions: PaymentSubmission[]): boolean {
-  if (submissions.some((submission) => submission.linked_record_id === applicationId && submission.status === "paid")) return true;
-  const slugs = payments.map((p) => p.slug ?? "");
-  if (appType === "cert_sync") return slugs.includes("certification-sync");
-  if (appType === "renewal") return slugs.some((s) => s.includes("renewal"));
-  if (appType === "initial") return slugs.some((s) => s.startsWith("initial-certification") || s.includes("certification-only"));
-  return payments.length > 0;
+// Exact match only: a payment_submissions row whose linked_record_id is this
+// exact application, paid. (Every application-fee checkout requires this link
+// server-side — see productRequiresApplication in the checkout route — so
+// there is no longer a legacy case to fall back to a same-type/any-payment
+// guess for, which could mark the wrong one of two same-type applications paid.)
+function feePaid(applicationId: string, submissions: PaymentSubmission[]): boolean {
+  return submissions.some((submission) => submission.linked_record_id === applicationId && submission.status === "paid");
+}
+
+/** Deep link back into the workspace (or dedicated page) that owns this application. */
+function workspaceHref(a: Application): { href: string; label: string } | null {
+  if (a.app_type === "cert_sync") return { href: "/account/certification-sync", label: "View sync request" };
+  const workflow = getWorkflowForApplication(a.app_type, a.cert_type);
+  if (!workflow) return null;
+  const href = `/account/forms?workflow=${encodeURIComponent(workflow.key)}&application=${encodeURIComponent(a.id)}`;
+  return a.status === "draft" ? { href, label: "Continue application" } : { href, label: "View packet" };
 }
 
 function Timeline({ status }: { status: string | null }) {
+  if (status === "draft") {
+    return (
+      <div className="rounded-lg border border-dashed border-line bg-bg px-4 py-3 text-sm text-muted">
+        Draft — not yet submitted to ABCAC. Continue the application to finish and submit it.
+      </div>
+    );
+  }
   const rejected = status === "rejected";
   const idx = stageIndex(status);
   if (rejected) {
@@ -85,14 +102,12 @@ export default async function ApplicationsPage() {
   const __authUserId = await requireUserId();
   const uid = __authUserId;
 
-  const [{ data: apps }, { data: pays }, { data: paymentSubmissions }, { count: docCount }] = await Promise.all([
+  const [{ data: apps }, { data: paymentSubmissions }, { count: docCount }] = await Promise.all([
     supabase.from("applications").select("*").eq("member_id", uid).order("submitted_at", { ascending: false }),
-    supabase.from("payments").select("slug,product_name,created_at").eq("member_id", uid),
     supabase.from("payment_submissions").select("linked_record_id,status").eq("member_id", uid).eq("linked_record_type", "applications"),
     supabase.from("documents").select("*", { count: "exact", head: true }).eq("member_id", uid),
   ]);
   const applications = (apps as Application[]) ?? [];
-  const payments = (pays as Payment[]) ?? [];
   const submissions = (paymentSubmissions as PaymentSubmission[]) ?? [];
 
   return (
@@ -114,9 +129,12 @@ export default async function ApplicationsPage() {
                 <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-display text-lg font-bold text-ink">{title(a.app_type)}{a.cert_type ? ` — ${a.cert_type}` : ""}</h3>
-                    <p className="text-sm text-muted">Submitted {fmt(a.submitted_at)}</p>
+                    <p className="text-sm text-muted">{a.status === "draft" || !a.submitted_at ? "Saved draft" : `Submitted ${fmt(a.submitted_at)}`}</p>
                   </div>
-                  <ApplicationsStatusChip status={a.status} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(() => { const link = workspaceHref(a); return link ? <CtaButton href={link.href} size="sm" variant={a.status === "draft" ? "primary" : "outline"}>{link.label}</CtaButton> : null; })()}
+                    <ApplicationsStatusChip status={a.status} />
+                  </div>
                 </div>
 
                 <Timeline status={a.status} />
@@ -126,12 +144,12 @@ export default async function ApplicationsPage() {
                     <div className="text-muted">Fee</div>
                     <div
                       className={`font-semibold ${
-                        feePaid(a.id, a.app_type, payments, submissions)
+                        feePaid(a.id, submissions)
                           ? "text-success"
                           : "text-amber-600"
                       }`}
                     >
-                      {feePaid(a.id, a.app_type, payments, submissions) ? "Paid" : "Not recorded"}
+                      {feePaid(a.id, submissions) ? "Paid" : "Not recorded"}
                     </div>
                   </div>
                   <div className="rounded-lg border border-line bg-bg p-3 text-sm">
@@ -151,7 +169,10 @@ export default async function ApplicationsPage() {
                   </div>
                 )}
 
-                {(a.status === null || a.status === "submitted") && !feePaid(a.id, a.app_type, payments, submissions) && (
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id).length > 0 && (
+                  <div className="mt-4"><PaymentsPausedNotice compact /></div>
+                )}
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && paymentsEnabled && (
                   <div className="mt-4 rounded-xl border border-brand/15 bg-brand/[0.04] p-4">
                     <p className="text-sm font-semibold text-ink">Complete the payment linked to this application</p>
                     <p className="mt-1 text-sm text-muted">Choose the correct option below. The payment will be recorded against this exact application.</p>

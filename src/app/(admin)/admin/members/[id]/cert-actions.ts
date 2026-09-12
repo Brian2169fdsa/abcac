@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { isAdminRole } from "@/lib/auth/roles";
+import { applyCertSyncPlan } from "@/lib/automation/workflows/cert-sync-apply";
 
 // Certification lifecycle actions for the member-detail page. Closes parity gap
 // B5: admins can ISSUE a cert (issue-cert-form) but previously could not
@@ -185,5 +186,50 @@ export async function toggleCertSync(
   }
 
   revalidatePath(MEMBER_PAGE(memberId));
+  return { ok: true };
+}
+
+/**
+ * Applies a paid/under-review Certification Sync application: sets the
+ * target expiration date the member's own certifications computed at
+ * submission on every certification in that plan, flips sync_enabled, and
+ * approves the application. Delegates to applyCertSyncPlan() — the same
+ * function the automation executor (enable_cert_sync) uses — so the manual
+ * and automated paths can never disagree about what "apply the sync" means.
+ * ADMIN-GATED, audited, revalidates both the applications queue and (when
+ * known) the member cockpit.
+ */
+export async function applyCertSync(applicationId: string): Promise<ActionResult> {
+  if (!applicationId) return { ok: false, error: "bad_request" };
+
+  const caller = await requireCaller();
+  if (!caller.ok) return caller;
+  if (!isAdminRole(caller.role)) return { ok: false, error: "forbidden" };
+
+  const admin = createSupabaseAdminClient();
+  const { data: app } = await admin
+    .from("applications")
+    .select("id,member_id,app_type,status,member_notes")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!app) return { ok: false, error: "not_found" };
+
+  const result = await applyCertSyncPlan(admin, app);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  try {
+    await admin.from("admin_audit_log").insert({
+      admin_id: caller.userId,
+      action: "certification_sync_applied",
+      target_table: "applications",
+      target_id: applicationId,
+      details: { member_id: app.member_id, synced_cert_ids: result.appliedCertIds, target_expiration: result.targetExpiration },
+    });
+  } catch {
+    /* best-effort */
+  }
+
+  revalidatePath("/admin/applications");
+  if (app.member_id) revalidatePath(MEMBER_PAGE(app.member_id));
   return { ok: true };
 }

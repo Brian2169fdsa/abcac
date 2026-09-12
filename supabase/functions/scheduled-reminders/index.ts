@@ -1,3 +1,8 @@
+// RETIRED — do not deploy or schedule.
+// Reminders run from the Vercel cron (/api/cron/reminders → src/lib/reminders-runner.ts),
+// which deduplicates via reminder_log and delivers in-portal + email. Migration 047
+// removed this function's pg_cron schedule so the two engines can never double-send.
+// Kept only for reference during the transition.
 // ABCAC — scheduled-reminders Edge Function
 // Run daily by pg_cron. Sends:
 //   • Renewal reminders at 90, 60, and 30 days before a certification expires
@@ -16,7 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FROM = Deno.env.get("RESEND_FROM_EMAIL") ?? "noreply@abcac.org";
-const PORTAL = Deno.env.get("VERCEL_URL") ?? "https://portal.abcac.org";
+const PORTAL = (Deno.env.get("SITE_URL") ?? "https://abcac.org") + "/account";
 // Defaults used when a credential has no cert_schedules row (graceful fallback).
 const DEFAULT_REQUIRED_CEU_HOURS = 40;
 const REMINDER_DAYS = [90, 60, 30];

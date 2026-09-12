@@ -18,6 +18,8 @@ export type SaveDigitalApplicationInput = {
   documents: DigitalFormDocument[];
   paperDocumentPath?: string | null;
   paperFileName?: string | null;
+  /** testing:accommodations only — which of the member's own exam pre-registrations this request is for. */
+  testingRequestId?: string | null;
 };
 
 export type ActionResult = { ok: true; id: string; message?: string; shareUrl?: string } | { ok: false; error: string };
@@ -69,6 +71,20 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     return { ok: false, error: "Upload your completed paper packet before submitting it." };
   }
 
+  // testing:accommodations only — the linked exam pre-registration must belong
+  // to this member. Never trust the client's id past that ownership check.
+  let testingRequestId: string | null = null;
+  if (workflow.appType === "testing_accommodations" && input.testingRequestId) {
+    const { data: testingRequest } = await admin
+      .from("testing_requests")
+      .select("id")
+      .eq("id", input.testingRequestId)
+      .eq("member_id", memberId)
+      .maybeSingle();
+    if (!testingRequest) return { ok: false, error: "Select one of your own exam pre-registrations." };
+    testingRequestId = testingRequest.id;
+  }
+
   const details: DigitalApplicationDetails = {
     version: 1,
     requestKind: "digital_application_packet",
@@ -95,11 +111,14 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     app_type: workflow.appType,
     cert_type: workflow.certType,
     status: input.status,
-    submitted_at: input.status === "submitted" ? new Date().toISOString() : undefined,
+    // Drafts have not been submitted — leave the timestamp null so Application
+    // Status does not show a "Submitted" date on an unsent packet.
+    submitted_at: input.status === "submitted" ? new Date().toISOString() : null,
     member_notes: JSON.stringify(details),
     attested: input.status === "submitted" && submissionMode === "digital",
     attested_at: input.status === "submitted" && submissionMode === "digital" ? new Date().toISOString() : null,
     signature_name: documents.flatMap((document) => document.annotations).find((annotation) => annotation.type === "signature" && annotation.author === "applicant")?.value || null,
+    ...(workflow.appType === "testing_accommodations" ? { testing_request_id: testingRequestId } : {}),
   };
   const query = input.id
     ? admin.from("applications").update(row).eq("id", input.id).eq("member_id", memberId).select("id").single()
@@ -114,7 +133,7 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
       detail: `${submissionMode === "digital" ? "Digital" : "Uploaded paper"} packet ${data.id} submitted for admin review.`,
       priority: "high",
       status: "open",
-      visible_to_member: true,
+      visible_to_member: false,
     });
     void pushTaskToClickUp({
       title: `Review ${workflow.title}`,
@@ -124,7 +143,7 @@ export async function saveDigitalApplication(input: SaveDigitalApplicationInput)
     });
   }
 
-  revalidatePath(`/account/forms?workflow=${encodeURIComponent(workflow.key)}`);
+  revalidatePath("/account/forms");
   revalidatePath("/account/applications");
   revalidatePath("/admin/applications");
   return { ok: true, id: data.id };
@@ -194,4 +213,62 @@ export async function inviteApplicationSigner(input: {
   });
   revalidatePath("/account/forms");
   return { ok: true, id: data.id, shareUrl, message: sent ? "Invitation emailed." : "Invitation created. Copy the secure link to the signer." };
+}
+
+/** Withdraws a not-yet-signed signer invitation, freeing its reserved signature line for a new invite. */
+export async function revokeApplicationSigner(requestId: string): Promise<ActionResult> {
+  const memberId = await requireUserId();
+  const admin = createSupabaseAdminClient();
+  const { data: request } = await admin
+    .from("application_signer_requests")
+    .select("id,status")
+    .eq("id", requestId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (!request) return { ok: false, error: "Signer request not found." };
+  if (request.status === "signed") return { ok: false, error: "This signer has already submitted their section." };
+  if (request.status !== "revoked") {
+    const { error } = await admin.from("application_signer_requests").update({ status: "revoked" }).eq("id", requestId);
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/account/forms");
+  return { ok: true, id: requestId, message: "Signer invitation withdrawn." };
+}
+
+/** Re-invites a signer with a fresh secure link and a reset 30-day expiration, and re-sends the email. */
+export async function resendApplicationSigner(requestId: string): Promise<ActionResult> {
+  const memberId = await requireUserId();
+  const admin = createSupabaseAdminClient();
+  const { data: request } = await admin
+    .from("application_signer_requests")
+    .select("id,status,signer_name,signer_email,signer_role")
+    .eq("id", requestId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (!request) return { ok: false, error: "Signer request not found." };
+  if (request.status === "signed") return { ok: false, error: "This signer has already submitted their section." };
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const { error } = await admin
+    .from("application_signer_requests")
+    .update({
+      token_hash: tokenHash,
+      status: "invited",
+      invited_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      opened_at: null,
+    })
+    .eq("id", requestId);
+  if (error) return { ok: false, error: error.message };
+
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const shareUrl = `${origin}/sign/application/${token}`;
+  const sent = await sendEmail({
+    to: request.signer_email,
+    subject: `ABCAC ${request.signer_role} form request`,
+    html: `<p>Hello ${escapeHtml(request.signer_name)},</p><p>An ABCAC applicant has asked you to complete and sign a portion of an application packet as <strong>${escapeHtml(request.signer_role)}</strong>.</p><p><a href="${shareUrl}">Open the secure form request</a></p><p>This private link is intended only for you.</p>`,
+  });
+  revalidatePath("/account/forms");
+  return { ok: true, id: requestId, shareUrl, message: sent ? "New invitation emailed." : "New invitation created. Copy the secure link to the signer." };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MessageCircle, X, Loader2, Send, Sparkles, Paperclip, Mail } from "lucide-react";
+import { MessageCircle, X, Loader2, Send, Sparkles, Paperclip } from "lucide-react";
 import { Markdown } from "@/components/assistant/markdown";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -80,9 +80,6 @@ export function ChatWidget({ surface }: { surface: Surface }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [emailValue, setEmailValue] = useState("");
-  const [emailBusy, setEmailBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -203,45 +200,6 @@ export function ChatWidget({ surface }: { surface: Surface }) {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
-      scrollToBottom();
-    }
-  }
-
-  /** Website surface: email the conversation transcript to the visitor. */
-  async function exportTranscript() {
-    const email = emailValue.trim();
-    if (!email || emailBusy || messages.length === 0) return;
-    setNotice(null);
-    setEmailBusy(true);
-    try {
-      const res = await fetch("/api/assistant/export-transcript", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, messages: messages.map(({ role, content }) => ({ role, content })) }),
-      });
-      if (res.status === 503) {
-        setNotice("Emailing the transcript isn't set up yet — please copy the conversation for now.");
-        return;
-      }
-      if (res.status === 429) {
-        setNotice("Too many requests — please wait a moment and try again.");
-        return;
-      }
-      if (res.status === 400) {
-        setNotice("Please enter a valid email address.");
-        return;
-      }
-      if (!res.ok) {
-        setNotice("Couldn't send the email. Please try again.");
-        return;
-      }
-      setNotice(`Sent! Your conversation is on its way to ${email}.`);
-      setEmailOpen(false);
-      setEmailValue("");
-    } catch {
-      setNotice("Couldn't send the email. Check your connection and try again.");
-    } finally {
-      setEmailBusy(false);
       scrollToBottom();
     }
   }
@@ -373,51 +331,8 @@ export function ChatWidget({ surface }: { surface: Surface }) {
         )}
       </div>
 
-      {/* Website: email-this-conversation bar */}
-      {isWebsite && messages.length > 0 && (
-        <div className="border-t border-line bg-surface px-3 py-2">
-          {emailOpen ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="email"
-                value={emailValue}
-                onChange={(e) => setEmailValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && exportTranscript()}
-                placeholder="you@email.com"
-                className="h-9 flex-1 rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              />
-              <button
-                type="button"
-                onClick={exportTranscript}
-                disabled={emailBusy || !emailValue.trim()}
-                className="h-9 rounded-lg bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
-              >
-                {emailBusy ? "Sending…" : "Send"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEmailOpen(false)}
-                aria-label="Cancel"
-                className="rounded-lg p-1.5 text-muted hover:text-ink"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEmailOpen(true)}
-              className="flex items-center gap-1.5 text-[13px] font-medium text-brand hover:text-brand-600"
-            >
-              <Mail className="h-4 w-4" aria-hidden />
-              Email me this conversation
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Persistent suggestion chips (once the conversation has started) */}
-      {messages.length > 0 && !emailOpen && (
+      {messages.length > 0 && (
         <div className="flex gap-2 overflow-x-auto border-t border-line px-3 py-2">
           {suggestions.map((s) => (
             <button

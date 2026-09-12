@@ -17,7 +17,15 @@ export interface Prefs {
   renewal_reminders: boolean; ceu_deadline_alerts: boolean; abcac_announcements: boolean; icrc_updates: boolean;
 }
 
-export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: Prefs }) {
+export function ProfileForm({
+  profile,
+  namesLocked = false,
+}: {
+  profile: ProfileData;
+  prefs?: Prefs;
+  /** Approved accounts: legal name is pinned by the DB and changes go through a Name Change Request. */
+  namesLocked?: boolean;
+}) {
   const [savingInfo, setSavingInfo] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
@@ -34,8 +42,10 @@ export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: P
     const get = (n: string) => (f.elements.namedItem(n) as HTMLInputElement).value.trim() || null;
 
     // Required-field validation (matches the static member portal).
-    if (!get("first_name")) return flash("First name is required.");
-    if (!get("last_name")) return flash("Last name is required.");
+    if (!namesLocked) {
+      if (!get("first_name")) return flash("First name is required.");
+      if (!get("last_name")) return flash("Last name is required.");
+    }
     if (!get("phone")) return flash("Phone number is required.");
 
     // SSN last-4: accept only 4 digits; never log the value.
@@ -47,8 +57,13 @@ export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: P
       const supabase = createSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      // Name columns are omitted for approved accounts: the guard trigger would
+      // silently revert them, and the form must not claim otherwise.
+      const nameFields = namesLocked
+        ? {}
+        : { first_name: get("first_name"), middle_name: get("middle_name"), last_name: get("last_name") };
       const { error } = await supabase.from("profiles").update({
-        first_name: get("first_name"), middle_name: get("middle_name"), last_name: get("last_name"),
+        ...nameFields,
         phone: get("phone"), date_of_birth: get("date_of_birth"), ssn_last4: ssnRaw,
         address_line1: get("address_line1"), city: get("city"), state: get("state"), zip_code: get("zip_code"),
       }).eq("id", user.id);
@@ -80,10 +95,17 @@ export function ProfileForm({ profile, prefs }: { profile: ProfileData; prefs: P
 
       <form onSubmit={saveInfo} className="rounded-xl border border-line bg-surface p-6">
         <h3 className="mb-4">Personal Information</h3>
+        {namesLocked && (
+          <p className="mb-4 rounded-lg border border-line bg-bg px-4 py-3 text-sm text-muted">
+            Your legal name is locked because it appears on your ABCAC credential. To change it, submit a{" "}
+            <a href="/account/requests#name-change" className="font-semibold text-brand">Name Change Request</a> with
+            supporting ID and staff will update your record.
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block"><span className="mb-1.5 block text-sm font-semibold">First name <span className="text-red-600">*</span></span><input name="first_name" required className={field} defaultValue={profile.first_name ?? ""} /></label>
-          <label className="block"><span className="mb-1.5 block text-sm font-semibold">Middle name</span><input name="middle_name" className={field} defaultValue={profile.middle_name ?? ""} /></label>
-          <label className="block"><span className="mb-1.5 block text-sm font-semibold">Last name <span className="text-red-600">*</span></span><input name="last_name" required className={field} defaultValue={profile.last_name ?? ""} /></label>
+          <label className="block"><span className="mb-1.5 block text-sm font-semibold">First name {!namesLocked && <span className="text-red-600">*</span>}</span><input name="first_name" required={!namesLocked} disabled={namesLocked} className={field} defaultValue={profile.first_name ?? ""} /></label>
+          <label className="block"><span className="mb-1.5 block text-sm font-semibold">Middle name</span><input name="middle_name" disabled={namesLocked} className={field} defaultValue={profile.middle_name ?? ""} /></label>
+          <label className="block"><span className="mb-1.5 block text-sm font-semibold">Last name {!namesLocked && <span className="text-red-600">*</span>}</span><input name="last_name" required={!namesLocked} disabled={namesLocked} className={field} defaultValue={profile.last_name ?? ""} /></label>
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">Email (login)</span><input className={field} value={profile.email ?? ""} disabled /></label>
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">Phone <span className="text-red-600">*</span></span><input name="phone" type="tel" required className={field} defaultValue={profile.phone ?? ""} /></label>
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">Date of birth</span><input name="date_of_birth" type="date" className={field} defaultValue={profile.date_of_birth ?? ""} /></label>

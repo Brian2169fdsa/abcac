@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CeuSubmitForm } from "@/components/ceu-submit-form";
+import { EditCeuForm, DeleteCeuButton } from "@/components/account/ceu-record-actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeCompliance, requirementsFromSchedule } from "@/lib/ceu-compliance";
 import { type CertSchedule, findScheduleFor } from "@/lib/schedules";
@@ -140,18 +141,26 @@ export default async function CeusPage() {
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3">Course</th><th className="px-4 py-3">Provider</th><th className="px-4 py-3">Hours</th>
-                  <th className="px-4 py-3">Category</th><th className="px-4 py-3">Completed</th><th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Category</th><th className="px-4 py-3">Completed</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((r) => (
-                  <tr key={r.id} className="border-b border-line last:border-0">
+                  <tr key={r.id} className="border-b border-line last:border-0 align-top">
                     <td className="px-4 py-3 text-ink">{r.course_name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{r.provider ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{r.hours ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{r.category ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">{fmt(r.completion_date)}</td>
                     <td className="px-4 py-3 capitalize text-muted">{r.status ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {r.status === "pending" && (
+                        <div className="flex flex-wrap gap-1">
+                          <EditCeuForm record={r} />
+                          <DeleteCeuButton id={r.id} />
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -168,6 +177,12 @@ export default async function CeusPage() {
                   <Field label="Completed">{fmt(r.completion_date)}</Field>
                   <Field label="Status"><span className="capitalize">{r.status ?? "—"}</span></Field>
                 </dl>
+                {r.status === "pending" && (
+                  <div className="mt-3 flex flex-wrap gap-1 border-t border-line pt-3">
+                    <EditCeuForm record={r} />
+                    <DeleteCeuButton id={r.id} />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

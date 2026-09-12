@@ -55,11 +55,10 @@ now"** on any member's detail page.
 - In-portal messages send as soon as `CRON_SECRET` is set; **emails** also need
   `RESEND_API_KEY` (section 3). Without Resend, reminders still appear in the
   member portal.
-- There is also a legacy Supabase Edge Function reminder path (migration 003 +
-  `supabase/functions/scheduled-reminders`). **Use one or the other, not both.**
-  The Vercel cron above is the recommended path (no Supabase CLI/Edge deploy).
-  The Edge cron is currently dormant (its Vault secrets are unset), so there's no
-  conflict unless you deploy and configure it.
+- The legacy Supabase Edge Function reminder path (migration 003 +
+  `supabase/functions/scheduled-reminders`) is **retired**: migration 047 removes
+  its pg_cron schedule. Do not deploy or re-schedule it — it has no dedupe log and
+  would double-send every reminder the Vercel cron already delivers.
 
 ---
 
@@ -69,12 +68,12 @@ Without these, checkout/sync/invoice routes return `503`.
 
 ### 2a. Seed products & prices (one-time, run locally)
 This creates a Stripe Product + Price for every catalog item and writes the
-price ids into `src/data/stripe-price-map.json`.
+price ids into `src/data/stripe-price-map.live.json` (test-mode keys write `stripe-price-map.test.json`). **The live map is empty until you run this — every live checkout returns 503 `price_not_found` until it is committed and deployed.**
 
 ```bash
 # from the repo root, with a checkout of main
 STRIPE_SECRET_KEY=sk_live_xxx npm run seed:stripe
-git add src/data/stripe-price-map.json
+git add src/data/stripe-price-map.live.json
 git commit -m "Seed Stripe price map"
 git push           # (open a PR / merge so prod has the price ids)
 ```

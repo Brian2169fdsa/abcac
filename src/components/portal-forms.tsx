@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { paymentsEnabled } from "@/lib/feature-flags";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -148,6 +149,30 @@ export function EditEmploymentForm({ record }: { record: EmploymentRecord }) {
   );
 }
 
+export function DeleteEmploymentButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  async function onDelete() {
+    if (!confirm("Delete this employment record? This cannot be undone.")) return;
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from("employment_records").delete().eq("id", id).eq("member_id", user.id);
+      if (error) { alert(error.message); return; }
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button size="sm" variant="ghost" onClick={onDelete} disabled={loading} className="text-red-600 hover:text-red-700">
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Delete"}
+    </Button>
+  );
+}
+
 // ─── Other certification (with optional supporting-document upload) ───
 export function AddOtherCertForm() {
   const router = useRouter();
@@ -285,6 +310,94 @@ export function AddSupervisionForm() {
         <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Add Record"}</Button>
       </form>
     </Collapsible>
+  );
+}
+
+export interface SupervisionRecordForEdit {
+  id: string;
+  supervisee_name: string | null;
+  supervisee_credential: string | null;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+// Inline edit for a supervision record the member provides (supervisor_id = them).
+// Does not touch supervisee_member_id — that link is only resolved at creation.
+export function EditSupervisionForm({ record }: { record: SupervisionRecordForEdit }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const f = e.currentTarget;
+    const g = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
+    const end = g("end").value;
+    const payload = {
+      supervisee_name: g("name").value.trim(),
+      supervisee_credential: g("cred").value.trim() || null,
+      start_date: g("start").value || null,
+      end_date: end || null,
+      status: end ? "completed" : "active",
+    };
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Session expired — sign in again."); return; }
+      const { error: updErr } = await supabase.from("supervision_records").update(payload).eq("id", record.id).eq("supervisor_id", user.id);
+      if (updErr) throw updErr;
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!open) return <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Edit</Button>;
+  return (
+    <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-line bg-surface p-6">
+      <h3>Edit Supervision Record</h3>
+      <label className="block"><span className={labelCls}>Supervisee name *</span><input name="name" className={field} required defaultValue={record.supervisee_name ?? ""} /></label>
+      <label className="block"><span className={labelCls}>Supervisee credential</span><input name="cred" className={field} placeholder="e.g. CAC applicant" defaultValue={record.supervisee_credential ?? ""} /></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block"><span className={labelCls}>Start date</span><input name="start" type="date" className={field} defaultValue={record.start_date ?? ""} /></label>
+        <label className="block"><span className={labelCls}>End date</span><input name="end" type="date" className={field} defaultValue={record.end_date ?? ""} /></label>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "Save Changes"}</Button>
+        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+      </div>
+    </form>
+  );
+}
+
+export function DeleteSupervisionButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  async function onDelete() {
+    if (!confirm("Delete this supervision record? This cannot be undone.")) return;
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from("supervision_records").delete().eq("id", id).eq("supervisor_id", user.id);
+      if (error) { alert(error.message); return; }
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button size="sm" variant="ghost" onClick={onDelete} disabled={loading} className="text-red-600 hover:text-red-700">
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Delete"}
+    </Button>
   );
 }
 
@@ -465,7 +578,8 @@ export function ReciprocityForm() {
       if (!isOut) { setDone("into"); router.refresh(); return; }
 
       // OUT of Arizona: start the $150 credit-card Stripe Checkout. Degrade
-      // gracefully if payments aren't configured/seeded.
+      // gracefully if payments aren't configured/seeded, or are paused for launch.
+      if (!paymentsEnabled) { setDone("out_invoice"); router.refresh(); return; }
       try {
         const res = await fetch("/api/stripe/checkout", {
           method: "POST",
@@ -511,11 +625,11 @@ export function ReciprocityForm() {
       </label>
       <label className="block"><span className={labelCls}>Reason / notes</span><input name="reason" className={field} /></label>
       {isOut
-        ? <p className="text-sm text-muted">A <strong>$150 IC&amp;RC transfer fee</strong> applies and is paid by credit card after you submit.</p>
+        ? <p className="text-sm text-muted">A <strong>$150 IC&amp;RC transfer fee</strong> applies{paymentsEnabled ? " and is paid by credit card after you submit." : ". Online payment opens shortly; ABCAC will confirm how to pay."}</p>
         : <p className="text-sm text-muted">Inbound transfers carry <strong>no fee</strong>. ABCAC will review your notice and follow up.</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <Button type="submit" disabled={loading}>
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : isOut ? "Submit & Pay $150" : "Submit Inbound Notice"}
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : isOut ? (paymentsEnabled ? "Submit & Pay $150" : "Submit Transfer Request") : "Submit Inbound Notice"}
       </Button>
     </form>
   );

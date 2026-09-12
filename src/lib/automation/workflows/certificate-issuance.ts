@@ -22,7 +22,10 @@ export const CERTIFICATE_ISSUANCE_RULE_VERSION = "certissue-1";
 export const CERT_EXTENSION_YEARS = 2;
 
 /** Application types this workflow handles (anything else is ignored). */
-export const ISSUANCE_APP_TYPES = ["initial_certification", "renewal"];
+// The digital packet workflows (src/lib/form-library.ts) write app_type
+// "initial"; older/imported rows use "initial_certification". Accept both so
+// the issuance sweep sees every initial packet.
+export const ISSUANCE_APP_TYPES = ["initial", "initial_certification", "renewal"];
 
 /** Paid invoices scanned for a renewal line item (description match in TS). */
 const PAID_INVOICE_SCAN_LIMIT = 50;

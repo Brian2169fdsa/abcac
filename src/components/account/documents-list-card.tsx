@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import { ViewFileButton } from "@/components/view-file-button";
 import { StatusChip } from "@/components/account/status-chip";
+import { EditDocumentTypeForm, DeleteDocumentButton } from "@/components/account/document-actions";
 
 interface DocItem {
   id: string;
@@ -40,12 +41,12 @@ export function DocumentRow({ doc }: { doc: DocItem }) {
             {doc.admin_notes}
           </div>
         )}
+        {(doc.status ?? "pending") === "pending" && <EditDocumentTypeForm id={doc.id} currentType={doc.document_type} />}
       </div>
-      {doc.file_path && (
-        <div className="flex-shrink-0">
-          <ViewFileButton bucket="member-documents" path={doc.file_path} />
-        </div>
-      )}
+      <div className="flex flex-shrink-0 flex-col items-end gap-2">
+        {doc.file_path && <ViewFileButton bucket="member-documents" path={doc.file_path} />}
+        {(doc.status ?? "pending") === "pending" && <DeleteDocumentButton id={doc.id} filePath={doc.file_path} />}
+      </div>
     </div>
   );
 }

@@ -2,12 +2,13 @@ import Link from "next/link";
 import { LockKeyhole, UserRoundPlus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { authHref, getProductPortalDestination } from "@/lib/portal-routing";
+import { paymentsEnabled } from "@/lib/feature-flags";
 
 /** Public-site workflow panel: the website is informative, while applications,
  * requests, and payments are completed from the member's authenticated record. */
 export function SignInToPay({ slug }: { slug: string }) {
   const destination = getProductPortalDestination(slug);
-  const isDirectPayment = destination.startsWith("/account/payments");
+  const isDirectPayment = paymentsEnabled && destination.startsWith("/account/payments");
 
   return (
     <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
@@ -33,7 +34,7 @@ export function SignInToPay({ slug }: { slug: string }) {
         </Link>
       </div>
       <p className="mt-3 text-center text-xs text-muted">
-        {isDirectPayment ? "Secure checkout powered by Stripe." : "Save your progress and return at any time."}
+        {isDirectPayment ? "Secure checkout powered by Stripe." : paymentsEnabled ? "Save your progress and return at any time." : "Online payment opens shortly — start your record now and pay when it does."}
       </p>
     </div>
   );
