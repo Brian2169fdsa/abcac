@@ -257,6 +257,27 @@ export default function CertificationRenewalPage() {
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <p><strong className="text-ink">Important:</strong> HIV/AIDS education is required for initial certification only and is not required for recertification.</p>
           </div>
+
+          <div className="mt-8 overflow-hidden rounded-2xl border border-brand/15 bg-surface shadow-[0_18px_45px_-38px_rgba(13,34,63,0.5)]">
+            <div className="h-1.5 bg-brand" />
+            <div className="p-6 sm:p-8">
+              <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand">PR-A</span>
+              <h3 className="mt-4 text-xl">Peer Recovery Associate (PR-A) — Renewal Requirements</h3>
+              <ul className="mt-4 grid gap-2.5 text-sm leading-relaxed text-muted sm:grid-cols-2">
+                {[
+                  "Renewal every two (2) years",
+                  "20 continuing education hours (minimum 6 hours in ethics)",
+                  "$150 renewal fee",
+                  "Completed Renewal Application",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 fill-brand/10 text-brand" aria-hidden />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 

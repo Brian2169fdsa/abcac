@@ -134,20 +134,23 @@ export default function HomePage() {
 
       {/* New credential announcement */}
       <Section compact className="bg-surface">
-        <div className="flex flex-col gap-5 rounded-2xl border border-brand/15 bg-gradient-to-br from-brand/[0.06] to-surface p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.08] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-brand">
-              New Credential · IC&amp;RC PR-A Reciprocal
-            </span>
-            <h3 className="mt-3">Certified Peer Recovery Specialist–Associate (CPRS-A)</h3>
-            <p className="mt-2 max-w-2xl text-muted">
-              Arizona&apos;s entry-level peer credential. No degree and no experience hours required — and your
-              training and supervised practice count toward the full CPRS.
-            </p>
+        <div className="relative overflow-hidden rounded-3xl border-2 border-brand/25 bg-gradient-to-br from-brand/[0.1] via-surface to-brand/[0.04] p-7 shadow-[0_25px_60px_-35px_rgba(134,31,36,0.45)] sm:p-9">
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-brand/10 blur-3xl" />
+          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-1.5 text-xs font-bold uppercase tracking-[0.1em] text-white shadow-md">
+                Now Accepting Applications
+              </span>
+              <h3 className="mt-4 text-2xl sm:text-3xl">Peer Recovery Associate (PR-A)</h3>
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+                ABCAC is now offering the Peer Recovery Associate credential in partnership with IC&amp;RC. If you have
+                lived experience and are working in peer support, apply today.
+              </p>
+            </div>
+            <CtaButton href="/initial-certification#pr-a" size="lg" className="shrink-0 whitespace-nowrap shadow-lg shadow-brand/25">
+              Learn More / Apply <ArrowRight className="h-4 w-4" aria-hidden />
+            </CtaButton>
           </div>
-          <CtaButton href="/initial-certification#cprs-a" size="lg" className="shrink-0 whitespace-nowrap">
-            Learn about the CPRS-A <ArrowRight className="h-4 w-4" aria-hidden />
-          </CtaButton>
         </div>
       </Section>
 

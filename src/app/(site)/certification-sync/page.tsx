@@ -37,7 +37,7 @@ const syncFaqs = [
   },
   {
     q: "How do I calculate the number of months?",
-    a: "Count the months from the earlier renewal date to the target renewal date. If you are unsure, contact ABCAC before paying so the quantity can be confirmed.",
+    a: "You don't have to. Sign in and select the active credentials you want to align in your member account — the portal reads their real expiration dates and calculates the exact month difference and fee for you before you submit or pay anything.",
   },
   {
     q: "What happens after payment?",
@@ -48,23 +48,23 @@ const syncFaqs = [
 const steps = [
   {
     icon: FileCheck2,
-    title: "Confirm your credentials",
-    text: "Gather each active ABCAC credential number and current expiration date. Certification Sync is most useful when you maintain two or more credentials.",
+    title: "Select your credentials",
+    text: "Sign in and check off two or more of your active ABCAC credentials. Certification Sync is most useful when you maintain two or more credentials.",
   },
   {
     icon: CalendarCheck2,
-    title: "Confirm the month difference",
-    text: "Count how many months the earlier credential must move forward. Contact ABCAC before paying if the correct quantity is unclear.",
+    title: "Review your calculated plan",
+    text: "The portal reads each credential's real expiration date and shows you the new shared date, the months moved, and the exact fee — before you submit or pay anything.",
+  },
+  {
+    icon: Upload,
+    title: "Submit your request",
+    text: "Sign the digital request, or download and upload a completed paper form instead if you prefer.",
   },
   {
     icon: CircleDollarSign,
     title: "Complete one-time payment",
-    text: "Pay $15 for each month moved forward. Enter the number of months as the checkout quantity—not as a recurring monthly plan.",
-  },
-  {
-    icon: Upload,
-    title: "Submit your sync request",
-    text: "Sign in to upload the completed request and supporting credential details. ABCAC confirms the new cycle after review.",
+    text: "Pay the calculated fee — $15 for each month moved forward — securely online to send your request to ABCAC for review.",
   },
 ];
 
@@ -146,7 +146,7 @@ export default function CertificationSyncPage() {
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand">How it works</p>
             <h2 className="mt-3 text-3xl sm:text-4xl">A clear four-step process</h2>
-            <p className="mt-4 text-lg text-muted">Prepare the credential details first, then pay only after the month difference is confirmed.</p>
+            <p className="mt-4 text-lg text-muted">Select your credentials in the portal — the exact month difference and fee are calculated for you automatically, before you pay.</p>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {steps.map((step, index) => (

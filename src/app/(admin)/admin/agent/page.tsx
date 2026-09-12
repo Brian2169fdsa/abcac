@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
-import {
-  AdminAgentWorkspace,
-  type AgentMember,
-  type AgentTask,
-  type AgentTaskPriority,
-} from "@/components/agent/admin-agent-workspace";
+import { AdminAgentWorkspace, type AgentMember } from "@/components/agent/admin-agent-workspace";
+import type { MemberTask } from "@/components/admin/member-tasks-panel";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminAnalytics } from "@/lib/admin-analytics";
 import { agentWorkspaceEnabled } from "@/lib/feature-flags";
@@ -61,23 +57,26 @@ export default async function AdminAgentPage() {
       .limit(20),
     sb
       .from("member_tasks")
-      .select("id, member_id, title, detail, priority, status, due_date, visible_to_member, created_at")
-      .in("status", ["open", "in_progress"])
-      .order("due_date", { ascending: true, nullsFirst: false })
+      .select("id, member_id, title, detail, priority, status, due_date, visible_to_member, created_at, completed_at")
       .order("created_at", { ascending: false })
-      .limit(30),
+      .limit(50),
   ]);
 
   const rosterRows = rosterRes.data ?? [];
   const taskRows = tasksRes.data ?? [];
 
   // Two cheap follow-up lookups: active-cert counts for the roster, and names
-  // for task owners (who may not be among the 20 most recent members).
+  // for task owners (who may not be among the 20 most recent members). Tasks
+  // with no member_id are general staff to-dos — never looked up.
   const rosterIds = rosterRows.map((p: any) => p.id as string);
-  const taskMemberIds = Array.from(new Set(taskRows.map((t: any) => t.member_id as string)));
+  const taskMemberIds = Array.from(
+    new Set(taskRows.map((t: any) => t.member_id as string | null).filter((id): id is string => Boolean(id))),
+  );
   const [certsRes, ownersRes] = await Promise.all([
     sb.from("certifications").select("member_id").eq("status", "active").in("member_id", rosterIds),
-    sb.from("profiles").select("id, first_name, last_name, email").in("id", taskMemberIds),
+    taskMemberIds.length
+      ? sb.from("profiles").select("id, first_name, last_name, email").in("id", taskMemberIds)
+      : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const activeCertCount = new Map<string, number>();
@@ -101,17 +100,18 @@ export default async function AdminAgentPage() {
     joined: p.created_at ?? null,
   }));
 
-  const tasks: AgentTask[] = taskRows.map((t: any) => ({
+  const tasks: MemberTask[] = taskRows.map((t: any) => ({
     id: t.id as string,
-    memberId: t.member_id as string,
-    memberName: displayName(ownerById.get(t.member_id as string)),
+    member_id: (t.member_id as string | null) ?? null,
+    member_name: t.member_id ? displayName(ownerById.get(t.member_id as string)) : null,
     title: (t.title as string) || "Untitled task",
     detail: t.detail ?? null,
-    priority: (t.priority === "high" || t.priority === "low" ? t.priority : "normal") as AgentTaskPriority,
-    status: t.status === "in_progress" ? "in_progress" : "open",
-    dueDate: t.due_date ?? null,
-    visibleToMember: Boolean(t.visible_to_member),
-    createdAt: t.created_at as string,
+    priority: t.priority ?? "normal",
+    status: t.status ?? "open",
+    due_date: t.due_date ?? null,
+    visible_to_member: Boolean(t.visible_to_member),
+    created_at: t.created_at as string,
+    completed_at: t.completed_at ?? null,
   }));
 
   return (

@@ -5,7 +5,6 @@ import { Section } from "@/components/section";
 import { PageHero } from "@/components/page-hero";
 import { CertificateActions } from "@/components/certificate-actions";
 import { AddOtherCertForm } from "@/components/portal-forms";
-import { ViewFileButton } from "@/components/view-file-button";
 import { buttonVariants } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
@@ -26,22 +25,36 @@ function CertStatusPill({ status }: { status: string | null }) {
   return <span className="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold text-muted">Expired</span>;
 }
 
-/** The uploaded certificate rendered beside its credential: image inline, PDF embedded, or a clear "none yet" frame. */
-function CertificatePreview({ url, kind, label }: { url: string | null; kind: "image" | "pdf" | "file" | "none"; label: string }) {
+/** Detects the preview kind from a stored file's extension. */
+function previewKind(path: string): "image" | "pdf" | "file" {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return "image";
+  if (ext === "pdf") return "pdf";
+  return "file";
+}
+
+/**
+ * The uploaded certificate rendered as an actual image/PDF on the page (not
+ * just a link to open elsewhere): image inline, PDF embedded, or a clear
+ * "none yet" frame. `compact` renders a small thumbnail for table rows —
+ * still a real inline preview, just sized to fit a table cell.
+ */
+function CertificatePreview({ url, kind, label, compact = false }: { url: string | null; kind: "image" | "pdf" | "file" | "none"; label: string; compact?: boolean }) {
   const frame = "relative overflow-hidden rounded-lg border border-line bg-bg";
+  const sizeClass = compact ? "h-20 w-28" : "aspect-[11/8.5] w-full";
   if (!url || kind === "none") {
     return (
-      <div className={`${frame} flex aspect-[11/8.5] w-full max-w-full items-center justify-center p-4 text-center`}>
+      <div className={`${frame} flex ${sizeClass} max-w-full items-center justify-center ${compact ? "p-2" : "p-4"} text-center`}>
         <div>
-          <p className="text-sm font-semibold text-ink">No scanned certificate on file yet</p>
-          <p className="mt-1 text-xs text-muted">ABCAC will attach it here when issued. Your generated PDF certificate is available under Downloads.</p>
+          <p className={`font-semibold text-ink ${compact ? "text-xs" : "text-sm"}`}>{compact ? "No file" : "No scanned certificate on file yet"}</p>
+          {!compact && <p className="mt-1 text-xs text-muted">ABCAC will attach it here when issued. Your generated PDF certificate is available under Downloads.</p>}
         </div>
       </div>
     );
   }
   return (
-    <figure className="w-full max-w-full">
-      <a href={url} target="_blank" rel="noreferrer" className={`${frame} block aspect-[11/8.5] w-full`} aria-label={`Open ${label} full size`}>
+    <figure className={compact ? "w-28" : "w-full max-w-full"}>
+      <a href={url} target="_blank" rel="noreferrer" className={`${frame} block ${sizeClass}`} aria-label={`Open ${label} full size`}>
         {kind === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived storage URL; not an optimizable static asset
           <img src={url} alt={label} className="h-full w-full object-contain" />
@@ -50,12 +63,12 @@ function CertificatePreview({ url, kind, label }: { url: string | null; kind: "i
             <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted">PDF certificate — open to view</div>
           </object>
         ) : (
-          <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted">Certificate file — open to view</div>
+          <div className="flex h-full items-center justify-center p-2 text-center text-xs text-muted">Certificate file — open to view</div>
         )}
       </a>
-      <figcaption className="mt-1.5 flex items-center justify-between text-xs text-muted">
-        <span>Certificate on file with ABCAC</span>
-        <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-brand">Open full size</a>
+      <figcaption className={`mt-1.5 flex items-center justify-between text-xs text-muted ${compact ? "gap-2" : ""}`}>
+        {!compact && <span>Certificate on file with ABCAC</span>}
+        <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-brand">{compact ? "Open full size" : "Open full size"}</a>
       </figcaption>
     </figure>
   );
@@ -94,12 +107,24 @@ export default async function CertificationsPage() {
         const path = c.certificate_url as string;
         const { data } = await supabase.storage.from("member-documents").createSignedUrl(path, 3600);
         if (!data?.signedUrl) return;
-        const ext = path.split(".").pop()?.toLowerCase() ?? "";
-        const kind = ["png", "jpg", "jpeg", "webp", "gif"].includes(ext) ? "image" : ext === "pdf" ? "pdf" : "file";
-        previews[c.id] = { url: data.signedUrl, kind };
+        previews[c.id] = { url: data.signedUrl, kind: previewKind(path) };
       }),
   );
   const hasActive = rows.some((c) => c.status === "active");
+
+  // Same treatment for certificates uploaded under "other organizations" —
+  // shown as a real inline image/PDF instead of a click-through link.
+  const otherPreviews: Record<string, { url: string; kind: "image" | "pdf" | "file" }> = {};
+  await Promise.all(
+    external
+      .filter((c) => typeof c.doc_path === "string" && c.doc_path)
+      .map(async (c) => {
+        const path = c.doc_path as string;
+        const { data } = await supabase.storage.from("member-documents").createSignedUrl(path, 3600);
+        if (!data?.signedUrl) return;
+        otherPreviews[c.id] = { url: data.signedUrl, kind: previewKind(path) };
+      }),
+  );
 
   return (
     <>
@@ -194,9 +219,7 @@ export default async function CertificationsPage() {
                     <td className="px-4 py-3 text-muted">{fmt(c.issued_date)}</td>
                     <td className="px-4 py-3 text-muted">{fmt(c.expiration_date)}</td>
                     <td className="px-4 py-3">
-                      {c.doc_path
-                        ? <ViewFileButton bucket="member-documents" path={c.doc_path} label="View Certificate" />
-                        : <span className="text-muted">No file uploaded</span>}
+                      <CertificatePreview url={otherPreviews[c.id]?.url ?? null} kind={c.doc_path ? (otherPreviews[c.id]?.kind ?? "none") : "none"} label={`${c.credential_title ?? "Credential"} certificate`} compact />
                     </td>
                   </tr>
                 ))}
@@ -215,9 +238,7 @@ export default async function CertificationsPage() {
                   <div className="mt-3 border-t border-line pt-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted">Certificate</div>
                     <div className="mt-2">
-                      {c.doc_path
-                        ? <ViewFileButton bucket="member-documents" path={c.doc_path} label="View Certificate" />
-                        : <span className="text-sm text-muted">No file uploaded</span>}
+                      <CertificatePreview url={otherPreviews[c.id]?.url ?? null} kind={c.doc_path ? (otherPreviews[c.id]?.kind ?? "none") : "none"} label={`${c.credential_title ?? "Credential"} certificate`} />
                     </div>
                   </div>
                 </li>

@@ -84,6 +84,16 @@ describe("createMemberTask", () => {
     const ins = adminRef.current!.callsFor("member_tasks", "insert")[0];
     expect(ins.payload).toMatchObject({ due_date: null, priority: "normal" });
   });
+
+  it("admin: a null memberId creates a general task (member_id null, never visible to a member) and revalidates the agent page only", async () => {
+    setup({ user: { id: "admin1" }, callerRole: "admin" });
+    const res = await createMemberTask(null, { title: "Renew SSL cert", visibleToMember: true });
+    expect(res).toEqual({ ok: true });
+    const ins = adminRef.current!.callsFor("member_tasks", "insert")[0];
+    expect(ins.payload).toMatchObject({ member_id: null, title: "Renew SSL cert", visible_to_member: false, status: "open" });
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/agent");
+    expect(revalidatePath).not.toHaveBeenCalledWith(expect.stringContaining("/admin/members/"));
+  });
 });
 
 describe("setMemberTaskStatus", () => {
@@ -115,6 +125,15 @@ describe("setMemberTaskStatus", () => {
     setup({ user: { id: "admin1" }, callerRole: "admin", adminResult });
     expect(await setMemberTaskStatus("t1", "m1", "done")).toEqual({ ok: false, error: "fail" });
   });
+
+  it("admin: a null memberId scopes the update with .is(member_id, null) and revalidates the agent page", async () => {
+    setup({ user: { id: "admin1" }, callerRole: "admin" });
+    expect(await setMemberTaskStatus("t1", null, "done")).toEqual({ ok: true });
+    const upd = adminRef.current!.callsFor("member_tasks", "update")[0];
+    expect(upd.filters).toContainEqual({ col: "id", val: "t1" });
+    expect(upd.filters).toContainEqual({ col: "member_id", val: null });
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/agent");
+  });
 });
 
 describe("updateMemberTask", () => {
@@ -136,6 +155,14 @@ describe("updateMemberTask", () => {
     expect(upd.payload).not.toHaveProperty("completed_at");
     expect(upd.filters).toContainEqual({ col: "id", val: "t1" });
     expect(upd.filters).toContainEqual({ col: "member_id", val: "m1" });
+  });
+
+  it("admin: a null memberId scopes the update with .is(member_id, null) and forces visible_to_member false", async () => {
+    setup({ user: { id: "admin1" }, callerRole: "admin" });
+    expect(await updateMemberTask("t1", null, { title: "New", visibleToMember: true })).toEqual({ ok: true });
+    const upd = adminRef.current!.callsFor("member_tasks", "update")[0];
+    expect(upd.payload).toMatchObject({ title: "New", visible_to_member: false });
+    expect(upd.filters).toContainEqual({ col: "member_id", val: null });
   });
 });
 
@@ -159,5 +186,13 @@ describe("deleteMemberTask", () => {
     const audit = adminRef.current!.callsFor("admin_audit_log", "insert")[0];
     expect(audit.payload).toMatchObject({ action: "task_deleted", target_id: "t1" });
     expect(revalidatePath).toHaveBeenCalledWith("/admin/members/m1");
+  });
+
+  it("admin: a null memberId deletes scoped with .is(member_id, null)", async () => {
+    setup({ user: { id: "admin1" }, callerRole: "admin" });
+    expect(await deleteMemberTask("t1", null)).toEqual({ ok: true });
+    const del = adminRef.current!.callsFor("member_tasks", "delete")[0];
+    expect(del.filters).toContainEqual({ col: "id", val: "t1" });
+    expect(del.filters).toContainEqual({ col: "member_id", val: null });
   });
 });

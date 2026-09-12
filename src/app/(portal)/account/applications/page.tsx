@@ -169,7 +169,7 @@ export default async function ApplicationsPage() {
                   </div>
                 )}
 
-                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id).length > 0 && (
+                {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && !paymentsEnabled && paymentOptionsForApplication(a.app_type ?? "", a.id, a.cert_type).length > 0 && (
                   <div className="mt-4"><PaymentsPausedNotice compact /></div>
                 )}
                 {(a.status === null || a.status === "submitted") && !feePaid(a.id, submissions) && paymentsEnabled && (
@@ -177,7 +177,7 @@ export default async function ApplicationsPage() {
                     <p className="text-sm font-semibold text-ink">Complete the payment linked to this application</p>
                     <p className="mt-1 text-sm text-muted">Choose the correct option below. The payment will be recorded against this exact application.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {paymentOptionsForApplication(a.app_type ?? "", a.id).map((option) => (
+                      {paymentOptionsForApplication(a.app_type ?? "", a.id, a.cert_type).map((option) => (
                         <CtaButton key={option.href} href={option.href} size="sm">{option.label}</CtaButton>
                       ))}
                       <CtaButton href="/account/documents" variant="outline" size="sm">Review documents</CtaButton>

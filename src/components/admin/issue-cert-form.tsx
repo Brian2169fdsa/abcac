@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const field =
   "h-11 w-full rounded-lg border border-line bg-bg px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
-const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS"] as const;
+const CREDENTIALS = ["CAC", "CADAC", "AADC", "CCS", "CCJP", "CPRS", "CPS", "PRA"] as const;
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];

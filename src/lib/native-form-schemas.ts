@@ -7,6 +7,7 @@ import { INITIAL_CCS_SCHEMA } from "@/lib/native-schemas/initial-ccs";
 import { INITIAL_CCJP_SCHEMA } from "@/lib/native-schemas/initial-ccjp";
 import { INITIAL_CPS_SCHEMA } from "@/lib/native-schemas/initial-cps";
 import { CEU_WORKSHOP_SCHEMA } from "@/lib/native-schemas/ceu-workshop";
+import { INITIAL_PRA_SCHEMA } from "@/lib/native-schemas/initial-pra";
 
 // Native (HTML) versions of ABCAC forms. Each schema reproduces the content of
 // the original PDF as structured fields so members fill a real form instead of
@@ -366,6 +367,7 @@ const NATIVE_FORM_SCHEMAS: Record<string, NativeFormSchema> = {
   "initial-ccjp": INITIAL_CCJP_SCHEMA,
   "initial-cps": INITIAL_CPS_SCHEMA,
   "ceu-workshop": CEU_WORKSHOP_SCHEMA,
+  "initial-pra": INITIAL_PRA_SCHEMA,
 };
 
 export function getNativeFormSchema(formKey: string): NativeFormSchema | undefined {

@@ -45,6 +45,19 @@
       ]
     },
     {
+      "slug": "peer-recovery-associate-application-fee",
+      "name": "Peer Recovery Associate (PR-A) Application Fee",
+      "price": 150.0,
+      "category": "Certification",
+      "exam_mode": null,
+      "short": "Non-refundable application fee for the Peer Recovery Associate (PR-A) credential, offered in partnership with IC&RC.",
+      "includes": [
+        "Application processing and review",
+        "Board-approved examination administered through your AHCCCS-recognized training program",
+        "Issuance of the Peer Recovery Associate (PR-A) credential once approved"
+      ]
+    },
+    {
       "slug": "certification-renewal-2-year-credential-renewal-fee",
       "name": "Certification Renewal \u2013 2-Year Credential Renewal Fee",
       "price": 150.0,
