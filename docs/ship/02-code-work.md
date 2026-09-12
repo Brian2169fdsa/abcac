@@ -88,8 +88,7 @@ These were flagged by prior audits and remain reasonable; none block launch:
   Back with Vercel KV / Upstash before heavy public traffic.
 - [ ] **Upload validation by magic-bytes** — `document-upload.tsx` validates by filename extension;
   files land in a private, never-executed bucket (low risk) but content-sniffing would harden it.
-- [ ] **`export-transcript` honeypot** — add the same honeypot the sibling public forms use
-  (`src/app/api/assistant/export-transcript/route.ts`).
+- [x] **`export-transcript`** — route removed for launch (it was an unauthenticated email relay); the website chat no longer offers "email me this conversation".
 - [ ] **Verification result surfaced to member** — confirm verified/not-verified shows in
   `/account/requests`, not just status.
 - [ ] **`admin-notify` superadmin inclusion** — confirm it no longer uses exact `=== 'admin'` (which
